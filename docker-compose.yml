@@ -1,0 +1,38 @@
+services:
+  # Frontend (nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: restaurante-frontend
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - restaurante-network
+
+  # Backend (Node.js + Express)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: restaurante-backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - restaurante-data:/data
+    restart: unless-stopped
+    networks:
+      - restaurante-network
+    environment:
+      - NODE_ENV=production
+
+volumes:
+  restaurante-data:
+    driver: local
+
+networks:
+  restaurante-network:
+    driver: bridge

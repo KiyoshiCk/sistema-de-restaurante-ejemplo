@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurante - Bienvenido</title>
+    <meta http-equiv="refresh" content="0;url=cliente.html">
+</head>
+<body>
+    <p>Redirigiendo...</p>
+</body>
+</html>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍽️ Sistema de Gestión - Restaurante</h1>
+            <div id="fecha-hora"></div>
+        </header>
+
+        <nav class="main-nav">
+            <button class="nav-btn active" data-page="dashboard">
+                <span class="icon">📊</span>
+                Dashboard
+            </button>
+            <button class="nav-btn" data-page="menu-cliente">
+                <span class="icon">👥</span>
+                Menú Cliente
+            </button>
+            <button class="nav-btn" data-page="menu">
+                <span class="icon">📋</span>
+                Gestión Menú
+            </button>
+            <button class="nav-btn" data-page="mesas">
+                <span class="icon">🪑</span>
+                Mesas
+            </button>
+            <button class="nav-btn" data-page="pedidos">
+                <span class="icon">🛎️</span>
+                Pedidos
+            </button>
+            <button class="nav-btn" data-page="facturacion">
+                <span class="icon">💰</span>
+                Facturación
+            </butMenú para Clientes -->
+            <section id="menu-cliente" class="page">
+                <div class="menu-cliente-header">
+                    <h2>Nuestro Menú</h2>
+                    <p class="menu-cliente-subtitle">Disfruta de nuestros deliciosos platillos</p>
+                </div>
+                
+                <div class="menu-cliente-categorias">
+                    <button class="categoria-btn active" data-categoria="">Todos</button>
+                    <button class="categoria-btn" data-categoria="Entradas">Entradas</button>
+                    <button class="categoria-btn" data-categoria="Platos Fuertes">Platos Fuertes</button>
+                    <button class="categoria-btn" data-categoria="Postres">Postres</button>
+                    <button class="categoria-btn" data-categoria="Bebidas">Bebidas</button>
+                </div>
+
+                <div class="menu-cliente-grid" id="menu-cliente-grid"></div>
+            </section>
+
+            <!-- ton>
+        </nav>
+
+        <main id="content">
+            <!-- Dashboard -->
+            <section id="dashboard" class="page active">
+                <h2>Dashboard</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Mesas Ocupadas</h3>
+                        <p class="stat-number" id="mesas-ocupadas">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Pedidos Activos</h3>
+                        <p class="stat-number" id="pedidos-activos">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Ventas Hoy</h3>
+                        <p class="stat-number" id="ventas-hoy">$0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Platillos en Menú</h3>
+                        <p class="stat-number" id="total-platillos">0</p>
+                    </div>
+                </div>
+                <div class="recent-activity">
+                    <h3>Actividad Reciente</h3>
+                    <div id="actividad-reciente"></div>
+                </div>
+            </section>
+
+            <!-- Gestión de Menú -->
+            <section id="menu" class="page">
+                <div class="section-header">
+                    <h2>Gestión de Menú</h2>
+                    <button class="btn-primary" id="btn-agregar-platillo">+ Agregar Platillo</button>
+                </div>
+                
+                <div class="filters">
+                    <select id="filtro-categoria">
+                        <option value="">Todas las categorías</option>
+                        <option value="Entradas">Entradas</option>
+                        <option value="Platos Fuertes">Platos Fuertes</option>
+                        <option value="Postres">Postres</option>
+                        <option value="Bebidas">Bebidas</option>
+                    </select>
+                    <input type="text" id="buscar-platillo" placeholder="Buscar platillo...">
+                </div>
+
+                <div class="menu-grid" id="lista-menu"></div>
+            </section>
+
+            <!-- Gestión de Mesas -->
+            <section id="mesas" class="page">
+                <div class="section-header">
+                    <h2>Gestión de Mesas</h2>
+                    <button class="btn-primary" id="btn-agregar-mesa">+ Agregar Mesa</button>
+                </div>
+                <div class="mesas-grid" id="lista-mesas"></div>
+            </section>
+
+            <!-- Pedidos -->
+            <section id="pedidos" class="page">
+                <div class="section-header">
+                    <h2>Gestión de Pedidos</h2>
+                    <button class="btn-primary" id="btn-nuevo-pedido">+ Nuevo Pedido</button>
+                </div>
+                <div class="pedidos-container">
+                    <div class="pedidos-list" id="lista-pedidos"></div>
+                </div>
+            </section>
+
+            <!-- Facturación -->
+            <section id="facturacion" class="page">
+                <h2>Facturación e Historial</h2>
+                <div class="facturacion-stats">
+                    <div class="stat-card">
+                        <h3>Total Hoy</h3>
+                        <p class="stat-number" id="total-dia">$0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Semana</h3>
+                        <p class="stat-number" id="total-semana">$0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Mes</h3>
+                        <p class="stat-number" id="total-mes">$0.00</p>
+                    </div>
+                </div>
+                <div class="historial-container">
+                    <h3>Historial de Facturas</h3>
+                    <div id="lista-facturas"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal Agregar/Editar Platillo -->
+    <div id="modal-platillo" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modal-platillo-titulo">Agregar Platillo</h2>
+            <form id="form-platillo">
+                <div class="form-group">
+                    <label>Nombre del Platillo:</label>
+                    <input type="text" id="platillo-nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Categoría:</label>
+                    <select id="platillo-categoria" required>
+                        <option value="">Seleccionar...</option>
+                        <option value="Entradas">Entradas</option>
+                        <option value="Platos Fuertes">Platos Fuertes</option>
+                        <option value="Postres">Postres</option>
+                        <option value="Bebidas">Bebidas</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Precio:</label>
+                    <input type="number" id="platillo-precio" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Descripción:</label>
+                    <textarea id="platillo-descripcion"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar</button>
+                    <button type="button" class="btn-secondary" id="btn-cancelar-platillo">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo Pedido -->
+    <div id="modal-pedido" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close">&times;</span>
+            <h2>Nuevo Pedido</h2>
+            <form id="form-pedido">
+                <div class="form-group">
+                    <label>Mesa:</label>
+                    <select id="pedido-mesa" required></select>
+                </div>
+                <div class="pedido-items">
+                    <h3>Platillos</h3>
+                    <div id="menu-pedido" class="menu-pedido-grid"></div>
+                    <h3>Items Seleccionados</h3>
+                    <div id="items-seleccionados"></div>
+                    <div class="pedido-total">
+                        <strong>Total: $<span id="pedido-total">0.00</span></strong>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Confirmar Pedido</button>
+                    <button type="button" class="btn-secondary" id="btn-cancelar-pedido">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Agregar Mesa -->
+    <div id="modal-mesa" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Agregar Mesa</h2>
+            <form id="form-mesa">
+                <div class="form-group">
+                    <label>Número de Mesa:</label>
+                    <input type="number" id="mesa-numero" required>
+                </div>
+                <div class="form-group">
+                    <label>Capacidad:</label>
+                    <input type="number" id="mesa-capacidad" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar</button>
+                    <button type="button" class="btn-secondary" id="btn-cancelar-mesa">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

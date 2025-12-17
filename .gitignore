@@ -1,0 +1,17 @@
+# Node modules
+node_modules/
+npm-debug.log*
+
+# Datos (volumen de Docker)
+backend/data/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log

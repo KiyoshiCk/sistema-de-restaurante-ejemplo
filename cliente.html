@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú - Restaurante</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="cliente-view">
+    <div class="container-cliente">
+        <header class="cliente-header">
+            <h1>🍽️ Nuestro Menú</h1>
+            <p class="cliente-subtitle">Disfruta de nuestros deliciosos platillos</p>
+            <a href="admin.html" class="btn-admin-access">👤 Acceso Personal</a>
+        </header>
+
+        <div class="menu-cliente-categorias">
+            <button class="categoria-btn active" data-categoria="">Todos</button>
+            <button class="categoria-btn" data-categoria="Entradas">Entradas</button>
+            <button class="categoria-btn" data-categoria="Platos Fuertes">Platos Fuertes</button>
+            <button class="categoria-btn" data-categoria="Postres">Postres</button>
+            <button class="categoria-btn" data-categoria="Bebidas">Bebidas</button>
+        </div>
+
+        <div class="menu-cliente-grid" id="menu-cliente-grid">
+            <p style="text-align: center; color: #7f8c8d; grid-column: 1/-1; padding: 40px;">Cargando menú...</p>
+        </div>
+    </div>
+
+    <script src="js/cliente.js"></script>
+</body>
+</html>
