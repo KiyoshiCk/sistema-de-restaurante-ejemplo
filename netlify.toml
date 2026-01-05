@@ -8,7 +8,7 @@
   
 [[redirects]]
   from = "/api/*"
-  to = "https://tu-backend-url.com/api/:splat"
+  to = "https://sistema-de-restaurante-ejemplo.onrender.com/api/:splat"
   status = 200
 
 [[redirects]]
