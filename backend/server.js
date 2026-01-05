@@ -5,7 +5,18 @@ const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://admin:admin123@localhost:27017/restaurante?authSource=admin';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+    if ((process.env.NODE_ENV || '').toLowerCase() === 'production') {
+        console.error('❌ Falta configurar MONGODB_URI en variables de entorno (producción).');
+        process.exit(1);
+    }
+
+    console.warn('⚠️ MONGODB_URI no está configurada. Usando MongoDB local por defecto.');
+}
+
+const EFFECTIVE_MONGODB_URI = MONGODB_URI || 'mongodb://127.0.0.1:27017/restaurante';
 
 // Middleware
 app.use(cors({
@@ -76,10 +87,7 @@ const Actividad = mongoose.model('Actividad', actividadSchema);
 
 // ============= CONEXIÓN A MONGODB =============
 
-mongoose.connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
+mongoose.connect(EFFECTIVE_MONGODB_URI)
 .then(async () => {
     console.log('✅ Conectado a MongoDB');
     
