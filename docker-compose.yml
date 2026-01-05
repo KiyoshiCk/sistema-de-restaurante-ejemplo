@@ -1,4 +1,37 @@
 services:
+  # MongoDB
+  mongodb:
+    image: mongo:latest
+    container_name: restaurante-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - restaurante-mongo-data:/data/db
+    restart: unless-stopped
+    networks:
+      - restaurante-network
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin123
+
+  # Mongo Express (UI para MongoDB)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: restaurante-mongo-express
+    ports:
+      - "8082:8081"
+    restart: unless-stopped
+    networks:
+      - restaurante-network
+    depends_on:
+      - mongodb
+    environment:
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:admin123@mongodb:27017/
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      - ME_CONFIG_BASICAUTH=true
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+
   # Frontend (nginx)
   frontend:
     build:
@@ -21,16 +54,17 @@ services:
     container_name: restaurante-backend
     ports:
       - "3000:3000"
-    volumes:
-      - restaurante-data:/data
     restart: unless-stopped
     networks:
       - restaurante-network
+    depends_on:
+      - mongodb
     environment:
       - NODE_ENV=production
+      - MONGODB_URI=mongodb://admin:admin123@mongodb:27017/restaurante?authSource=admin
 
 volumes:
-  restaurante-data:
+  restaurante-mongo-data:
     driver: local
 
 networks:
