@@ -100,6 +100,12 @@ mongoose.connect(EFFECTIVE_MONGODB_URI)
     
     // Inicializar datos de ejemplo si la BD está vacía
     await inicializarDatos();
+
+    // Iniciar servidor solo cuando la BD está lista
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Backend corriendo en puerto ${PORT}`);
+        console.log('📦 Base de datos: MongoDB');
+    });
 })
 .catch(err => {
     console.error('❌ Error conectando a MongoDB:', err);
@@ -427,8 +433,3 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Iniciar servidor
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Backend corriendo en puerto ${PORT}`);
-    console.log(`📦 Base de datos: MongoDB`);
-});
