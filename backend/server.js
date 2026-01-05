@@ -7,9 +7,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
+const IS_RENDER = Boolean(process.env.RENDER)
+    || Boolean(process.env.RENDER_SERVICE_ID)
+    || Boolean(process.env.RENDER_EXTERNAL_URL)
+    || Boolean(process.env.RENDER_INSTANCE_ID);
+const IS_PRODUCTION = (process.env.NODE_ENV || '').toLowerCase() === 'production';
+
 if (!MONGODB_URI) {
-    if ((process.env.NODE_ENV || '').toLowerCase() === 'production') {
-        console.error('❌ Falta configurar MONGODB_URI en variables de entorno (producción).');
+    if (IS_RENDER || IS_PRODUCTION) {
+        console.error('❌ Falta configurar MONGODB_URI en variables de entorno (Render/producción).');
         process.exit(1);
     }
 
@@ -17,6 +23,7 @@ if (!MONGODB_URI) {
 }
 
 const EFFECTIVE_MONGODB_URI = MONGODB_URI || 'mongodb://127.0.0.1:27017/restaurante';
+console.log(`🔧 MongoDB URI: ${MONGODB_URI ? 'desde env (MONGODB_URI)' : 'fallback local (solo desarrollo)'}`);
 
 // Middleware
 app.use(cors({
