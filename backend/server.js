@@ -25,6 +25,10 @@ if (!MONGODB_URI) {
 const EFFECTIVE_MONGODB_URI = MONGODB_URI || 'mongodb://127.0.0.1:27017/restaurante';
 console.log(`🔧 MongoDB URI: ${MONGODB_URI ? 'desde env (MONGODB_URI)' : 'fallback local (solo desarrollo)'}`);
 
+const logError = (context, error) => {
+    console.error(`❌ ${context}:`, error);
+};
+
 // Middleware
 app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
@@ -177,6 +181,7 @@ app.get('/api/menu', async (req, res) => {
         const menu = await Menu.find();
         res.json(menu);
     } catch (error) {
+        logError('Error al obtener menú', error);
         res.status(500).json({ error: 'Error al obtener menú' });
     }
 });
@@ -187,6 +192,7 @@ app.post('/api/menu', async (req, res) => {
         await nuevoPlatillo.save();
         res.status(201).json(nuevoPlatillo);
     } catch (error) {
+        logError('Error al crear platillo', error);
         res.status(500).json({ error: 'Error al crear platillo' });
     }
 });
@@ -200,6 +206,7 @@ app.put('/api/menu/:id', async (req, res) => {
             res.status(404).json({ error: 'Platillo no encontrado' });
         }
     } catch (error) {
+        logError('Error al actualizar platillo', error);
         res.status(500).json({ error: 'Error al actualizar platillo' });
     }
 });
@@ -213,6 +220,7 @@ app.delete('/api/menu/:id', async (req, res) => {
             res.status(404).json({ error: 'Platillo no encontrado' });
         }
     } catch (error) {
+        logError('Error al eliminar platillo', error);
         res.status(500).json({ error: 'Error al eliminar platillo' });
     }
 });
@@ -224,6 +232,7 @@ app.get('/api/mesas', async (req, res) => {
         const mesas = await Mesa.find();
         res.json(mesas);
     } catch (error) {
+        logError('Error al obtener mesas', error);
         res.status(500).json({ error: 'Error al obtener mesas' });
     }
 });
@@ -234,6 +243,7 @@ app.post('/api/mesas', async (req, res) => {
         await nuevaMesa.save();
         res.status(201).json(nuevaMesa);
     } catch (error) {
+        logError('Error al crear mesa', error);
         res.status(500).json({ error: 'Error al crear mesa' });
     }
 });
@@ -247,6 +257,7 @@ app.put('/api/mesas/:id', async (req, res) => {
             res.status(404).json({ error: 'Mesa no encontrada' });
         }
     } catch (error) {
+        logError('Error al actualizar mesa', error);
         res.status(500).json({ error: 'Error al actualizar mesa' });
     }
 });
@@ -271,6 +282,7 @@ app.get('/api/pedidos', async (req, res) => {
         const pedidos = await Pedido.find();
         res.json(pedidos);
     } catch (error) {
+        logError('Error al obtener pedidos', error);
         res.status(500).json({ error: 'Error al obtener pedidos' });
     }
 });
