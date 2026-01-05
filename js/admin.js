@@ -1,7 +1,9 @@
 // Panel de Administración con Control de Acceso
 class AdminApp {
     constructor() {
-        this.API_URL = 'http://localhost:3000/api';
+        this.API_URL = (typeof API_CONFIG !== 'undefined' && API_CONFIG.url)
+            ? API_CONFIG.url
+            : 'http://localhost:3000/api';
         this.usuario = null;
         this.menu = [];
         this.mesas = [];

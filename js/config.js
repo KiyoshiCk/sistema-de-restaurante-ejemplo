@@ -5,8 +5,10 @@ const getAPIURL = () => {
         return 'http://localhost:3000/api';
     }
     
-    // En producción - obtener del localStorage o variable global
-    return window.__API_URL__ || 'https://tu-backend-url.com/api';
+    // En producción:
+    // - si defines window.__API_URL__ (por ejemplo, inyectándolo), se usa eso
+    // - caso contrario, usa /api (y Netlify hará proxy con netlify.toml)
+    return window.__API_URL__ || '/api';
 };
 
 const API_CONFIG = {
