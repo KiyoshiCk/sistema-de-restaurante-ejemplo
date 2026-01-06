@@ -1,14 +1,15 @@
 [build]
-  command = "echo 'Frontend estático - No requiere build'"
+  command = "cd netlify/functions && npm install"
   publish = "."
-  base = "."
+  functions = "netlify/functions"
 
-[context.production]
-  command = "echo 'Producción'"
+[functions]
+  node_bundler = "esbuild"
   
+# Redirigir todas las llamadas /api/* a la función serverless
 [[redirects]]
   from = "/api/*"
-  to = "https://sistema-de-restaurante-ejemplo.onrender.com/api/:splat"
+  to = "/.netlify/functions/api/:splat"
   status = 200
 
 [[redirects]]

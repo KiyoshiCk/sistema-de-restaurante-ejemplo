@@ -1,0 +1,8 @@
+{
+  "name": "restaurante-netlify-functions",
+  "version": "1.0.0",
+  "description": "Netlify Functions para Sistema de Restaurante",
+  "dependencies": {
+    "mongoose": "^8.0.3"
+  }
+}
