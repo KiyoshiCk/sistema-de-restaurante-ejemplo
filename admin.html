@@ -28,6 +28,7 @@
                     <p><strong>Usuarios de prueba:</strong></p>
                     <p>👤 Mesero: <code>mesero</code> / <code>mesero123</code></p>
                     <p>👑 Admin: <code>admin</code> / <code>admin123</code></p>
+                    <p>👨‍🍳 Cocinero: <a href="cocina.html">Ir al panel de cocina</a></p>
                 </div>
             </form>
             <a href="cliente.html" class="btn-volver-cliente">← Ver Menú del Cliente</a>
@@ -144,6 +145,15 @@
                         <div id="lista-facturas"></div>
                     </div>
                 </section>
+
+                <!-- Gestión de Usuarios (Solo Admin) -->
+                <section id="usuarios" class="page admin-only">
+                    <div class="section-header">
+                        <h2>👥 Gestión de Usuarios</h2>
+                        <button class="btn-primary" id="btn-agregar-usuario">+ Nuevo Usuario</button>
+                    </div>
+                    <div class="usuarios-grid" id="lista-usuarios"></div>
+                </section>
             </main>
         </div>
 
@@ -227,6 +237,49 @@
                     <div class="form-actions">
                         <button type="submit" class="btn-primary">Guardar</button>
                         <button type="button" class="btn-secondary" id="btn-cancelar-mesa">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Agregar/Editar Usuario -->
+        <div id="modal-usuario" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2 id="modal-usuario-titulo">Nuevo Usuario</h2>
+                <form id="form-usuario">
+                    <div class="form-group">
+                        <label>Nombre completo:</label>
+                        <input type="text" id="usuario-nombre" required placeholder="Ej: Juan Pérez">
+                    </div>
+                    <div class="form-group">
+                        <label>Usuario (login):</label>
+                        <input type="text" id="usuario-username" required placeholder="Ej: juan.perez">
+                    </div>
+                    <div class="form-group">
+                        <label id="label-password">Contraseña:</label>
+                        <input type="password" id="usuario-password" placeholder="Mínimo 6 caracteres">
+                        <small id="password-help" style="color: #7f8c8d;"></small>
+                    </div>
+                    <div class="form-group">
+                        <label>Rol:</label>
+                        <select id="usuario-rol" required>
+                            <option value="">Seleccionar rol...</option>
+                            <option value="administrador">👑 Administrador</option>
+                            <option value="mesero">👤 Mesero</option>
+                            <option value="cocinero">👨‍🍳 Cocinero</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="grupo-activo" style="display: none;">
+                        <label>Estado:</label>
+                        <select id="usuario-activo">
+                            <option value="true">✅ Activo</option>
+                            <option value="false">❌ Inactivo</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Guardar</button>
+                        <button type="button" class="btn-secondary" id="btn-cancelar-usuario">Cancelar</button>
                     </div>
                 </form>
             </div>

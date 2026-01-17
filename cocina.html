@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍳 Cocina - Sistema de Restaurante</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Estilos específicos para la vista de cocina */
+        .cocina-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .cocina-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border-radius: 15px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        .cocina-header h1 {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .cocina-header .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-logout-cocina {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-logout-cocina:hover {
+            background: white;
+            color: #e74c3c;
+        }
+
+        .pedidos-cocina-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .pedido-cocina-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid #3498db;
+            transition: all 0.3s;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pedido-cocina-card.pendiente {
+            border-left-color: #e74c3c;
+            background: linear-gradient(135deg, #fff 0%, #ffeaea 100%);
+        }
+
+        .pedido-cocina-card.en-preparacion {
+            border-left-color: #f39c12;
+            background: linear-gradient(135deg, #fff 0%, #fff8e6 100%);
+        }
+
+        .pedido-cocina-card.listo {
+            border-left-color: #27ae60;
+            background: linear-gradient(135deg, #fff 0%, #e8f8ef 100%);
+        }
+
+        .pedido-cocina-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px dashed #eee;
+        }
+
+        .mesa-numero-cocina {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .tiempo-pedido {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tiempo-pedido.urgente {
+            color: #e74c3c;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .items-cocina-lista {
+            margin: 15px 0;
+        }
+
+        .item-cocina {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            margin: 8px 0;
+            background: rgba(0,0,0,0.03);
+            border-radius: 8px;
+            font-size: 1.1em;
+        }
+
+        .item-cocina .cantidad {
+            background: #3498db;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .item-cocina .nombre {
+            flex: 1;
+            margin-left: 15px;
+            font-weight: 500;
+        }
+
+        .estado-badge {
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .estado-badge.pendiente {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .estado-badge.en-preparacion {
+            background: #f39c12;
+            color: white;
+        }
+
+        .estado-badge.listo {
+            background: #27ae60;
+            color: white;
+        }
+
+        .acciones-cocina {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-cocina {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-preparar {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        .btn-preparar:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.4);
+        }
+
+        .btn-listo {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+        }
+
+        .btn-listo:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .sin-pedidos {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .sin-pedidos .icono {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .sin-pedidos h2 {
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+
+        .estadisticas-cocina {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-cocina {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .stat-cocina .numero {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-cocina .label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .stat-cocina.pendientes .numero { color: #e74c3c; }
+        .stat-cocina.en-prep .numero { color: #f39c12; }
+        .stat-cocina.listos .numero { color: #27ae60; }
+
+        .filtros-cocina {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filtro-btn {
+            padding: 10px 20px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .filtro-btn.active {
+            background: #3498db;
+            border-color: #3498db;
+            color: white;
+        }
+
+        .filtro-btn:hover:not(.active) {
+            border-color: #3498db;
+            color: #3498db;
+        }
+
+        /* Notificación de nuevo pedido */
+        .notificacion-nuevo {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(231, 76, 60, 0.5);
+            z-index: 1000;
+            animation: bounceIn 0.5s ease;
+            display: none;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .notificacion-nuevo.show {
+            display: block;
+        }
+
+        /* Login cocina */
+        .login-cocina {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .login-cocina .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .login-cocina h1 {
+            color: #e74c3c;
+            margin-bottom: 30px;
+        }
+
+        .login-cocina .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .login-cocina label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .login-cocina input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .login-cocina input:focus {
+            border-color: #e74c3c;
+            outline: none;
+        }
+
+        .login-cocina .btn-login {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .login-cocina .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .login-cocina .credenciales {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .login-cocina .credenciales code {
+            background: #e74c3c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .volver-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #e74c3c;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .volver-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Sonido visual para nuevos pedidos */
+        .pedido-nuevo-highlight {
+            animation: highlight 2s ease;
+        }
+
+        @keyframes highlight {
+            0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+            50% { box-shadow: 0 0 30px rgba(231, 76, 60, 0.6); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Pantalla de Login -->
+    <div id="login-screen" class="login-cocina">
+        <div class="login-container">
+            <h1>🍳 Panel de Cocina</h1>
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Usuario:</label>
+                    <input type="text" id="login-username" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label>Contraseña:</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" class="btn-login">🔓 Ingresar a Cocina</button>
+            </form>
+            <div class="credenciales">
+                <strong>Credenciales:</strong><br>
+                Usuario: <code>cocinero</code> | Contraseña: <code>cocinero123</code>
+            </div>
+            <a href="index.html" class="volver-link">← Volver al inicio</a>
+        </div>
+    </div>
+
+    <!-- Panel de Cocina -->
+    <div id="cocina-screen" style="display: none;">
+        <div class="cocina-container">
+            <header class="cocina-header">
+                <h1>🍳 Panel de Cocina</h1>
+                <div class="user-info">
+                    <span id="fecha-hora"></span>
+                    <span id="user-name"></span>
+                    <button class="btn-logout-cocina" id="btn-logout">🚪 Salir</button>
+                </div>
+            </header>
+
+            <!-- Estadísticas -->
+            <div class="estadisticas-cocina">
+                <div class="stat-cocina pendientes">
+                    <div class="numero" id="stat-pendientes">0</div>
+                    <div class="label">🔴 Pendientes</div>
+                </div>
+                <div class="stat-cocina en-prep">
+                    <div class="numero" id="stat-preparacion">0</div>
+                    <div class="label">🟡 En Preparación</div>
+                </div>
+                <div class="stat-cocina listos">
+                    <div class="numero" id="stat-listos">0</div>
+                    <div class="label">🟢 Listos</div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filtros-cocina">
+                <button class="filtro-btn active" data-filtro="todos">📋 Todos</button>
+                <button class="filtro-btn" data-filtro="pendiente">🔴 Pendientes</button>
+                <button class="filtro-btn" data-filtro="en-preparacion">🟡 En Preparación</button>
+                <button class="filtro-btn" data-filtro="listo">🟢 Listos</button>
+            </div>
+
+            <!-- Lista de Pedidos -->
+            <div class="pedidos-cocina-grid" id="pedidos-cocina">
+                <!-- Los pedidos se cargan dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Notificación de nuevo pedido -->
+        <div class="notificacion-nuevo" id="notificacion">
+            🔔 <strong>¡Nuevo pedido!</strong>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/cocina.js"></script>
+</body>
+</html>

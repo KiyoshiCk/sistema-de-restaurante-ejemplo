@@ -12,6 +12,8 @@ class AdminApp {
         this.actividad = [];
         this.editandoPlatilloId = null;
         this.pedidoActual = [];
+        this.usuarios = [];
+        this.editandoUsuarioId = null;
         
         this.verificarSesion();
     }
@@ -113,6 +115,10 @@ class AdminApp {
                     <span class="icon">💰</span>
                     Facturación
                 </button>
+                <button class="nav-btn" data-page="usuarios">
+                    <span class="icon">👥</span>
+                    Usuarios
+                </button>
             `;
         } else {
             // Mesero: solo dashboard, mesas y pedidos
@@ -161,6 +167,7 @@ class AdminApp {
         if (this.usuario.rol === 'administrador') {
             this.cargarMenu();
             this.cargarFacturacion();
+            this.cargarUsuarios();
         }
         this.cargarMesas();
         this.cargarPedidos();
@@ -170,19 +177,30 @@ class AdminApp {
 
     async cargarDatos() {
         try {
-            const [menu, mesas, pedidos, facturas, actividad] = await Promise.all([
+            const promesas = [
                 fetch(`${this.API_URL}/menu`).then(r => r.json()),
                 fetch(`${this.API_URL}/mesas`).then(r => r.json()),
                 fetch(`${this.API_URL}/pedidos`).then(r => r.json()),
                 fetch(`${this.API_URL}/facturas`).then(r => r.json()),
                 fetch(`${this.API_URL}/actividad`).then(r => r.json())
-            ]);
+            ];
             
-            this.menu = menu;
-            this.mesas = mesas;
-            this.pedidos = pedidos;
-            this.facturas = facturas;
-            this.actividad = actividad;
+            // Solo cargar usuarios si es administrador
+            if (this.usuario.rol === 'administrador') {
+                promesas.push(fetch(`${this.API_URL}/usuarios`).then(r => r.json()));
+            }
+            
+            const resultados = await Promise.all(promesas);
+            
+            this.menu = resultados[0];
+            this.mesas = resultados[1];
+            this.pedidos = resultados[2];
+            this.facturas = resultados[3];
+            this.actividad = resultados[4];
+            
+            if (this.usuario.rol === 'administrador') {
+                this.usuarios = resultados[5] || [];
+            }
         } catch (error) {
             console.error('Error cargando datos:', error);
         }
@@ -226,6 +244,7 @@ class AdminApp {
         if (page === 'mesas') this.cargarMesas();
         if (page === 'pedidos') this.cargarPedidos();
         if (page === 'facturacion' && this.usuario.rol === 'administrador') this.cargarFacturacion();
+        if (page === 'usuarios' && this.usuario.rol === 'administrador') this.cargarUsuarios();
     }
 
     actualizarFechaHora() {
@@ -306,6 +325,21 @@ class AdminApp {
             document.getElementById('btn-cancelar-mesa')?.addEventListener('click', () => {
                 document.getElementById('modal-mesa').classList.remove('active');
             });
+
+            // Modal de usuarios
+            document.getElementById('btn-agregar-usuario')?.addEventListener('click', () => {
+                this.editandoUsuarioId = null;
+                document.getElementById('modal-usuario-titulo').textContent = 'Nuevo Usuario';
+                document.getElementById('form-usuario').reset();
+                document.getElementById('usuario-password').required = true;
+                document.getElementById('password-help').textContent = '';
+                document.getElementById('grupo-activo').style.display = 'none';
+                document.getElementById('modal-usuario').classList.add('active');
+            });
+
+            document.getElementById('btn-cancelar-usuario')?.addEventListener('click', () => {
+                document.getElementById('modal-usuario').classList.remove('active');
+            });
         }
 
         document.getElementById('btn-nuevo-pedido').addEventListener('click', () => {
@@ -341,6 +375,11 @@ class AdminApp {
             document.getElementById('form-mesa')?.addEventListener('submit', (e) => {
                 e.preventDefault();
                 this.guardarMesa();
+            });
+
+            document.getElementById('form-usuario')?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.guardarUsuario();
             });
 
             document.getElementById('filtro-categoria')?.addEventListener('change', () => this.cargarMenu());
@@ -839,6 +878,156 @@ class AdminApp {
                 </div>
             </div>
         `).join('');
+    }
+
+    // ===== GESTIÓN DE USUARIOS (Solo Admin) =====
+
+    cargarUsuarios() {
+        if (this.usuario.rol !== 'administrador') return;
+        
+        const container = document.getElementById('lista-usuarios');
+        
+        if (!this.usuarios || this.usuarios.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #7f8c8d; grid-column: 1/-1;">No hay usuarios registrados</p>';
+            return;
+        }
+
+        const rolIcono = {
+            'administrador': '👑',
+            'mesero': '👤',
+            'cocinero': '👨‍🍳'
+        };
+
+        const rolNombre = {
+            'administrador': 'Administrador',
+            'mesero': 'Mesero',
+            'cocinero': 'Cocinero'
+        };
+
+        container.innerHTML = this.usuarios.map(usuario => `
+            <div class="usuario-card ${!usuario.activo ? 'inactivo' : ''}">
+                <div class="usuario-header">
+                    <span class="usuario-icono">${rolIcono[usuario.rol] || '👤'}</span>
+                    <div class="usuario-info">
+                        <h3>${usuario.nombre}</h3>
+                        <span class="usuario-username">@${usuario.username}</span>
+                    </div>
+                </div>
+                <div class="usuario-detalles">
+                    <span class="usuario-rol ${usuario.rol}">${rolNombre[usuario.rol]}</span>
+                    <span class="usuario-estado ${usuario.activo ? 'activo' : 'inactivo'}">
+                        ${usuario.activo ? '✅ Activo' : '❌ Inactivo'}
+                    </span>
+                </div>
+                <div class="usuario-acciones">
+                    <button class="btn-secondary" onclick="app.editarUsuario('${usuario._id}')">
+                        ✏️ Editar
+                    </button>
+                    <button class="btn-danger" onclick="app.eliminarUsuario('${usuario._id}')" 
+                        ${usuario._id === this.usuario.id ? 'disabled title="No puedes eliminarte a ti mismo"' : ''}>
+                        🗑️ Eliminar
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    editarUsuario(id) {
+        const usuario = this.usuarios.find(u => u._id === id);
+        if (!usuario) return;
+
+        this.editandoUsuarioId = id;
+        
+        document.getElementById('modal-usuario-titulo').textContent = 'Editar Usuario';
+        document.getElementById('usuario-nombre').value = usuario.nombre;
+        document.getElementById('usuario-username').value = usuario.username;
+        document.getElementById('usuario-password').value = '';
+        document.getElementById('usuario-password').required = false;
+        document.getElementById('password-help').textContent = 'Dejar vacío para mantener la contraseña actual';
+        document.getElementById('usuario-rol').value = usuario.rol;
+        document.getElementById('usuario-activo').value = usuario.activo.toString();
+        document.getElementById('grupo-activo').style.display = 'block';
+        
+        document.getElementById('modal-usuario').classList.add('active');
+    }
+
+    async guardarUsuario() {
+        const nombre = document.getElementById('usuario-nombre').value.trim();
+        const username = document.getElementById('usuario-username').value.trim();
+        const password = document.getElementById('usuario-password').value;
+        const rol = document.getElementById('usuario-rol').value;
+        const activo = document.getElementById('usuario-activo').value === 'true';
+
+        if (!nombre || !username || !rol) {
+            alert('Por favor complete todos los campos requeridos');
+            return;
+        }
+
+        if (!this.editandoUsuarioId && password.length < 6) {
+            alert('La contraseña debe tener al menos 6 caracteres');
+            return;
+        }
+
+        const datosUsuario = { nombre, username, rol, activo };
+        if (password) {
+            datosUsuario.password = password;
+        }
+
+        try {
+            if (this.editandoUsuarioId) {
+                const actualizado = await this.apiRequest(`/usuarios/${this.editandoUsuarioId}`, 'PUT', datosUsuario);
+                if (actualizado.error) {
+                    alert(actualizado.error);
+                    return;
+                }
+                const index = this.usuarios.findIndex(u => u._id === this.editandoUsuarioId);
+                this.usuarios[index] = actualizado;
+                await this.agregarActividad(`Usuario actualizado: ${nombre}`);
+            } else {
+                datosUsuario.password = password;
+                const nuevo = await this.apiRequest('/usuarios', 'POST', datosUsuario);
+                if (nuevo.error) {
+                    alert(nuevo.error);
+                    return;
+                }
+                this.usuarios.push(nuevo);
+                await this.agregarActividad(`Nuevo usuario creado: ${nombre} (${rol})`);
+            }
+
+            document.getElementById('modal-usuario').classList.remove('active');
+            this.cargarUsuarios();
+        } catch (error) {
+            alert('Error al guardar el usuario');
+            console.error(error);
+        }
+    }
+
+    async eliminarUsuario(id) {
+        const usuario = this.usuarios.find(u => u._id === id);
+        
+        if (id === this.usuario.id) {
+            alert('No puedes eliminarte a ti mismo');
+            return;
+        }
+
+        if (!confirm(`¿Estás seguro de eliminar al usuario "${usuario.nombre}"?`)) {
+            return;
+        }
+
+        try {
+            const resultado = await this.apiRequest(`/usuarios/${id}`, 'DELETE');
+            if (resultado.error) {
+                alert(resultado.error);
+                return;
+            }
+            
+            this.usuarios = this.usuarios.filter(u => u._id !== id);
+            await this.agregarActividad(`Usuario eliminado: ${usuario.nombre}`);
+            this.cargarUsuarios();
+        } catch (error) {
+            alert('Error al eliminar el usuario');
+            console.error(error);
+        }
     }
 }
 

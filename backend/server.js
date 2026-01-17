@@ -88,6 +88,14 @@ const actividadSchema = new mongoose.Schema({
     fecha: { type: Date, default: Date.now }
 }, { timestamps: true });
 
+const usuarioSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    nombre: { type: String, required: true },
+    rol: { type: String, enum: ['administrador', 'mesero', 'cocinero'], required: true },
+    activo: { type: Boolean, default: true }
+}, { timestamps: true });
+
 // ============= MODELOS =============
 
 const Menu = mongoose.model('Menu', menuSchema);
@@ -95,6 +103,7 @@ const Mesa = mongoose.model('Mesa', mesaSchema);
 const Pedido = mongoose.model('Pedido', pedidoSchema);
 const Factura = mongoose.model('Factura', facturaSchema);
 const Actividad = mongoose.model('Actividad', actividadSchema);
+const Usuario = mongoose.model('Usuario', usuarioSchema);
 
 // ============= CONEXIÓN A MONGODB =============
 
@@ -168,6 +177,18 @@ const inicializarDatos = async () => {
             ];
             await Mesa.insertMany(mesas);
             console.log('✅ Mesas inicializadas');
+        }
+
+        // Inicializar usuarios por defecto
+        const usuariosCount = await Usuario.countDocuments();
+        if (usuariosCount === 0) {
+            const usuariosPorDefecto = [
+                { username: 'admin', password: 'admin123', nombre: 'Administrador', rol: 'administrador', activo: true },
+                { username: 'mesero', password: 'mesero123', nombre: 'Mesero', rol: 'mesero', activo: true },
+                { username: 'cocinero', password: 'cocinero123', nombre: 'Cocinero', rol: 'cocinero', activo: true }
+            ];
+            await Usuario.insertMany(usuariosPorDefecto);
+            console.log('✅ Usuarios inicializados');
         }
     } catch (error) {
         console.error('Error inicializando datos:', error);
@@ -367,27 +388,112 @@ app.post('/api/actividad', async (req, res) => {
 
 // ============= AUTENTICACIÓN =============
 
-app.post('/api/login', (req, res) => {
-    const usuarios = [
-        { id: 1, username: 'admin', password: 'admin123', rol: 'administrador', nombre: 'Administrador' },
-        { id: 2, username: 'mesero', password: 'mesero123', rol: 'mesero', nombre: 'Mesero' }
-    ];
+app.post('/api/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const usuario = await Usuario.findOne({ username, password, activo: true });
+        
+        if (usuario) {
+            res.json({
+                success: true,
+                usuario: {
+                    id: usuario._id,
+                    username: usuario.username,
+                    rol: usuario.rol,
+                    nombre: usuario.nombre
+                }
+            });
+        } else {
+            res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos' });
+        }
+    } catch (error) {
+        logError('Error en login', error);
+        res.status(500).json({ success: false, message: 'Error del servidor' });
+    }
+});
 
-    const { username, password } = req.body;
-    const usuario = usuarios.find(u => u.username === username && u.password === password);
-    
-    if (usuario) {
-        res.json({
-            success: true,
-            usuario: {
-                id: usuario.id,
-                username: usuario.username,
-                rol: usuario.rol,
-                nombre: usuario.nombre
-            }
-        });
-    } else {
-        res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos' });
+// ============= GESTIÓN DE USUARIOS =============
+
+app.get('/api/usuarios', async (req, res) => {
+    try {
+        const usuarios = await Usuario.find().select('-password');
+        res.json(usuarios);
+    } catch (error) {
+        logError('Error al obtener usuarios', error);
+        res.status(500).json({ error: 'Error al obtener usuarios' });
+    }
+});
+
+app.post('/api/usuarios', async (req, res) => {
+    try {
+        const { username, password, nombre, rol } = req.body;
+        
+        // Verificar si el usuario ya existe
+        const existente = await Usuario.findOne({ username });
+        if (existente) {
+            return res.status(400).json({ error: 'El nombre de usuario ya existe' });
+        }
+        
+        const nuevoUsuario = new Usuario({ username, password, nombre, rol, activo: true });
+        await nuevoUsuario.save();
+        
+        const usuarioSinPassword = nuevoUsuario.toObject();
+        delete usuarioSinPassword.password;
+        
+        res.status(201).json(usuarioSinPassword);
+    } catch (error) {
+        logError('Error al crear usuario', error);
+        res.status(500).json({ error: 'Error al crear usuario' });
+    }
+});
+
+app.put('/api/usuarios/:id', async (req, res) => {
+    try {
+        const { username, nombre, rol, activo, password } = req.body;
+        
+        // Verificar si el username ya existe en otro usuario
+        const existente = await Usuario.findOne({ username, _id: { $ne: req.params.id } });
+        if (existente) {
+            return res.status(400).json({ error: 'El nombre de usuario ya existe' });
+        }
+        
+        const updateData = { username, nombre, rol, activo };
+        if (password) {
+            updateData.password = password;
+        }
+        
+        const usuario = await Usuario.findByIdAndUpdate(req.params.id, updateData, { new: true }).select('-password');
+        
+        if (usuario) {
+            res.json(usuario);
+        } else {
+            res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+    } catch (error) {
+        logError('Error al actualizar usuario', error);
+        res.status(500).json({ error: 'Error al actualizar usuario' });
+    }
+});
+
+app.delete('/api/usuarios/:id', async (req, res) => {
+    try {
+        // No permitir eliminar el último administrador
+        const admins = await Usuario.countDocuments({ rol: 'administrador', activo: true });
+        const usuarioAEliminar = await Usuario.findById(req.params.id);
+        
+        if (usuarioAEliminar?.rol === 'administrador' && admins <= 1) {
+            return res.status(400).json({ error: 'No se puede eliminar el último administrador' });
+        }
+        
+        const usuario = await Usuario.findByIdAndDelete(req.params.id);
+        if (usuario) {
+            res.json({ message: 'Usuario eliminado' });
+        } else {
+            res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+    } catch (error) {
+        logError('Error al eliminar usuario', error);
+        res.status(500).json({ error: 'Error al eliminar usuario' });
     }
 });
 
