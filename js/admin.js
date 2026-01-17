@@ -173,6 +173,52 @@ class AdminApp {
         this.cargarPedidos();
         
         setInterval(() => this.actualizarFechaHora(), 1000);
+        
+        // Auto-refresh de pedidos cada 5 segundos para ver cambios en tiempo real
+        setInterval(() => this.refrescarPedidos(), 5000);
+    }
+
+    // Refrescar solo pedidos sin recargar toda la página
+    async refrescarPedidos() {
+        try {
+            const pedidosActualizados = await fetch(`${this.API_URL}/pedidos`).then(r => r.json());
+            
+            // Solo actualizar si hay cambios
+            const pedidosJSON = JSON.stringify(this.pedidos);
+            const nuevosJSON = JSON.stringify(pedidosActualizados);
+            
+            if (pedidosJSON !== nuevosJSON) {
+                this.pedidos = pedidosActualizados;
+                this.cargarPedidos();
+                this.cargarDashboard();
+                
+                // Notificar cambios con sonido/visual opcional
+                this.notificarCambioPedidos();
+            }
+        } catch (error) {
+            // Silenciar errores de red en auto-refresh
+            console.log('Auto-refresh: sin conexión');
+        }
+    }
+
+    notificarCambioPedidos() {
+        // Mostrar indicador visual de actualización
+        const indicator = document.createElement('div');
+        indicator.className = 'refresh-indicator';
+        indicator.innerHTML = '🔄 Pedidos actualizados';
+        indicator.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #27ae60;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            z-index: 9999;
+            animation: fadeInOut 2s ease-in-out;
+        `;
+        document.body.appendChild(indicator);
+        setTimeout(() => indicator.remove(), 2000);
     }
 
     async cargarDatos() {
