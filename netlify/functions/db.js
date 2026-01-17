@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 // Cachear la conexión para reutilizarla entre invocaciones
 let cachedDb = null;
+let cachedPromise = null;
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -78,8 +79,18 @@ const Usuario = mongoose.models.Usuario || mongoose.model('Usuario', usuarioSche
 // ============= CONEXIÓN =============
 
 async function connectToDatabase() {
+    // Si ya hay conexión activa, reutilizarla
     if (cachedDb && mongoose.connection.readyState === 1) {
         return cachedDb;
+    }
+
+    // Si hay una promesa de conexión en curso, esperarla
+    if (cachedPromise) {
+        await cachedPromise;
+        if (mongoose.connection.readyState === 1) {
+            cachedDb = mongoose.connection;
+            return cachedDb;
+        }
     }
 
     if (!MONGODB_URI) {
@@ -87,9 +98,14 @@ async function connectToDatabase() {
     }
 
     try {
-        await mongoose.connect(MONGODB_URI, {
+        // Crear promesa de conexión con timeout
+        cachedPromise = mongoose.connect(MONGODB_URI, {
             bufferCommands: false,
+            serverSelectionTimeoutMS: 5000,
+            connectTimeoutMS: 10000,
         });
+        
+        await cachedPromise;
         
         cachedDb = mongoose.connection;
         console.log('✅ Conectado a MongoDB Atlas');
@@ -99,7 +115,9 @@ async function connectToDatabase() {
         
         return cachedDb;
     } catch (error) {
-        console.error('❌ Error conectando a MongoDB:', error);
+        cachedPromise = null;
+        cachedDb = null;
+        console.error('❌ Error conectando a MongoDB:', error.message);
         throw error;
     }
 }
