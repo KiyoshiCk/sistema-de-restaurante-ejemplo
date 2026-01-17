@@ -720,13 +720,22 @@ class AdminApp {
                 </div>
                 <div class="pedido-total">Total: $${pedido.total.toFixed(2)}</div>
                 <div class="pedido-actions">
-                    ${pedido.estado === 'pendiente' ? `<button class="btn-primary" onclick="app.cambiarEstadoPedido('${pedido._id}', 'preparando')">Preparar</button>` : ''}
-                    ${pedido.estado === 'preparando' ? `<button class="btn-success" onclick="app.cambiarEstadoPedido('${pedido._id}', 'listo')">Marcar Listo</button>` : ''}
-                    ${pedido.estado === 'listo' ? `<button class="btn-success" onclick="app.entregarPedido('${pedido._id}')">Entregar</button>` : ''}
-                    <button class="btn-danger" onclick="app.cancelarPedido('${pedido._id}')">Cancelar</button>
+                    ${this.puedePreparar() && pedido.estado === 'pendiente' ? `<button class="btn-primary" onclick="app.cambiarEstadoPedido('${pedido._id}', 'preparando')">🔥 Preparar</button>` : ''}
+                    ${this.puedePreparar() && pedido.estado === 'preparando' ? `<button class="btn-success" onclick="app.cambiarEstadoPedido('${pedido._id}', 'listo')">✅ Marcar Listo</button>` : ''}
+                    ${this.puedeEntregar() && pedido.estado === 'listo' ? `<button class="btn-success" onclick="app.entregarPedido('${pedido._id}')">🍽️ Entregar</button>` : ''}
+                    ${this.usuario.rol === 'administrador' ? `<button class="btn-danger" onclick="app.cancelarPedido('${pedido._id}')">❌ Cancelar</button>` : ''}
                 </div>
             </div>
         `).join('');
+    }
+
+    // Permisos por rol
+    puedePreparar() {
+        return this.usuario.rol === 'administrador' || this.usuario.rol === 'cocinero';
+    }
+
+    puedeEntregar() {
+        return this.usuario.rol === 'administrador' || this.usuario.rol === 'mesero';
     }
 
     obtenerTextoEstado(estado) {
