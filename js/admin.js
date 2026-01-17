@@ -425,11 +425,11 @@ class AdminApp {
                     ${platillo.disponible ? '✅ Disponible' : '❌ No disponible'}
                 </div>
                 <div class="menu-item-actions">
-                    <button class="btn-secondary" onclick="app.toggleDisponibilidad(${platillo.id})">
+                    <button class="btn-secondary" onclick="app.toggleDisponibilidad('${platillo._id}')">
                         ${platillo.disponible ? '🚫 Marcar no disponible' : '✅ Marcar disponible'}
                     </button>
-                    <button class="btn-primary" onclick="app.editarPlatillo(${platillo.id})">✏️ Editar</button>
-                    <button class="btn-danger" onclick="app.eliminarPlatillo(${platillo.id})">🗑️ Eliminar</button>
+                    <button class="btn-primary" onclick="app.editarPlatillo('${platillo._id}')">✏️ Editar</button>
+                    <button class="btn-danger" onclick="app.eliminarPlatillo('${platillo._id}')">🗑️ Eliminar</button>
                 </div>
             </div>
         `).join('');
@@ -446,7 +446,7 @@ class AdminApp {
         try {
             if (this.editandoPlatilloId) {
                 const actualizado = await this.apiRequest(`/menu/${this.editandoPlatilloId}`, 'PUT', platillo);
-                const index = this.menu.findIndex(p => p.id === this.editandoPlatilloId);
+                const index = this.menu.findIndex(p => p._id === this.editandoPlatilloId);
                 this.menu[index] = actualizado;
                 await this.agregarActividad(`Platillo actualizado: ${platillo.nombre}`);
             } else {
@@ -464,7 +464,7 @@ class AdminApp {
     }
 
     editarPlatillo(id) {
-        const platillo = this.menu.find(p => p.id === id);
+        const platillo = this.menu.find(p => p._id === id);
         this.editandoPlatilloId = id;
         
         document.getElementById('modal-platillo-titulo').textContent = 'Editar Platillo';
@@ -478,7 +478,7 @@ class AdminApp {
 
     async toggleDisponibilidad(id) {
         try {
-            const platillo = this.menu.find(p => p.id === id);
+            const platillo = this.menu.find(p => p._id === id);
             const nuevoEstado = !platillo.disponible;
             
             const actualizado = await this.apiRequest(`/menu/${id}`, 'PUT', {
@@ -486,27 +486,7 @@ class AdminApp {
                 disponible: nuevoEstado
             });
             
-            const index = this.menu.findIndex(p => p.id === id);
-            this.menu[index] = actualizado;
-            
-            await this.agregarActividad(`${platillo.nombre} marcado como ${nuevoEstado ? 'disponible' : 'no disponible'}`);
-            this.cargarMenu();
-        } catch (error) {
-            alert('Error al cambiar disponibilidad');
-        }
-    }
-
-    async toggleDisponibilidad(id) {
-        try {
-            const platillo = this.menu.find(p => p.id === id);
-            const nuevoEstado = !platillo.disponible;
-            
-            const actualizado = await this.apiRequest(`/menu/${id}`, 'PUT', {
-                ...platillo,
-                disponible: nuevoEstado
-            });
-            
-            const index = this.menu.findIndex(p => p.id === id);
+            const index = this.menu.findIndex(p => p._id === id);
             this.menu[index] = actualizado;
             
             await this.agregarActividad(`${platillo.nombre} marcado como ${nuevoEstado ? 'disponible' : 'no disponible'}`);
@@ -519,9 +499,9 @@ class AdminApp {
     async eliminarPlatillo(id) {
         if (confirm('¿Estás seguro de eliminar este platillo?')) {
             try {
-                const platillo = this.menu.find(p => p.id === id);
+                const platillo = this.menu.find(p => p._id === id);
                 await this.apiRequest(`/menu/${id}`, 'DELETE');
-                this.menu = this.menu.filter(p => p.id !== id);
+                this.menu = this.menu.filter(p => p._id !== id);
                 await this.agregarActividad(`Platillo eliminado: ${platillo.nombre}`);
                 this.cargarMenu();
                 this.cargarDashboard();
@@ -544,11 +524,11 @@ class AdminApp {
         const puedeEliminar = this.usuario.rol === 'administrador';
 
         container.innerHTML = this.mesas.map(mesa => `
-            <div class="mesa-card ${mesa.estado}" onclick="app.toggleMesa(${mesa.id})">
+            <div class="mesa-card ${mesa.estado}" onclick="app.toggleMesa('${mesa._id}')">
                 <div class="mesa-numero">Mesa ${mesa.numero}</div>
                 <span class="mesa-estado ${mesa.estado}">${mesa.estado === 'disponible' ? 'Disponible' : 'Ocupada'}</span>
                 <p>Capacidad: ${mesa.capacidad} personas</p>
-                ${puedeEliminar ? `<button class="btn-danger" onclick="event.stopPropagation(); app.eliminarMesa(${mesa.id})" style="margin-top: 10px; width: 100%;">Eliminar</button>` : ''}
+                ${puedeEliminar ? `<button class="btn-danger" onclick="event.stopPropagation(); app.eliminarMesa('${mesa._id}')" style="margin-top: 10px; width: 100%;">Eliminar</button>` : ''}
             </div>
         `).join('');
     }
@@ -573,7 +553,7 @@ class AdminApp {
     }
 
     async toggleMesa(id) {
-        const mesa = this.mesas.find(m => m.id === id);
+        const mesa = this.mesas.find(m => m._id === id);
         mesa.estado = mesa.estado === 'disponible' ? 'ocupada' : 'disponible';
         
         try {
@@ -591,9 +571,9 @@ class AdminApp {
         
         if (confirm('¿Estás seguro de eliminar esta mesa?')) {
             try {
-                const mesa = this.mesas.find(m => m.id === id);
+                const mesa = this.mesas.find(m => m._id === id);
                 await this.apiRequest(`/mesas/${id}`, 'DELETE');
-                this.mesas = this.mesas.filter(m => m.id !== id);
+                this.mesas = this.mesas.filter(m => m._id !== id);
                 await this.agregarActividad(`Mesa ${mesa.numero} eliminada`);
                 this.cargarMesas();
                 this.cargarDashboard();
@@ -610,12 +590,12 @@ class AdminApp {
         const mesasDisponibles = this.mesas.filter(m => m.estado === 'disponible');
         
         selectMesa.innerHTML = mesasDisponibles.length > 0 
-            ? mesasDisponibles.map(m => `<option value="${m.id}">Mesa ${m.numero}</option>`).join('')
+            ? mesasDisponibles.map(m => `<option value="${m._id}">Mesa ${m.numero}</option>`).join('')
             : '<option value="">No hay mesas disponibles</option>';
 
         const menuContainer = document.getElementById('menu-pedido');
         menuContainer.innerHTML = this.menu.map(platillo => `
-            <div class="menu-pedido-item" onclick="app.agregarItemPedido(${platillo.id})">
+            <div class="menu-pedido-item" onclick="app.agregarItemPedido('${platillo._id}')">
                 <h4>${platillo.nombre}</h4>
                 <div class="precio">$${platillo.precio.toFixed(2)}</div>
             </div>
@@ -625,7 +605,7 @@ class AdminApp {
     }
 
     agregarItemPedido(platilloId) {
-        const platillo = this.menu.find(p => p.id === platilloId);
+        const platillo = this.menu.find(p => p._id === platilloId);
         const itemExistente = this.pedidoActual.find(i => i.platilloId === platilloId);
 
         if (itemExistente) {
@@ -678,14 +658,14 @@ class AdminApp {
     }
 
     async guardarPedido() {
-        const mesaId = parseInt(document.getElementById('pedido-mesa').value);
+        const mesaId = document.getElementById('pedido-mesa').value;
         
         if (!mesaId || this.pedidoActual.length === 0) {
             alert('Debes seleccionar una mesa y al menos un platillo');
             return;
         }
 
-        const mesa = this.mesas.find(m => m.id === mesaId);
+        const mesa = this.mesas.find(m => m._id === mesaId);
         const total = this.pedidoActual.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
         const pedido = {
@@ -740,10 +720,10 @@ class AdminApp {
                 </div>
                 <div class="pedido-total">Total: $${pedido.total.toFixed(2)}</div>
                 <div class="pedido-actions">
-                    ${pedido.estado === 'pendiente' ? `<button class="btn-primary" onclick="app.cambiarEstadoPedido(${pedido.id}, 'preparando')">Preparar</button>` : ''}
-                    ${pedido.estado === 'preparando' ? `<button class="btn-success" onclick="app.cambiarEstadoPedido(${pedido.id}, 'listo')">Marcar Listo</button>` : ''}
-                    ${pedido.estado === 'listo' ? `<button class="btn-success" onclick="app.entregarPedido(${pedido.id})">Entregar</button>` : ''}
-                    <button class="btn-danger" onclick="app.cancelarPedido(${pedido.id})">Cancelar</button>
+                    ${pedido.estado === 'pendiente' ? `<button class="btn-primary" onclick="app.cambiarEstadoPedido('${pedido._id}', 'preparando')">Preparar</button>` : ''}
+                    ${pedido.estado === 'preparando' ? `<button class="btn-success" onclick="app.cambiarEstadoPedido('${pedido._id}', 'listo')">Marcar Listo</button>` : ''}
+                    ${pedido.estado === 'listo' ? `<button class="btn-success" onclick="app.entregarPedido('${pedido._id}')">Entregar</button>` : ''}
+                    <button class="btn-danger" onclick="app.cancelarPedido('${pedido._id}')">Cancelar</button>
                 </div>
             </div>
         `).join('');
@@ -760,7 +740,7 @@ class AdminApp {
     }
 
     async cambiarEstadoPedido(pedidoId, nuevoEstado) {
-        const pedido = this.pedidos.find(p => p.id === pedidoId);
+        const pedido = this.pedidos.find(p => p._id === pedidoId);
         pedido.estado = nuevoEstado;
         
         try {
@@ -774,11 +754,11 @@ class AdminApp {
     }
 
     async entregarPedido(pedidoId) {
-        const pedido = this.pedidos.find(p => p.id === pedidoId);
+        const pedido = this.pedidos.find(p => p._id === pedidoId);
         pedido.estado = 'entregado';
         
         const factura = {
-            pedidoId: pedido.id,
+            pedidoId: pedido._id,
             mesaNumero: pedido.mesaNumero,
             items: pedido.items,
             total: pedido.total,
@@ -790,10 +770,10 @@ class AdminApp {
             const nuevaFactura = await this.apiRequest('/facturas', 'POST', factura);
             this.facturas.push(nuevaFactura);
             
-            const mesa = this.mesas.find(m => m.id === pedido.mesaId);
+            const mesa = this.mesas.find(m => m._id === pedido.mesaId);
             if (mesa) {
                 mesa.estado = 'disponible';
-                await this.apiRequest(`/mesas/${mesa.id}`, 'PUT', mesa);
+                await this.apiRequest(`/mesas/${mesa._id}`, 'PUT', mesa);
             }
             
             await this.agregarActividad(`Pedido entregado - Mesa ${pedido.mesaNumero} - $${pedido.total.toFixed(2)}`);
@@ -810,16 +790,16 @@ class AdminApp {
     async cancelarPedido(pedidoId) {
         if (confirm('¿Estás seguro de cancelar este pedido?')) {
             try {
-                const pedido = this.pedidos.find(p => p.id === pedidoId);
-                const mesa = this.mesas.find(m => m.id === pedido.mesaId);
+                const pedido = this.pedidos.find(p => p._id === pedidoId);
+                const mesa = this.mesas.find(m => m._id === pedido.mesaId);
                 
                 if (mesa) {
                     mesa.estado = 'disponible';
-                    await this.apiRequest(`/mesas/${mesa.id}`, 'PUT', mesa);
+                    await this.apiRequest(`/mesas/${mesa._id}`, 'PUT', mesa);
                 }
                 
                 await this.apiRequest(`/pedidos/${pedidoId}`, 'DELETE');
-                this.pedidos = this.pedidos.filter(p => p.id !== pedidoId);
+                this.pedidos = this.pedidos.filter(p => p._id !== pedidoId);
                 
                 await this.agregarActividad(`Pedido cancelado - Mesa ${pedido.mesaNumero}`);
                 
