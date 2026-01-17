@@ -1,4 +1,4 @@
-const { connectToDatabase, Menu, Mesa, Pedido, Factura, Actividad } = require('./db');
+const { connectToDatabase, Menu, Mesa, Pedido, Factura, Actividad, Usuario } = require('./db');
 
 // Headers CORS
 const headers = {
@@ -143,19 +143,14 @@ exports.handler = async (event, context) => {
 
         // ============= LOGIN =============
         if (resource === 'login' && method === 'POST') {
-            const usuarios = [
-                { id: 1, username: 'admin', password: 'admin123', rol: 'administrador', nombre: 'Administrador' },
-                { id: 2, username: 'mesero', password: 'mesero123', rol: 'mesero', nombre: 'Mesero' }
-            ];
-
             const { username, password } = body;
-            const usuario = usuarios.find(u => u.username === username && u.password === password);
+            const usuario = await Usuario.findOne({ username, password, activo: true });
             
             if (usuario) {
                 return respond(200, {
                     success: true,
                     usuario: {
-                        id: usuario.id,
+                        id: usuario._id,
                         username: usuario.username,
                         rol: usuario.rol,
                         nombre: usuario.nombre
@@ -163,6 +158,48 @@ exports.handler = async (event, context) => {
                 });
             }
             return respond(401, { success: false, message: 'Usuario o contraseña incorrectos' });
+        }
+
+        // ============= GESTIÓN DE USUARIOS =============
+        if (resource === 'usuarios') {
+            if (method === 'GET' && !id) {
+                const usuarios = await Usuario.find().select('-password');
+                return respond(200, usuarios);
+            }
+            if (method === 'POST') {
+                const { username, password, nombre, rol } = body;
+                const existente = await Usuario.findOne({ username });
+                if (existente) {
+                    return respond(400, { error: 'El nombre de usuario ya existe' });
+                }
+                const nuevoUsuario = new Usuario({ username, password, nombre, rol, activo: true });
+                await nuevoUsuario.save();
+                const usuarioSinPassword = nuevoUsuario.toObject();
+                delete usuarioSinPassword.password;
+                return respond(201, usuarioSinPassword);
+            }
+            if (method === 'PUT' && id) {
+                const { username, nombre, rol, activo, password } = body;
+                const existente = await Usuario.findOne({ username, _id: { $ne: id } });
+                if (existente) {
+                    return respond(400, { error: 'El nombre de usuario ya existe' });
+                }
+                const updateData = { username, nombre, rol, activo };
+                if (password) updateData.password = password;
+                const usuario = await Usuario.findByIdAndUpdate(id, updateData, { new: true }).select('-password');
+                if (usuario) return respond(200, usuario);
+                return respond(404, { error: 'Usuario no encontrado' });
+            }
+            if (method === 'DELETE' && id) {
+                const admins = await Usuario.countDocuments({ rol: 'administrador', activo: true });
+                const usuarioAEliminar = await Usuario.findById(id);
+                if (usuarioAEliminar?.rol === 'administrador' && admins <= 1) {
+                    return respond(400, { error: 'No se puede eliminar el último administrador' });
+                }
+                const usuario = await Usuario.findByIdAndDelete(id);
+                if (usuario) return respond(200, { message: 'Usuario eliminado' });
+                return respond(404, { error: 'Usuario no encontrado' });
+            }
         }
 
         // ============= BACKUP =============

@@ -57,6 +57,14 @@ const actividadSchema = new mongoose.Schema({
     fecha: { type: Date, default: Date.now }
 }, { timestamps: true });
 
+const usuarioSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    nombre: { type: String, required: true },
+    rol: { type: String, enum: ['administrador', 'mesero', 'cocinero'], required: true },
+    activo: { type: Boolean, default: true }
+}, { timestamps: true });
+
 // ============= MODELOS =============
 // Usar modelos existentes o crear nuevos
 
@@ -65,6 +73,7 @@ const Mesa = mongoose.models.Mesa || mongoose.model('Mesa', mesaSchema);
 const Pedido = mongoose.models.Pedido || mongoose.model('Pedido', pedidoSchema);
 const Factura = mongoose.models.Factura || mongoose.model('Factura', facturaSchema);
 const Actividad = mongoose.models.Actividad || mongoose.model('Actividad', actividadSchema);
+const Usuario = mongoose.models.Usuario || mongoose.model('Usuario', usuarioSchema);
 
 // ============= CONEXIÓN =============
 
@@ -147,6 +156,18 @@ const inicializarDatos = async () => {
             await Mesa.insertMany(mesas);
             console.log('✅ Mesas inicializadas');
         }
+
+        // Inicializar usuarios por defecto
+        const usuariosCount = await Usuario.countDocuments();
+        if (usuariosCount === 0) {
+            const usuariosPorDefecto = [
+                { username: 'admin', password: 'admin123', nombre: 'Administrador', rol: 'administrador', activo: true },
+                { username: 'mesero', password: 'mesero123', nombre: 'Mesero', rol: 'mesero', activo: true },
+                { username: 'cocinero', password: 'cocinero123', nombre: 'Cocinero', rol: 'cocinero', activo: true }
+            ];
+            await Usuario.insertMany(usuariosPorDefecto);
+            console.log('✅ Usuarios inicializados');
+        }
     } catch (error) {
         console.error('Error inicializando datos:', error);
     }
@@ -158,5 +179,6 @@ module.exports = {
     Mesa,
     Pedido,
     Factura,
-    Actividad
+    Actividad,
+    Usuario
 };
