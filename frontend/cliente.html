@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Digital Restaurante | Carta Online</title>
+    <meta name="description" content="Menú digital del restaurante. Platos, bebidas y postres. ¡Rápido, moderno y accesible!">
+    <meta name="keywords" content="restaurante, menú digital, carta online, comida, cerca de mí, postres, bebidas, platos, barrio, local">
+    <meta property="og:title" content="Menú Digital Restaurante" />
+    <meta property="og:description" content="Descubre el menú digital del restaurante. Platos, bebidas y postres para todos los gustos." />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_PE" />
+    <meta name="robots" content="index, follow">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="cliente-view">
+    <!-- Hero Section con Parallax -->
+    <section class="parallax-hero">
+        <div class="parallax-bg"></div>
+        <div class="parallax-overlay"></div>
+        
+        <!-- Elementos flotantes decorativos -->
+        <div class="floating-elements">
+            <span class="float-item" style="animation-delay: 0s;">🍕</span>
+            <span class="float-item" style="animation-delay: 1.5s;">🍔</span>
+            <span class="float-item" style="animation-delay: 3s;">🍷</span>
+            <span class="float-item" style="animation-delay: 0.8s;">🍰</span>
+            <span class="float-item" style="animation-delay: 2.2s;">🥗</span>
+            <span class="float-item" style="animation-delay: 4s;">☕</span>
+        </div>
+        
+        <div class="parallax-content">
+            <h1 class="parallax-title">🍽️ Nuestro Menú</h1>
+            <p class="parallax-subtitle">Disfruta de nuestros deliciosos platillos en Moche, Perú</p>
+            <a href="#menu-section" class="scroll-indicator">
+                <span>Ver Menú</span>
+                <div class="scroll-arrow"></div>
+            </a>
+        </div>
+        <a href="admin.html" class="btn-admin-access">👤 Acceso Personal</a>
+    </section>
+
+    <div class="container-cliente" id="menu-section">
+
+        <h2 class="menu-digital-title">Menú Digital del Restaurante</h2>
+        <div class="menu-cliente-categorias" role="navigation" aria-label="Categorías del menú">
+            <button class="categoria-btn active" data-categoria="">Todos</button>
+            <button class="categoria-btn" data-categoria="Entradas">Entradas</button>
+            <button class="categoria-btn" data-categoria="Platos Fuertes">Platos Fuertes</button>
+            <button class="categoria-btn" data-categoria="Postres">Postres</button>
+            <button class="categoria-btn" data-categoria="Bebidas">Bebidas</button>
+        </div>
+
+        <div class="menu-cliente-grid" id="menu-cliente-grid">
+            <p style="text-align: center; color: #7f8c8d; grid-column: 1/-1; padding: 40px;">Cargando menú...</p>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/ubicacion-cliente.js"></script>
+    <script src="js/cliente.js"></script>
+</body>
+</html>

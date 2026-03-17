@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍳 Cocina - Sistema de Restaurante</title>
+    <title>🍳 Cocina - Restaurante en Moche, Perú</title>
+    <meta name="description" content="Panel de cocina del restaurante en Moche, Perú. Gestión de pedidos y platillos en tiempo real.">
+    <meta name="keywords" content="restaurante, cocina, Moche, Perú, pedidos, platillos, barrio, local">
+    <meta property="og:title" content="Cocina - Restaurante en Moche, Perú" />
+    <meta property="og:description" content="Panel de cocina para restaurante en Moche, Perú. Control de pedidos y platillos en tiempo real." />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_PE" />
+    <meta name="robots" content="noindex, follow">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
     <link rel="stylesheet" href="css/styles.css">
     <style>
         /* Estilos específicos para la vista de cocina */
@@ -66,8 +74,16 @@
             padding: 20px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             border-left: 5px solid #3498db;
-            transition: all 0.3s;
-            animation: slideIn 0.3s ease;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .pedido-cocina-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .pedido-cocina-card.nuevo {
+            animation: slideIn 0.4s ease;
         }
 
         @keyframes slideIn {
@@ -122,12 +138,19 @@
         .tiempo-pedido.urgente {
             color: #e74c3c;
             font-weight: bold;
-            animation: pulse 1s infinite;
+            background: rgba(231, 76, 60, 0.1);
+            padding: 4px 8px;
+            border-radius: 5px;
+        }
+
+        /* Animación sutil solo cuando se detecta urgente por primera vez */
+        .tiempo-pedido.urgente-nuevo {
+            animation: pulse 1.5s ease 3;
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            0%, 100% { opacity: 1; background: rgba(231, 76, 60, 0.1); }
+            50% { opacity: 0.7; background: rgba(231, 76, 60, 0.25); }
         }
 
         .items-cocina-lista {
@@ -159,6 +182,15 @@
             flex: 1;
             margin-left: 15px;
             font-weight: 500;
+        }
+
+        .item-cocina-comentario {
+            font-size: 0.9em;
+            color: #e67e22;
+            font-style: italic;
+            padding: 5px 0 8px 50px;
+            border-bottom: 1px dashed #eee;
+            margin-bottom: 5px;
         }
 
         .estado-badge {
@@ -441,7 +473,8 @@
     <div id="login-screen" class="login-cocina">
         <div class="login-container">
             <h1>🍳 Panel de Cocina</h1>
-            <form id="login-form">
+            <h2 class="sr-only">Panel de cocina para restaurante en Moche, Perú</h2>
+            <form id="login-form" aria-label="Formulario de acceso a cocina">
                 <div class="form-group">
                     <label>Usuario:</label>
                     <input type="text" id="login-username" required autofocus>
@@ -464,7 +497,8 @@
     <div id="cocina-screen" style="display: none;">
         <div class="cocina-container">
             <header class="cocina-header">
-                <h1>🍳 Panel de Cocina</h1>
+                <h1>🍳 Panel de Cocina - Moche, Perú</h1>
+                <h2 class="sr-only">Gestión de pedidos en cocina para restaurante en Moche, Perú</h2>
                 <div class="user-info">
                     <span id="fecha-hora"></span>
                     <span id="user-name"></span>
@@ -508,6 +542,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/cocina.js"></script>
 </body>

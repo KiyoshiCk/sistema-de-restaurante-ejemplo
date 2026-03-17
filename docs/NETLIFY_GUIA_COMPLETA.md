@@ -238,3 +238,9 @@ Tu sistema está desplegado en la nube y accesible desde cualquier lugar.
 - 🗄️ MongoDB: Cloud Atlas
 
 ¡Éxito! 🚀
+
+$env:MONGODB_URI="mongodb+srv://admin:admin123@cluster0.yqpcckd.mongodb.net/restaurante?retryWrites=true&w=majority"; node server.js
+iniciar mongo
+
+cd "f:\sistema de restaurante\backend"
+$env:MONGODB_URI="mongodb+srv://admin:admin123@cluster0.yqpcckd.mongodb.net/restaurante?retryWrites=true&w=majority"; node server.js

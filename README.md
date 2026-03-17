@@ -2,6 +2,27 @@
 
 Sistema completo para gestionar restaurantes con menú, mesas, pedidos y facturación.
 
+## � Estructura del Proyecto
+
+```
+├── frontend/           # Interfaz de usuario
+│   ├── css/           # Estilos
+│   ├── js/            # JavaScript del cliente
+│   ├── index.html     # Página principal
+│   ├── admin.html     # Panel de administración
+│   ├── cliente.html   # Vista del cliente
+│   └── cocina.html    # Vista de cocina
+├── backend/           # Servidor Node.js + Express
+│   ├── server.js      # API REST
+│   └── package.json
+├── netlify/           # Funciones serverless para Netlify
+│   └── functions/
+├── docs/              # Documentación adicional
+├── docker-compose.yml
+├── Dockerfile
+└── README.md
+```
+
 ## 🚀 Características
 
 - **Dashboard**: Estadísticas en tiempo real
@@ -9,6 +30,27 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 - **Gestión de Mesas**: Control de disponibilidad y ocupación
 - **Sistema de Pedidos**: Flujo completo desde toma hasta entrega
 - **Facturación**: Historial y reportes de ventas
+
+## 👥 Roles de Usuario
+
+| Usuario | Contraseña | Rol |
+|---------|------------|-----|
+| admin | admin123 | Administrador |
+| mesero | mesero123 | Mesero |
+| cocinero | cocinero123 | Cocinero |
+
+## 🛠️ Desarrollo Local
+
+### Backend
+```bash
+cd backend
+npm install
+$env:MONGODB_URI="mongodb+srv://admin:admin123@cluster0.yqpcckd.mongodb.net/restaurante"
+node server.js
+```
+
+### Frontend
+Abrir `frontend/index.html` con Live Server en el puerto 5500.
 
 ## 📦 Instalación con Docker
 
@@ -46,7 +88,7 @@ docker rm sistema-restaurante
 
 Una vez iniciado el contenedor, abre tu navegador en:
 
-**http://localhost:8080**
+**http://localhost:8081**
 
 ## 💻 Uso sin Docker
 

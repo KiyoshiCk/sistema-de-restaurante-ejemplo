@@ -29,7 +29,8 @@ const pedidoSchema = new mongoose.Schema({
         id: mongoose.Schema.Types.ObjectId,
         nombre: String,
         cantidad: Number,
-        precio: Number
+        precio: Number,
+        comentario: String
     }],
     estado: String,
     total: Number,

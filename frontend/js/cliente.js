@@ -12,6 +12,62 @@ class ClienteApp {
         await this.cargarMenu();
         this.setupFiltros();
         this.mostrarMenu();
+        this.setupParallax();
+        this.setupSmoothScroll();
+    }
+
+    // ============= PARALLAX EFFECT =============
+    setupParallax() {
+        const parallaxContent = document.querySelector('.parallax-content');
+        const floatingElements = document.querySelectorAll('.float-item');
+        const parallaxHero = document.querySelector('.parallax-hero');
+        
+        if (!parallaxHero) return;
+
+        let ticking = false;
+
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    const scrolled = window.pageYOffset;
+                    const heroHeight = parallaxHero.offsetHeight;
+                    
+                    // Solo aplicar cuando el hero es visible
+                    if (scrolled < heroHeight) {
+                        // Parallax en el contenido (se mueve más rápido hacia arriba)
+                        if (parallaxContent) {
+                            parallaxContent.style.transform = `translateY(${scrolled * 0.4}px)`;
+                            parallaxContent.style.opacity = 1 - (scrolled / heroHeight);
+                        }
+                        
+                        // Parallax en elementos flotantes (diferentes velocidades)
+                        floatingElements.forEach((el, index) => {
+                            const speed = 0.2 + (index * 0.1);
+                            el.style.transform = `translateY(${scrolled * speed}px)`;
+                        });
+                    }
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+    }
+
+    setupSmoothScroll() {
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = anchor.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
     }
 
     async cargarMenu() {
