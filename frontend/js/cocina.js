@@ -92,8 +92,10 @@ class CocinaApp {
 
     verificarSesion() {
         const usuarioGuardado = localStorage.getItem('usuario_cocina');
-        if (usuarioGuardado) {
+        const tokenGuardado = localStorage.getItem('token_cocina');
+        if (usuarioGuardado && tokenGuardado) {
             this.usuario = JSON.parse(usuarioGuardado);
+            this.token = tokenGuardado;
             if (this.usuario.rol === 'cocinero') {
                 this.mostrarPanel();
             } else {
@@ -129,7 +131,9 @@ class CocinaApp {
 
             if (data.success && data.usuario.rol === 'cocinero') {
                 this.usuario = data.usuario;
+                this.token = data.token;
                 localStorage.setItem('usuario_cocina', JSON.stringify(this.usuario));
+                localStorage.setItem('token_cocina', data.token);
                 this.mostrarPanel();
             } else if (data.success && data.usuario.rol !== 'cocinero') {
                 alert('⚠️ Este panel es solo para cocineros. Use el panel de administración para otros roles.');
@@ -144,7 +148,9 @@ class CocinaApp {
 
     logout() {
         localStorage.removeItem('usuario_cocina');
+        localStorage.removeItem('token_cocina');
         this.usuario = null;
+        this.token = null;
         location.reload();
     }
 
@@ -198,7 +204,10 @@ class CocinaApp {
 
     async cargarPedidos() {
         try {
-            const response = await fetch(`${this.API_URL}/pedidos`);
+            const response = await fetch(`${this.API_URL}/pedidos`, {
+                headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+            if (response.status === 401 || response.status === 403) { this.logout(); return; }
             const pedidos = await response.json();
             
             // Filtrar solo pedidos activos (no entregados ni cancelados)
@@ -459,7 +468,10 @@ class CocinaApp {
         try {
             const response = await fetch(`${this.API_URL}/pedidos/${pedidoId}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
                 body: JSON.stringify({ estado: nuevoEstado })
             });
             
@@ -488,7 +500,10 @@ class CocinaApp {
         try {
             await fetch(`${this.API_URL}/actividad`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
                 body: JSON.stringify({ 
                     descripcion: `🍳 ${this.usuario.nombre}: ${accion}` 
                 })

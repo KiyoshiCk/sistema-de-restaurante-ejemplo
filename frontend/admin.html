@@ -33,9 +33,6 @@
                 </div>
                 <button type="submit" class="btn-primary btn-login">Iniciar Sesión</button>
                 <div class="login-help">
-                    <p><strong>Usuarios de prueba:</strong></p>
-                    <p>👤 Mesero: <code>mesero</code> / <code>mesero123</code></p>
-                    <p>👑 Admin: <code>admin</code> / <code>admin123</code></p>
                     <p>👨‍🍳 Cocinero: <a href="cocina.html">Ir al panel de cocina</a></p>
                 </div>
             </form>
@@ -270,6 +267,8 @@
                             <option value="">Todas las categorías</option>
                             <option value="Carnes">Carnes</option>
                             <option value="Verduras">Verduras</option>
+                            <option value="Frutas">Frutas</option>
+                            <option value="Granos">Granos</option>
                             <option value="Lácteos">Lácteos</option>
                             <option value="Bebidas">Bebidas</option>
                             <option value="Condimentos">Condimentos</option>
@@ -342,6 +341,20 @@
                     <div class="form-group">
                         <label>Descripción:</label>
                         <textarea id="platillo-descripcion"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Foto del platillo (opcional):</label>
+                        <div class="imagen-upload-container">
+                            <input type="file" id="platillo-imagen" accept="image/*" class="input-file-hidden">
+                            <label for="platillo-imagen" class="btn-upload">
+                                📷 Seleccionar imagen
+                            </label>
+                            <span id="imagen-nombre" class="imagen-nombre">Sin imagen seleccionada</span>
+                        </div>
+                        <div id="imagen-preview" class="imagen-preview">
+                            <img id="imagen-preview-img" src="" alt="Preview">
+                            <button type="button" id="btn-quitar-imagen" class="btn-quitar-imagen">✕ Quitar imagen</button>
+                        </div>
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn-primary">Guardar</button>
@@ -496,6 +509,8 @@
                             <select id="inventario-categoria" required>
                                 <option value="Carnes">🥩 Carnes</option>
                                 <option value="Verduras">🥬 Verduras</option>
+                                <option value="Frutas">🍎 Frutas</option>
+                                <option value="Granos">🌾 Granos</option>
                                 <option value="Lácteos">🧀 Lácteos</option>
                                 <option value="Bebidas">🥤 Bebidas</option>
                                 <option value="Condimentos">🧂 Condimentos</option>

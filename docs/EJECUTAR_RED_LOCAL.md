@@ -8,7 +8,6 @@ Esta guía te permite ejecutar el sistema y acceder desde cualquier dispositivo 
 
 - Node.js instalado
 - Python instalado (para servidor frontend)
-- Conexión a internet (para MongoDB Atlas)
 
 ---
 
@@ -57,13 +56,7 @@ Abre PowerShell y ejecuta:
 cd "f:\sistema de restaurante\backend"
 ```
 
-### Opción A: Ejecución normal (se cierra al cerrar terminal)
-
-```powershell
-$env:MONGODB_URI="mongodb+srv://admin:admin123@cluster0.yqpcckd.mongodb.net/restaurante?retryWrites=true&w=majority"; node server.js
-```
-
-### Opción B: Ejecución en segundo plano (recomendado)
+### Ejecución en segundo plano (recomendado)
 
 ```powershell
 Start-Process -NoNewWindow -FilePath "node" -ArgumentList "server.js" -WorkingDirectory "f:\sistema de restaurante\backend"
@@ -157,7 +150,7 @@ Get-Process python | Stop-Process -Force
 Crea un archivo `iniciar.ps1` y pega esto:
 
 ```powershell
-# Iniciar Backend
+# Iniciar Backend (SQLite, sin configuración adicional)
 Write-Host "🚀 Iniciando Backend..." -ForegroundColor Green
 Start-Process -NoNewWindow -FilePath "node" -ArgumentList "server.js" -WorkingDirectory "f:\sistema de restaurante\backend"
 Start-Sleep -Seconds 3
@@ -215,10 +208,6 @@ powershell -ExecutionPolicy Bypass -File iniciar.ps1
 Set-NetConnectionProfile -InterfaceAlias "Wi-Fi" -NetworkCategory Private
 ```
 
-### Error: "MongoDB connection failed"
-
-Verificar que tienes conexión a internet y que la URI de MongoDB es correcta.
-
 ---
 
 ## 📊 Arquitectura
@@ -232,17 +221,12 @@ Verificar que tienes conexión a internet y que la URI de MongoDB es correcta.
 │  │              │     │  Otro PC     │              │
 │  │ Backend:3000 │◄────│              │              │
 │  │ Frontend:5500│◄────│  Navegador   │              │
+│  │ SQLite (DB)  │     │              │              │
 │  └──────────────┘     └──────────────┘              │
-│         │                                           │
-└─────────│───────────────────────────────────────────┘
-          │
-          ▼ (Internet)
-┌─────────────────────────────────────────────────────┐
-│              MONGODB ATLAS (Nube)                   │
-│         Base de datos del restaurante               │
-└─────────────────────────────────────────────────────┘
+│                                                      │
+└──────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📅 Última actualización: Enero 2026
+## 📅 Última actualización: Marzo 2026

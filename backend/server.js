@@ -1,11 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const mongoose = require('mongoose');
+const Database = require('better-sqlite3');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const http = require('http');
 const { Server } = require('socket.io');
+const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,26 +19,37 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI;
-const JWT_SECRET = process.env.JWT_SECRET || 'restaurante_secret_key_2024';
 
-const IS_RENDER = Boolean(process.env.RENDER)
-    || Boolean(process.env.RENDER_SERVICE_ID)
-    || Boolean(process.env.RENDER_EXTERNAL_URL)
-    || Boolean(process.env.RENDER_INSTANCE_ID);
-const IS_PRODUCTION = (process.env.NODE_ENV || '').toLowerCase() === 'production';
-
-if (!MONGODB_URI) {
-    if (IS_RENDER || IS_PRODUCTION) {
-        console.error('❌ Falta configurar MONGODB_URI en variables de entorno (Render/producción).');
-        process.exit(1);
+// JWT_SECRET: usar variable de entorno o generar uno seguro por instalación
+const JWT_SECRET_PATH = path.join(__dirname, '.jwt_secret');
+const getJwtSecret = () => {
+    if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+    try {
+        const fs = require('fs');
+        if (fs.existsSync(JWT_SECRET_PATH)) {
+            return fs.readFileSync(JWT_SECRET_PATH, 'utf8').trim();
+        }
+        const secret = crypto.randomBytes(64).toString('hex');
+        fs.writeFileSync(JWT_SECRET_PATH, secret);
+        return secret;
+    } catch {
+        return crypto.randomBytes(64).toString('hex');
     }
+};
+const JWT_SECRET = getJwtSecret();
 
-    console.warn('⚠️ MONGODB_URI no está configurada. Usando MongoDB local por defecto.');
-}
+// ============= BASE DE DATOS SQLite =============
+const DB_PATH = path.join(__dirname, 'restaurante.db');
+const db = new Database(DB_PATH);
 
-const EFFECTIVE_MONGODB_URI = MONGODB_URI || 'mongodb://127.0.0.1:27017/restaurante';
-console.log(`🔧 MongoDB URI: ${MONGODB_URI ? 'desde env (MONGODB_URI)' : 'fallback local (solo desarrollo)'}`);
+// Habilitar WAL mode para mejor rendimiento
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
+
+console.log(`📦 Base de datos SQLite: ${DB_PATH}`);
+
+// Helper: generar ID único
+const generarId = () => crypto.randomBytes(12).toString('hex');
 
 const logError = (context, error) => {
     console.error(`❌ ${context}:`, error);
@@ -47,110 +60,156 @@ app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
     credentials: true
 }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' }));
 
+// ============= MIDDLEWARE DE AUTENTICACIÓN =============
+const verificarToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
-// ============= SCHEMAS =============
-// Configuración general del restaurante (incluye ubicación)
-const configSchema = new mongoose.Schema({
-    ciudad: { type: String, default: 'Moche' },
-    barrio: { type: String, default: '' },
-    direccion: { type: String, default: '' },
-    lat: { type: Number, default: -8.1713 },
-    lng: { type: Number, default: -78.5143 },
-}, { timestamps: true });
+    if (!token) {
+        return res.status(401).json({ error: 'Token de autenticación requerido' });
+    }
 
-
-const menuSchema = new mongoose.Schema({
-    nombre: String,
-    categoria: String,
-    precio: Number,
-    descripcion: String,
-    disponible: Boolean,
-    icono: String
-}, { timestamps: true });
-
-const mesaSchema = new mongoose.Schema({
-    numero: Number,
-    capacidad: Number,
-    estado: String
-}, { timestamps: true });
-
-const pedidoSchema = new mongoose.Schema({
-    mesaId: mongoose.Schema.Types.ObjectId,
-    mesaNumero: Number,
-    numeroMesa: Number, // Legacy field
-    items: [{
-        id: mongoose.Schema.Types.ObjectId,
-        nombre: String,
-        cantidad: Number,
-        precio: Number,
-        comentario: String
-    }],
-    estado: String,
-    total: Number,
-    fecha: { type: Date, default: Date.now }
-}, { timestamps: true });
-
-const facturaSchema = new mongoose.Schema({
-    numeroFactura: String,
-    numeroMesa: mongoose.Schema.Types.Mixed, // Puede ser Number o String
-    items: [{
-        nombre: String,
-        cantidad: Number,
-        precio: Number,
-        comentario: String
-    }],
-    subtotal: Number,
-    impuesto: Number,
-    total: Number,
-    metodoPago: String,
-    fecha: { type: Date, default: Date.now }
-}, { timestamps: true });
-
-const actividadSchema = new mongoose.Schema({
-    tipo: String,
-    descripcion: String,
-    usuario: String,
-    fecha: { type: Date, default: Date.now }
-}, { timestamps: true });
-
-const usuarioSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    nombre: { type: String, required: true },
-    rol: { type: String, enum: ['administrador', 'mesero', 'cocinero'], required: true },
-    activo: { type: Boolean, default: true }
-}, { timestamps: true });
-
-const inventarioSchema = new mongoose.Schema({
-    nombre: { type: String, required: true },
-    categoria: { type: String, default: 'General' },
-    cantidad: { type: Number, default: 0 },
-    unidad: { type: String, default: 'unidades' },
-    stockMinimo: { type: Number, default: 10 },
-    costo: { type: Number, default: 0 }
-}, { timestamps: true });
-
-// ============= MODELOS =============
-
-
-const Menu = mongoose.model('Menu', menuSchema);
-const Mesa = mongoose.model('Mesa', mesaSchema);
-const Pedido = mongoose.model('Pedido', pedidoSchema);
-const Factura = mongoose.model('Factura', facturaSchema);
-const Actividad = mongoose.model('Actividad', actividadSchema);
-const Usuario = mongoose.model('Usuario', usuarioSchema);
-const Inventario = mongoose.model('Inventario', inventarioSchema);
-const Config = mongoose.model('Config', configSchema);
-// ============= CONFIGURACIÓN DEL RESTAURANTE (UBICACIÓN) =============
-
-// Obtener configuración (solo 1 documento)
-app.get('/api/config', async (req, res) => {
     try {
-        let config = await Config.findOne();
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.usuario = decoded;
+        next();
+    } catch (error) {
+        return res.status(403).json({ error: 'Token inválido o expirado' });
+    }
+};
+
+// Middleware para verificar rol de administrador
+const soloAdmin = (req, res, next) => {
+    if (req.usuario.rol !== 'administrador') {
+        return res.status(403).json({ error: 'Acceso solo para administradores' });
+    }
+    next();
+};
+
+// ============= CREAR TABLAS =============
+db.exec(`
+    CREATE TABLE IF NOT EXISTS config (
+        _id TEXT PRIMARY KEY,
+        ciudad TEXT DEFAULT 'Moche',
+        barrio TEXT DEFAULT '',
+        direccion TEXT DEFAULT '',
+        lat REAL DEFAULT -8.1713,
+        lng REAL DEFAULT -78.5143,
+        createdAt TEXT DEFAULT (datetime('now')),
+        updatedAt TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS menu (
+        _id TEXT PRIMARY KEY,
+        nombre TEXT,
+        categoria TEXT,
+        precio REAL,
+        descripcion TEXT,
+        disponible INTEGER DEFAULT 1,
+        icono TEXT,
+        imagen TEXT,
+        createdAt TEXT DEFAULT (datetime('now')),
+        updatedAt TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS mesas (
+        _id TEXT PRIMARY KEY,
+        numero INTEGER,
+        capacidad INTEGER,
+        estado TEXT DEFAULT 'disponible',
+        createdAt TEXT DEFAULT (datetime('now')),
+        updatedAt TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS pedidos (
+        _id TEXT PRIMARY KEY,
+        mesaId TEXT,
+        mesaNumero INTEGER,
+        numeroMesa INTEGER,
+        items TEXT DEFAULT '[]',
+        estado TEXT,
+        total REAL,
+        fecha TEXT DEFAULT (datetime('now')),
+        createdAt TEXT DEFAULT (datetime('now')),
+        updatedAt TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS facturas (
+        _id TEXT PRIMARY KEY,
+        numeroFactura TEXT,
+        numeroMesa TEXT,
+        items TEXT DEFAULT '[]',
+        subtotal REAL,
+        impuesto REAL,
+        total REAL,
+        metodoPago TEXT,
+        fecha TEXT DEFAULT (datetime('now')),
+        createdAt TEXT DEFAULT (datetime('now')),
+        updatedAt TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS actividad (
+        _id TEXT PRIMARY KEY,
+        tipo TEXT,
+        descripcion TEXT,
+        usuario TEXT,
+        fecha TEXT DEFAULT (datetime('now')),
+        createdAt TEXT DEFAULT (datetime('now')),
+        updatedAt TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS usuarios (
+        _id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        nombre TEXT NOT NULL,
+        rol TEXT CHECK(rol IN ('administrador', 'mesero', 'cocinero')) NOT NULL,
+        activo INTEGER DEFAULT 1,
+        createdAt TEXT DEFAULT (datetime('now')),
+        updatedAt TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS inventario (
+        _id TEXT PRIMARY KEY,
+        nombre TEXT NOT NULL,
+        categoria TEXT DEFAULT 'General',
+        cantidad REAL DEFAULT 0,
+        unidad TEXT DEFAULT 'unidades',
+        stockMinimo REAL DEFAULT 10,
+        costo REAL DEFAULT 0,
+        createdAt TEXT DEFAULT (datetime('now')),
+        updatedAt TEXT DEFAULT (datetime('now'))
+    );
+`);
+
+// ============= HELPERS =============
+const formatRow = (row, jsonFields = []) => {
+    if (!row) return null;
+    const obj = { ...row };
+    for (const field of jsonFields) {
+        if (obj[field] && typeof obj[field] === 'string') {
+            try { obj[field] = JSON.parse(obj[field]); } catch { /* mantener string */ }
+        }
+    }
+    if ('disponible' in obj) obj.disponible = Boolean(obj.disponible);
+    if ('activo' in obj) obj.activo = Boolean(obj.activo);
+    return obj;
+};
+
+const formatRows = (rows, jsonFields = []) => rows.map(r => formatRow(r, jsonFields));
+const now = () => new Date().toISOString();
+
+// ============= CONFIGURACIÓN DEL RESTAURANTE =============
+
+app.get('/api/config', (req, res) => {
+    try {
+        let config = db.prepare('SELECT * FROM config LIMIT 1').get();
         if (!config) {
-            config = await Config.create({});
+            const _id = generarId();
+            db.prepare('INSERT INTO config (_id) VALUES (?)').run(_id);
+            config = db.prepare('SELECT * FROM config WHERE _id = ?').get(_id);
         }
         res.json(config);
     } catch (error) {
@@ -159,103 +218,102 @@ app.get('/api/config', async (req, res) => {
     }
 });
 
-// Actualizar configuración (ubicación)
-app.put('/api/config', async (req, res) => {
+app.put('/api/config', verificarToken, soloAdmin, (req, res) => {
     try {
-        let config = await Config.findOne();
+        let config = db.prepare('SELECT * FROM config LIMIT 1').get();
         if (!config) {
-            config = await Config.create({});
+            const _id = generarId();
+            db.prepare('INSERT INTO config (_id) VALUES (?)').run(_id);
+            config = db.prepare('SELECT * FROM config WHERE _id = ?').get(_id);
         }
-        config.ciudad = req.body.ciudad || config.ciudad;
-        config.barrio = req.body.barrio || config.barrio;
-        config.direccion = req.body.direccion || config.direccion;
-        if (typeof req.body.lat === 'number') config.lat = req.body.lat;
-        if (typeof req.body.lng === 'number') config.lng = req.body.lng;
-        await config.save();
-        res.json(config);
+        const ciudad = req.body.ciudad || config.ciudad;
+        const barrio = req.body.barrio || config.barrio;
+        const direccion = req.body.direccion || config.direccion;
+        const lat = typeof req.body.lat === 'number' ? req.body.lat : config.lat;
+        const lng = typeof req.body.lng === 'number' ? req.body.lng : config.lng;
+
+        db.prepare('UPDATE config SET ciudad=?, barrio=?, direccion=?, lat=?, lng=?, updatedAt=? WHERE _id=?')
+            .run(ciudad, barrio, direccion, lat, lng, now(), config._id);
+
+        const updated = db.prepare('SELECT * FROM config WHERE _id = ?').get(config._id);
+        res.json(updated);
     } catch (error) {
         logError('Error al actualizar configuración', error);
         res.status(500).json({ error: 'Error al actualizar configuración' });
     }
 });
 
-// ============= SOCKET.IO EVENTOS =============
+// ============= SOCKET.IO =============
 
 io.on('connection', (socket) => {
     console.log('🔌 Cliente conectado:', socket.id);
 
-    // Unirse a una sala específica (admin, cocina, mesero)
     socket.on('join-room', (room) => {
         socket.join(room);
         console.log(`📢 ${socket.id} se unió a la sala: ${room}`);
     });
 
-    // Desconexión
     socket.on('disconnect', () => {
         console.log('🔌 Cliente desconectado:', socket.id);
     });
 });
 
-// Función helper para emitir eventos a todos los clientes
 const emitirEvento = (evento, datos) => {
     io.emit(evento, datos);
 };
 
-// ============= CONEXIÓN A MONGODB =============
-
-mongoose.connect(EFFECTIVE_MONGODB_URI)
-.then(async () => {
-    console.log('✅ Conectado a MongoDB');
-    
-    // Inicializar datos de ejemplo si la BD está vacía
-    await inicializarDatos();
-
-    // Iniciar servidor solo cuando la BD está lista
-    server.listen(PORT, '0.0.0.0', () => {
-        console.log(`🚀 Backend corriendo en puerto ${PORT}`);
-        console.log('📦 Base de datos: MongoDB');
-        console.log('🔌 WebSocket activo');
-    });
-})
-.catch(err => {
-    console.error('❌ Error conectando a MongoDB:', err);
-    process.exit(1);
-});
+// ============= MIGRACIONES =============
+try {
+    const columnas = db.prepare("PRAGMA table_info(menu)").all();
+    if (!columnas.find(c => c.name === 'imagen')) {
+        db.exec('ALTER TABLE menu ADD COLUMN imagen TEXT');
+        console.log('✅ Columna imagen agregada a menu');
+    }
+} catch (e) {
+    console.log('Migración imagen ya aplicada o no necesaria');
+}
 
 // ============= INICIALIZACIÓN DE DATOS =============
 
-const inicializarDatos = async () => {
+const inicializarDatos = () => {
     try {
-        // Verificar si ya hay datos
-        const menuCount = await Menu.countDocuments();
-        const mesasCount = await Mesa.countDocuments();
+        const menuCount = db.prepare('SELECT COUNT(*) as count FROM menu').get().count;
+        const mesasCount = db.prepare('SELECT COUNT(*) as count FROM mesas').get().count;
+        const usuariosCount = db.prepare('SELECT COUNT(*) as count FROM usuarios').get().count;
 
         if (menuCount === 0) {
             const menuPeruano = [
-                { nombre: "Ceviche de Pescado", categoria: "Entradas", precio: 35, descripcion: "Pescado fresco marinado en limón con ají limo, cebolla morada y camote", disponible: true, icono: "🐟" },
-                { nombre: "Causa Limeña", categoria: "Entradas", precio: 22, descripcion: "Papa amarilla con limón, ají amarillo, rellena de atún o pollo", disponible: true, icono: "🥔" },
-                { nombre: "Anticuchos de Corazón", categoria: "Entradas", precio: 28, descripcion: "Brochetas de corazón de res marinadas en especias peruanas", disponible: true, icono: "🍢" },
-                { nombre: "Tequeños", categoria: "Entradas", precio: 18, descripcion: "Deditos de masa rellenos de queso fresco", disponible: true, icono: "🧀" },
-                { nombre: "Lomo Saltado", categoria: "Platos Fuertes", precio: 42, descripcion: "Tiras de lomo fino salteado con cebolla, tomate, papas fritas y arroz", disponible: true, icono: "🥩" },
-                { nombre: "Ají de Gallina", categoria: "Platos Fuertes", precio: 38, descripcion: "Pollo deshilachado en crema de ají amarillo con papas y aceitunas", disponible: true, icono: "🍗" },
-                { nombre: "Arroz con Pollo", categoria: "Platos Fuertes", precio: 32, descripcion: "Arroz verde con cilantro acompañado de pollo y papa a la huancaína", disponible: true, icono: "🍚" },
-                { nombre: "Tacu Tacu con Lomo", categoria: "Platos Fuertes", precio: 45, descripcion: "Mezcla de arroz y frijoles frita con lomo saltado encima", disponible: true, icono: "🍛" },
-                { nombre: "Seco de Carne", categoria: "Platos Fuertes", precio: 40, descripcion: "Carne guisada con cilantro, frijoles y arroz", disponible: true, icono: "🥘" },
-                { nombre: "Pescado a lo Macho", categoria: "Platos Fuertes", precio: 48, descripcion: "Pescado frito con salsa de mariscos cremosa", disponible: true, icono: "🐠" },
-                { nombre: "Tallarín Saltado", categoria: "Platos Fuertes", precio: 35, descripcion: "Fideos salteados con carne o pollo al estilo chifa peruano", disponible: true, icono: "🍝" },
-                { nombre: "Chicharrón de Pescado", categoria: "Platos Fuertes", precio: 38, descripcion: "Trozos de pescado frito crocante con yuca y salsa criolla", disponible: true, icono: "🍤" },
-                { nombre: "Inca Kola", categoria: "Bebidas", precio: 8, descripcion: "La bebida nacional del Perú, sabor único", disponible: true, icono: "🥤" },
-                { nombre: "Chicha Morada", categoria: "Bebidas", precio: 10, descripcion: "Refresco de maíz morado con especias y frutas", disponible: true, icono: "🍹" },
-                { nombre: "Pisco Sour", categoria: "Bebidas", precio: 25, descripcion: "Cóctel de pisco, limón, jarabe y clara de huevo", disponible: true, icono: "🍸" },
-                { nombre: "Emoliente", categoria: "Bebidas", precio: 7, descripcion: "Bebida caliente de hierbas medicinales", disponible: true, icono: "☕" },
-                { nombre: "Limonada Frozen", categoria: "Bebidas", precio: 12, descripcion: "Limonada peruana bien helada", disponible: true, icono: "🍋" },
-                { nombre: "Suspiro Limeño", categoria: "Postres", precio: 18, descripcion: "Manjar blanco con merengue de oporto", disponible: true, icono: "🍮" },
-                { nombre: "Mazamorra Morada", categoria: "Postres", precio: 15, descripcion: "Postre de maíz morado con frutas", disponible: true, icono: "🍇" },
-                { nombre: "Picarones", categoria: "Postres", precio: 16, descripcion: "Buñuelos de zapallo con miel de chancaca", disponible: true, icono: "🍩" },
-                { nombre: "Alfajores", categoria: "Postres", precio: 12, descripcion: "Galletas rellenas de manjar blanco", disponible: true, icono: "🍪" },
-                { nombre: "Arroz con Leche", categoria: "Postres", precio: 14, descripcion: "Arroz cremoso con leche, canela y pasas", disponible: true, icono: "🍚" }
+                { nombre: "Ceviche de Pescado", categoria: "Entradas", precio: 35, descripcion: "Pescado fresco marinado en limón con ají limo, cebolla morada y camote", disponible: 1, icono: "🐟" },
+                { nombre: "Causa Limeña", categoria: "Entradas", precio: 22, descripcion: "Papa amarilla con limón, ají amarillo, rellena de atún o pollo", disponible: 1, icono: "🥔" },
+                { nombre: "Anticuchos de Corazón", categoria: "Entradas", precio: 28, descripcion: "Brochetas de corazón de res marinadas en especias peruanas", disponible: 1, icono: "🍢" },
+                { nombre: "Tequeños", categoria: "Entradas", precio: 18, descripcion: "Deditos de masa rellenos de queso fresco", disponible: 1, icono: "🧀" },
+                { nombre: "Lomo Saltado", categoria: "Platos Fuertes", precio: 42, descripcion: "Tiras de lomo fino salteado con cebolla, tomate, papas fritas y arroz", disponible: 1, icono: "🥩" },
+                { nombre: "Ají de Gallina", categoria: "Platos Fuertes", precio: 38, descripcion: "Pollo deshilachado en crema de ají amarillo con papas y aceitunas", disponible: 1, icono: "🍗" },
+                { nombre: "Arroz con Pollo", categoria: "Platos Fuertes", precio: 32, descripcion: "Arroz verde con cilantro acompañado de pollo y papa a la huancaína", disponible: 1, icono: "🍚" },
+                { nombre: "Tacu Tacu con Lomo", categoria: "Platos Fuertes", precio: 45, descripcion: "Mezcla de arroz y frijoles frita con lomo saltado encima", disponible: 1, icono: "🍛" },
+                { nombre: "Seco de Carne", categoria: "Platos Fuertes", precio: 40, descripcion: "Carne guisada con cilantro, frijoles y arroz", disponible: 1, icono: "🥘" },
+                { nombre: "Pescado a lo Macho", categoria: "Platos Fuertes", precio: 48, descripcion: "Pescado frito con salsa de mariscos cremosa", disponible: 1, icono: "🐠" },
+                { nombre: "Tallarín Saltado", categoria: "Platos Fuertes", precio: 35, descripcion: "Fideos salteados con carne o pollo al estilo chifa peruano", disponible: 1, icono: "🍝" },
+                { nombre: "Chicharrón de Pescado", categoria: "Platos Fuertes", precio: 38, descripcion: "Trozos de pescado frito crocante con yuca y salsa criolla", disponible: 1, icono: "🍤" },
+                { nombre: "Inca Kola", categoria: "Bebidas", precio: 8, descripcion: "La bebida nacional del Perú, sabor único", disponible: 1, icono: "🥤" },
+                { nombre: "Chicha Morada", categoria: "Bebidas", precio: 10, descripcion: "Refresco de maíz morado con especias y frutas", disponible: 1, icono: "🍹" },
+                { nombre: "Pisco Sour", categoria: "Bebidas", precio: 25, descripcion: "Cóctel de pisco, limón, jarabe y clara de huevo", disponible: 1, icono: "🍸" },
+                { nombre: "Emoliente", categoria: "Bebidas", precio: 7, descripcion: "Bebida caliente de hierbas medicinales", disponible: 1, icono: "☕" },
+                { nombre: "Limonada Frozen", categoria: "Bebidas", precio: 12, descripcion: "Limonada peruana bien helada", disponible: 1, icono: "🍋" },
+                { nombre: "Suspiro Limeño", categoria: "Postres", precio: 18, descripcion: "Manjar blanco con merengue de oporto", disponible: 1, icono: "🍮" },
+                { nombre: "Mazamorra Morada", categoria: "Postres", precio: 15, descripcion: "Postre de maíz morado con frutas", disponible: 1, icono: "🍇" },
+                { nombre: "Picarones", categoria: "Postres", precio: 16, descripcion: "Buñuelos de zapallo con miel de chancaca", disponible: 1, icono: "🍩" },
+                { nombre: "Alfajores", categoria: "Postres", precio: 12, descripcion: "Galletas rellenas de manjar blanco", disponible: 1, icono: "🍪" },
+                { nombre: "Arroz con Leche", categoria: "Postres", precio: 14, descripcion: "Arroz cremoso con leche, canela y pasas", disponible: 1, icono: "🍚" }
             ];
-            await Menu.insertMany(menuPeruano);
+
+            const insertMenu = db.prepare('INSERT INTO menu (_id, nombre, categoria, precio, descripcion, disponible, icono) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            const insertManyMenu = db.transaction((items) => {
+                for (const item of items) {
+                    insertMenu.run(generarId(), item.nombre, item.categoria, item.precio, item.descripcion, item.disponible, item.icono);
+                }
+            });
+            insertManyMenu(menuPeruano);
             console.log('✅ Menú peruano inicializado');
         }
 
@@ -272,20 +330,29 @@ const inicializarDatos = async () => {
                 { numero: 9, capacidad: 6, estado: "disponible" },
                 { numero: 10, capacidad: 2, estado: "disponible" }
             ];
-            await Mesa.insertMany(mesas);
+            const insertMesa = db.prepare('INSERT INTO mesas (_id, numero, capacidad, estado) VALUES (?, ?, ?, ?)');
+            const insertManyMesas = db.transaction((items) => {
+                for (const item of items) {
+                    insertMesa.run(generarId(), item.numero, item.capacidad, item.estado);
+                }
+            });
+            insertManyMesas(mesas);
             console.log('✅ Mesas inicializadas');
         }
 
-        // Inicializar usuarios por defecto
-        const usuariosCount = await Usuario.countDocuments();
         if (usuariosCount === 0) {
             const usuariosPorDefecto = [
-                { username: 'admin', password: 'admin123', nombre: 'Administrador', rol: 'administrador', activo: true },
-                { username: 'mesero', password: 'mesero123', nombre: 'Mesero', rol: 'mesero', activo: true },
-                { username: 'cocinero', password: 'cocinero123', nombre: 'Cocinero', rol: 'cocinero', activo: true }
+                { username: 'admin', password: 'admin123', nombre: 'Administrador', rol: 'administrador', activo: 1 },
+                { username: 'mesero', password: 'mesero123', nombre: 'Mesero', rol: 'mesero', activo: 1 },
+                { username: 'cocinero', password: 'cocinero123', nombre: 'Cocinero', rol: 'cocinero', activo: 1 }
             ];
-            await Usuario.insertMany(usuariosPorDefecto);
-            console.log('✅ Usuarios inicializados');
+            const insertUsuario = db.prepare('INSERT INTO usuarios (_id, username, password, nombre, rol, activo) VALUES (?, ?, ?, ?, ?, ?)');
+            // Hashear contraseñas antes de guardar
+            for (const item of usuariosPorDefecto) {
+                const hashedPassword = bcrypt.hashSync(item.password, 10);
+                insertUsuario.run(generarId(), item.username, hashedPassword, item.nombre, item.rol, item.activo);
+            }
+            console.log('✅ Usuarios inicializados (contraseñas hasheadas)');
         }
     } catch (error) {
         console.error('Error inicializando datos:', error);
@@ -294,45 +361,69 @@ const inicializarDatos = async () => {
 
 // ============= MENÚ =============
 
-app.get('/api/menu', async (req, res) => {
+app.get('/api/menu', (req, res) => {
     try {
-        const menu = await Menu.find();
-        res.json(menu);
+        const menu = db.prepare('SELECT * FROM menu').all();
+        res.json(formatRows(menu));
     } catch (error) {
         logError('Error al obtener menú', error);
         res.status(500).json({ error: 'Error al obtener menú' });
     }
 });
 
-app.post('/api/menu', async (req, res) => {
+app.post('/api/menu', verificarToken, (req, res) => {
     try {
-        const nuevoPlatillo = new Menu(req.body);
-        await nuevoPlatillo.save();
-        res.status(201).json(nuevoPlatillo);
+        const { nombre, categoria, precio, descripcion, disponible, icono, imagen } = req.body;
+
+        // Validación de datos
+        if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es requerido' });
+        if (!categoria) return res.status(400).json({ error: 'La categoría es requerida' });
+        if (precio === undefined || precio === null || precio < 0) return res.status(400).json({ error: 'El precio debe ser un número positivo' });
+
+        const _id = generarId();
+        db.prepare('INSERT INTO menu (_id, nombre, categoria, precio, descripcion, disponible, icono, imagen) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+            .run(_id, nombre, categoria, precio, descripcion, disponible ? 1 : 0, icono, imagen || null);
+        const platillo = db.prepare('SELECT * FROM menu WHERE _id = ?').get(_id);
+        res.status(201).json(formatRow(platillo));
     } catch (error) {
         logError('Error al crear platillo', error);
         res.status(500).json({ error: 'Error al crear platillo' });
     }
 });
 
-app.put('/api/menu/:id', async (req, res) => {
+app.put('/api/menu/:id', verificarToken, (req, res) => {
     try {
-        const platillo = await Menu.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (platillo) {
-            res.json(platillo);
-        } else {
-            res.status(404).json({ error: 'Platillo no encontrado' });
-        }
+        const { nombre, categoria, precio, descripcion, disponible, icono, imagen } = req.body;
+        const existing = db.prepare('SELECT * FROM menu WHERE _id = ?').get(req.params.id);
+        if (!existing) return res.status(404).json({ error: 'Platillo no encontrado' });
+
+        // Validación
+        if (precio !== undefined && precio < 0) return res.status(400).json({ error: 'El precio debe ser positivo' });
+
+        db.prepare('UPDATE menu SET nombre=?, categoria=?, precio=?, descripcion=?, disponible=?, icono=?, imagen=?, updatedAt=? WHERE _id=?')
+            .run(
+                nombre ?? existing.nombre,
+                categoria ?? existing.categoria,
+                precio ?? existing.precio,
+                descripcion ?? existing.descripcion,
+                disponible !== undefined ? (disponible ? 1 : 0) : existing.disponible,
+                icono ?? existing.icono,
+                imagen !== undefined ? imagen : existing.imagen,
+                now(),
+                req.params.id
+            );
+        const platillo = db.prepare('SELECT * FROM menu WHERE _id = ?').get(req.params.id);
+        res.json(formatRow(platillo));
     } catch (error) {
         logError('Error al actualizar platillo', error);
         res.status(500).json({ error: 'Error al actualizar platillo' });
     }
 });
 
-app.delete('/api/menu/:id', async (req, res) => {
+app.delete('/api/menu/:id', verificarToken, (req, res) => {
     try {
-        const platillo = await Menu.findByIdAndDelete(req.params.id);
-        if (platillo) {
+        const result = db.prepare('DELETE FROM menu WHERE _id = ?').run(req.params.id);
+        if (result.changes > 0) {
             res.json({ message: 'Platillo eliminado' });
         } else {
             res.status(404).json({ error: 'Platillo no encontrado' });
@@ -345,9 +436,9 @@ app.delete('/api/menu/:id', async (req, res) => {
 
 // ============= MESAS =============
 
-app.get('/api/mesas', async (req, res) => {
+app.get('/api/mesas', verificarToken, (req, res) => {
     try {
-        const mesas = await Mesa.find();
+        const mesas = db.prepare('SELECT * FROM mesas').all();
         res.json(mesas);
     } catch (error) {
         logError('Error al obtener mesas', error);
@@ -355,37 +446,49 @@ app.get('/api/mesas', async (req, res) => {
     }
 });
 
-app.post('/api/mesas', async (req, res) => {
+app.post('/api/mesas', verificarToken, (req, res) => {
     try {
-        const nuevaMesa = new Mesa(req.body);
-        await nuevaMesa.save();
-        res.status(201).json(nuevaMesa);
+        const { numero, capacidad, estado } = req.body;
+
+        // Validación
+        if (!numero || numero < 1) return res.status(400).json({ error: 'Número de mesa inválido' });
+        if (!capacidad || capacidad < 1) return res.status(400).json({ error: 'Capacidad inválida' });
+        const duplicada = db.prepare('SELECT _id FROM mesas WHERE numero = ?').get(numero);
+        if (duplicada) return res.status(400).json({ error: 'Ya existe una mesa con ese número' });
+
+        const _id = generarId();
+        db.prepare('INSERT INTO mesas (_id, numero, capacidad, estado) VALUES (?, ?, ?, ?)')
+            .run(_id, numero, capacidad, estado || 'disponible');
+        const mesa = db.prepare('SELECT * FROM mesas WHERE _id = ?').get(_id);
+        res.status(201).json(mesa);
     } catch (error) {
         logError('Error al crear mesa', error);
         res.status(500).json({ error: 'Error al crear mesa' });
     }
 });
 
-app.put('/api/mesas/:id', async (req, res) => {
+app.put('/api/mesas/:id', verificarToken, (req, res) => {
     try {
-        const mesa = await Mesa.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (mesa) {
-            // Emitir evento de mesa actualizada
-            emitirEvento('mesa-actualizada', mesa);
-            res.json(mesa);
-        } else {
-            res.status(404).json({ error: 'Mesa no encontrada' });
-        }
+        const existing = db.prepare('SELECT * FROM mesas WHERE _id = ?').get(req.params.id);
+        if (!existing) return res.status(404).json({ error: 'Mesa no encontrada' });
+
+        const { numero, capacidad, estado } = req.body;
+        db.prepare('UPDATE mesas SET numero=?, capacidad=?, estado=?, updatedAt=? WHERE _id=?')
+            .run(numero ?? existing.numero, capacidad ?? existing.capacidad, estado ?? existing.estado, now(), req.params.id);
+
+        const mesa = db.prepare('SELECT * FROM mesas WHERE _id = ?').get(req.params.id);
+        emitirEvento('mesa-actualizada', mesa);
+        res.json(mesa);
     } catch (error) {
         logError('Error al actualizar mesa', error);
         res.status(500).json({ error: 'Error al actualizar mesa' });
     }
 });
 
-app.delete('/api/mesas/:id', async (req, res) => {
+app.delete('/api/mesas/:id', verificarToken, (req, res) => {
     try {
-        const mesa = await Mesa.findByIdAndDelete(req.params.id);
-        if (mesa) {
+        const result = db.prepare('DELETE FROM mesas WHERE _id = ?').run(req.params.id);
+        if (result.changes > 0) {
             res.json({ message: 'Mesa eliminada' });
         } else {
             res.status(404).json({ error: 'Mesa no encontrada' });
@@ -397,63 +500,69 @@ app.delete('/api/mesas/:id', async (req, res) => {
 
 // ============= PEDIDOS =============
 
-app.get('/api/pedidos', async (req, res) => {
+app.get('/api/pedidos', verificarToken, (req, res) => {
     try {
-        const pedidos = await Pedido.find();
-        res.json(pedidos);
+        const pedidos = db.prepare('SELECT * FROM pedidos').all();
+        res.json(formatRows(pedidos, ['items']));
     } catch (error) {
         logError('Error al obtener pedidos', error);
         res.status(500).json({ error: 'Error al obtener pedidos' });
     }
 });
 
-app.post('/api/pedidos', async (req, res) => {
+app.post('/api/pedidos', verificarToken, (req, res) => {
     try {
+        const _id = generarId();
         const pedidoData = { ...req.body };
-        // Asegurar compatibilidad: guardar en ambos campos
-        if (pedidoData.mesaNumero && !pedidoData.numeroMesa) {
-            pedidoData.numeroMesa = pedidoData.mesaNumero;
-        }
-        if (pedidoData.numeroMesa && !pedidoData.mesaNumero) {
-            pedidoData.mesaNumero = pedidoData.numeroMesa;
-        }
-        const nuevoPedido = new Pedido(pedidoData);
-        await nuevoPedido.save();
-        
-        // Emitir evento de nuevo pedido
-        emitirEvento('nuevo-pedido', nuevoPedido);
-        
-        res.status(201).json(nuevoPedido);
+        if (pedidoData.mesaNumero && !pedidoData.numeroMesa) pedidoData.numeroMesa = pedidoData.mesaNumero;
+        if (pedidoData.numeroMesa && !pedidoData.mesaNumero) pedidoData.mesaNumero = pedidoData.numeroMesa;
+
+        const items = JSON.stringify(pedidoData.items || []);
+        db.prepare('INSERT INTO pedidos (_id, mesaId, mesaNumero, numeroMesa, items, estado, total) VALUES (?, ?, ?, ?, ?, ?, ?)')
+            .run(_id, pedidoData.mesaId || null, pedidoData.mesaNumero || null, pedidoData.numeroMesa || null, items, pedidoData.estado, pedidoData.total);
+
+        const pedido = formatRow(db.prepare('SELECT * FROM pedidos WHERE _id = ?').get(_id), ['items']);
+        emitirEvento('nuevo-pedido', pedido);
+        res.status(201).json(pedido);
     } catch (error) {
         res.status(500).json({ error: 'Error al crear pedido' });
     }
 });
 
-app.put('/api/pedidos/:id', async (req, res) => {
+app.put('/api/pedidos/:id', verificarToken, (req, res) => {
     try {
-        const pedido = await Pedido.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (pedido) {
-            // Emitir evento de pedido actualizado
-            emitirEvento('pedido-actualizado', pedido);
-            res.json(pedido);
-        } else {
-            res.status(404).json({ error: 'Pedido no encontrado' });
-        }
+        const existing = db.prepare('SELECT * FROM pedidos WHERE _id = ?').get(req.params.id);
+        if (!existing) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+        const items = req.body.items ? JSON.stringify(req.body.items) : existing.items;
+        db.prepare('UPDATE pedidos SET mesaId=?, mesaNumero=?, numeroMesa=?, items=?, estado=?, total=?, updatedAt=? WHERE _id=?')
+            .run(
+                req.body.mesaId ?? existing.mesaId,
+                req.body.mesaNumero ?? existing.mesaNumero,
+                req.body.numeroMesa ?? existing.numeroMesa,
+                items,
+                req.body.estado ?? existing.estado,
+                req.body.total ?? existing.total,
+                now(),
+                req.params.id
+            );
+
+        const pedido = formatRow(db.prepare('SELECT * FROM pedidos WHERE _id = ?').get(req.params.id), ['items']);
+        emitirEvento('pedido-actualizado', pedido);
+        res.json(pedido);
     } catch (error) {
         res.status(500).json({ error: 'Error al actualizar pedido' });
     }
 });
 
-app.delete('/api/pedidos/:id', async (req, res) => {
+app.delete('/api/pedidos/:id', verificarToken, (req, res) => {
     try {
-        const pedido = await Pedido.findByIdAndDelete(req.params.id);
-        if (pedido) {
-            // Emitir evento de pedido eliminado
-            emitirEvento('pedido-eliminado', { _id: req.params.id, mesaNumero: pedido.mesaNumero || pedido.numeroMesa });
-            res.json({ message: 'Pedido eliminado' });
-        } else {
-            res.status(404).json({ error: 'Pedido no encontrado' });
-        }
+        const pedido = db.prepare('SELECT * FROM pedidos WHERE _id = ?').get(req.params.id);
+        if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+        db.prepare('DELETE FROM pedidos WHERE _id = ?').run(req.params.id);
+        emitirEvento('pedido-eliminado', { _id: req.params.id, mesaNumero: pedido.mesaNumero || pedido.numeroMesa });
+        res.json({ message: 'Pedido eliminado' });
     } catch (error) {
         res.status(500).json({ error: 'Error al eliminar pedido' });
     }
@@ -461,22 +570,25 @@ app.delete('/api/pedidos/:id', async (req, res) => {
 
 // ============= FACTURAS =============
 
-app.get('/api/facturas', async (req, res) => {
+app.get('/api/facturas', verificarToken, (req, res) => {
     try {
-        const facturas = await Factura.find();
-        res.json(facturas);
+        const facturas = db.prepare('SELECT * FROM facturas').all();
+        res.json(formatRows(facturas, ['items']));
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener facturas' });
     }
 });
 
-app.post('/api/facturas', async (req, res) => {
+app.post('/api/facturas', verificarToken, (req, res) => {
     try {
-        const nuevaFactura = new Factura(req.body);
-        await nuevaFactura.save();
-        // Emitir evento de nueva factura
-        emitirEvento('nueva-factura', nuevaFactura);
-        res.status(201).json(nuevaFactura);
+        const _id = generarId();
+        const { numeroFactura, numeroMesa, items, subtotal, impuesto, total, metodoPago } = req.body;
+        db.prepare('INSERT INTO facturas (_id, numeroFactura, numeroMesa, items, subtotal, impuesto, total, metodoPago) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+            .run(_id, numeroFactura, String(numeroMesa), JSON.stringify(items || []), subtotal, impuesto, total, metodoPago);
+
+        const factura = formatRow(db.prepare('SELECT * FROM facturas WHERE _id = ?').get(_id), ['items']);
+        emitirEvento('nueva-factura', factura);
+        res.status(201).json(factura);
     } catch (error) {
         console.error('Error al crear factura:', error);
         res.status(500).json({ error: 'Error al crear factura', details: error.message });
@@ -485,42 +597,56 @@ app.post('/api/facturas', async (req, res) => {
 
 // ============= INVENTARIO =============
 
-app.get('/api/inventario', async (req, res) => {
+app.get('/api/inventario', verificarToken, (req, res) => {
     try {
-        const inventario = await Inventario.find().sort({ categoria: 1, nombre: 1 });
+        const inventario = db.prepare('SELECT * FROM inventario ORDER BY categoria ASC, nombre ASC').all();
         res.json(inventario);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener inventario' });
     }
 });
 
-app.post('/api/inventario', async (req, res) => {
+app.post('/api/inventario', verificarToken, soloAdmin, (req, res) => {
     try {
-        const nuevoItem = new Inventario(req.body);
-        await nuevoItem.save();
-        res.status(201).json(nuevoItem);
+        const _id = generarId();
+        const { nombre, categoria, cantidad, unidad, stockMinimo, costo } = req.body;
+        db.prepare('INSERT INTO inventario (_id, nombre, categoria, cantidad, unidad, stockMinimo, costo) VALUES (?, ?, ?, ?, ?, ?, ?)')
+            .run(_id, nombre, categoria || 'General', cantidad || 0, unidad || 'unidades', stockMinimo || 10, costo || 0);
+        const item = db.prepare('SELECT * FROM inventario WHERE _id = ?').get(_id);
+        res.status(201).json(item);
     } catch (error) {
         res.status(500).json({ error: 'Error al crear item de inventario' });
     }
 });
 
-app.put('/api/inventario/:id', async (req, res) => {
+app.put('/api/inventario/:id', verificarToken, soloAdmin, (req, res) => {
     try {
-        const item = await Inventario.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (item) {
-            res.json(item);
-        } else {
-            res.status(404).json({ error: 'Item no encontrado' });
-        }
+        const existing = db.prepare('SELECT * FROM inventario WHERE _id = ?').get(req.params.id);
+        if (!existing) return res.status(404).json({ error: 'Item no encontrado' });
+
+        const { nombre, categoria, cantidad, unidad, stockMinimo, costo } = req.body;
+        db.prepare('UPDATE inventario SET nombre=?, categoria=?, cantidad=?, unidad=?, stockMinimo=?, costo=?, updatedAt=? WHERE _id=?')
+            .run(
+                nombre ?? existing.nombre,
+                categoria ?? existing.categoria,
+                cantidad ?? existing.cantidad,
+                unidad ?? existing.unidad,
+                stockMinimo ?? existing.stockMinimo,
+                costo ?? existing.costo,
+                now(),
+                req.params.id
+            );
+        const item = db.prepare('SELECT * FROM inventario WHERE _id = ?').get(req.params.id);
+        res.json(item);
     } catch (error) {
         res.status(500).json({ error: 'Error al actualizar item' });
     }
 });
 
-app.delete('/api/inventario/:id', async (req, res) => {
+app.delete('/api/inventario/:id', verificarToken, soloAdmin, (req, res) => {
     try {
-        const item = await Inventario.findByIdAndDelete(req.params.id);
-        if (item) {
+        const result = db.prepare('DELETE FROM inventario WHERE _id = ?').run(req.params.id);
+        if (result.changes > 0) {
             res.json({ message: 'Item eliminado' });
         } else {
             res.status(404).json({ error: 'Item no encontrado' });
@@ -530,12 +656,9 @@ app.delete('/api/inventario/:id', async (req, res) => {
     }
 });
 
-// Endpoint para obtener items con stock bajo
-app.get('/api/inventario/alertas', async (req, res) => {
+app.get('/api/inventario/alertas', verificarToken, (req, res) => {
     try {
-        const alertas = await Inventario.find({
-            $expr: { $lte: ['$cantidad', '$stockMinimo'] }
-        });
+        const alertas = db.prepare('SELECT * FROM inventario WHERE cantidad <= stockMinimo').all();
         res.json(alertas);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener alertas' });
@@ -544,24 +667,24 @@ app.get('/api/inventario/alertas', async (req, res) => {
 
 // ============= ACTIVIDAD =============
 
-app.get('/api/actividad', async (req, res) => {
+app.get('/api/actividad', verificarToken, (req, res) => {
     try {
-        const actividad = await Actividad.find().sort({ fecha: -1 });
+        const actividad = db.prepare('SELECT * FROM actividad ORDER BY fecha DESC').all();
         res.json(actividad);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener actividad' });
     }
 });
 
-app.post('/api/actividad', async (req, res) => {
+app.post('/api/actividad', verificarToken, (req, res) => {
     try {
-        const nuevaActividad = new Actividad(req.body);
-        await nuevaActividad.save();
-        
-        // Emitir evento de nueva actividad
-        emitirEvento('nueva-actividad', nuevaActividad);
-        
-        res.status(201).json(nuevaActividad);
+        const _id = generarId();
+        const { tipo, descripcion, usuario } = req.body;
+        db.prepare('INSERT INTO actividad (_id, tipo, descripcion, usuario) VALUES (?, ?, ?, ?)')
+            .run(_id, tipo, descripcion, usuario);
+        const act = db.prepare('SELECT * FROM actividad WHERE _id = ?').get(_id);
+        emitirEvento('nueva-actividad', act);
+        res.status(201).json(act);
     } catch (error) {
         res.status(500).json({ error: 'Error al crear actividad' });
     }
@@ -572,35 +695,30 @@ app.post('/api/actividad', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        const usuario = await Usuario.findOne({ username, activo: true });
-        
+        const usuario = db.prepare('SELECT * FROM usuarios WHERE username = ? AND activo = 1').get(username);
+
         if (!usuario) {
             return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos' });
         }
-        
-        // Verificar contraseña (soporta tanto hash como texto plano para migración)
+
         let passwordValida = false;
         if (usuario.password.startsWith('$2')) {
-            // Contraseña hasheada con bcrypt
             passwordValida = await bcrypt.compare(password, usuario.password);
         } else {
-            // Contraseña en texto plano (migración pendiente)
             passwordValida = usuario.password === password;
-            // Actualizar a hash si coincide
             if (passwordValida) {
-                usuario.password = await bcrypt.hash(password, 10);
-                await usuario.save();
+                const hashed = await bcrypt.hash(password, 10);
+                db.prepare('UPDATE usuarios SET password = ?, updatedAt = ? WHERE _id = ?').run(hashed, now(), usuario._id);
             }
         }
-        
+
         if (passwordValida) {
-            // Generar token JWT
             const token = jwt.sign(
                 { id: usuario._id, username: usuario.username, rol: usuario.rol },
                 JWT_SECRET,
                 { expiresIn: '8h' }
             );
-            
+
             res.json({
                 success: true,
                 token,
@@ -622,83 +740,77 @@ app.post('/api/login', async (req, res) => {
 
 // ============= GESTIÓN DE USUARIOS =============
 
-app.get('/api/usuarios', async (req, res) => {
+app.get('/api/usuarios', verificarToken, soloAdmin, (req, res) => {
     try {
-        const usuarios = await Usuario.find().select('-password');
-        res.json(usuarios);
+        const usuarios = db.prepare('SELECT _id, username, nombre, rol, activo, createdAt, updatedAt FROM usuarios').all();
+        res.json(formatRows(usuarios));
     } catch (error) {
         logError('Error al obtener usuarios', error);
         res.status(500).json({ error: 'Error al obtener usuarios' });
     }
 });
 
-app.post('/api/usuarios', async (req, res) => {
+app.post('/api/usuarios', verificarToken, soloAdmin, async (req, res) => {
     try {
         const { username, password, nombre, rol } = req.body;
-        
-        // Verificar si el usuario ya existe
-        const existente = await Usuario.findOne({ username });
+
+        const existente = db.prepare('SELECT _id FROM usuarios WHERE username = ?').get(username);
         if (existente) {
             return res.status(400).json({ error: 'El nombre de usuario ya existe' });
         }
-        
-        // Encriptar contraseña
+
         const hashedPassword = await bcrypt.hash(password, 10);
-        
-        const nuevoUsuario = new Usuario({ username, password: hashedPassword, nombre, rol, activo: true });
-        await nuevoUsuario.save();
-        
-        const usuarioSinPassword = nuevoUsuario.toObject();
-        delete usuarioSinPassword.password;
-        
-        res.status(201).json(usuarioSinPassword);
+        const _id = generarId();
+        db.prepare('INSERT INTO usuarios (_id, username, password, nombre, rol, activo) VALUES (?, ?, ?, ?, ?, 1)')
+            .run(_id, username, hashedPassword, nombre, rol);
+
+        const usuario = db.prepare('SELECT _id, username, nombre, rol, activo, createdAt, updatedAt FROM usuarios WHERE _id = ?').get(_id);
+        res.status(201).json(formatRow(usuario));
     } catch (error) {
         logError('Error al crear usuario', error);
         res.status(500).json({ error: 'Error al crear usuario' });
     }
 });
 
-app.put('/api/usuarios/:id', async (req, res) => {
+app.put('/api/usuarios/:id', verificarToken, soloAdmin, async (req, res) => {
     try {
         const { username, nombre, rol, activo, password } = req.body;
-        
-        // Verificar si el username ya existe en otro usuario
-        const existente = await Usuario.findOne({ username, _id: { $ne: req.params.id } });
+
+        const existente = db.prepare('SELECT _id FROM usuarios WHERE username = ? AND _id != ?').get(username, req.params.id);
         if (existente) {
             return res.status(400).json({ error: 'El nombre de usuario ya existe' });
         }
-        
-        const updateData = { username, nombre, rol, activo };
+
+        const existing = db.prepare('SELECT * FROM usuarios WHERE _id = ?').get(req.params.id);
+        if (!existing) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        let passwordFinal = existing.password;
         if (password) {
-            // Encriptar nueva contraseña
-            updateData.password = await bcrypt.hash(password, 10);
+            passwordFinal = await bcrypt.hash(password, 10);
         }
-        
-        const usuario = await Usuario.findByIdAndUpdate(req.params.id, updateData, { new: true }).select('-password');
-        
-        if (usuario) {
-            res.json(usuario);
-        } else {
-            res.status(404).json({ error: 'Usuario no encontrado' });
-        }
+
+        db.prepare('UPDATE usuarios SET username=?, password=?, nombre=?, rol=?, activo=?, updatedAt=? WHERE _id=?')
+            .run(username ?? existing.username, passwordFinal, nombre ?? existing.nombre, rol ?? existing.rol, activo !== undefined ? (activo ? 1 : 0) : existing.activo, now(), req.params.id);
+
+        const usuario = db.prepare('SELECT _id, username, nombre, rol, activo, createdAt, updatedAt FROM usuarios WHERE _id = ?').get(req.params.id);
+        res.json(formatRow(usuario));
     } catch (error) {
         logError('Error al actualizar usuario', error);
         res.status(500).json({ error: 'Error al actualizar usuario' });
     }
 });
 
-app.delete('/api/usuarios/:id', async (req, res) => {
+app.delete('/api/usuarios/:id', verificarToken, soloAdmin, (req, res) => {
     try {
-        // No permitir eliminar el último administrador
-        const admins = await Usuario.countDocuments({ rol: 'administrador', activo: true });
-        const usuarioAEliminar = await Usuario.findById(req.params.id);
-        
+        const admins = db.prepare("SELECT COUNT(*) as count FROM usuarios WHERE rol = 'administrador' AND activo = 1").get().count;
+        const usuarioAEliminar = db.prepare('SELECT * FROM usuarios WHERE _id = ?').get(req.params.id);
+
         if (usuarioAEliminar?.rol === 'administrador' && admins <= 1) {
             return res.status(400).json({ error: 'No se puede eliminar el último administrador' });
         }
-        
-        const usuario = await Usuario.findByIdAndDelete(req.params.id);
-        if (usuario) {
+
+        const result = db.prepare('DELETE FROM usuarios WHERE _id = ?').run(req.params.id);
+        if (result.changes > 0) {
             res.json({ message: 'Usuario eliminado' });
         } else {
             res.status(404).json({ error: 'Usuario no encontrado' });
@@ -711,14 +823,14 @@ app.delete('/api/usuarios/:id', async (req, res) => {
 
 // ============= BACKUP Y RESTORE =============
 
-app.get('/api/backup', async (req, res) => {
+app.get('/api/backup', verificarToken, soloAdmin, (req, res) => {
     try {
         const backup = {
-            menu: await Menu.find(),
-            mesas: await Mesa.find(),
-            pedidos: await Pedido.find(),
-            facturas: await Factura.find(),
-            actividad: await Actividad.find(),
+            menu: formatRows(db.prepare('SELECT * FROM menu').all()),
+            mesas: db.prepare('SELECT * FROM mesas').all(),
+            pedidos: formatRows(db.prepare('SELECT * FROM pedidos').all(), ['items']),
+            facturas: formatRows(db.prepare('SELECT * FROM facturas').all(), ['items']),
+            actividad: db.prepare('SELECT * FROM actividad').all(),
             fecha: new Date().toISOString()
         };
         res.json(backup);
@@ -727,31 +839,49 @@ app.get('/api/backup', async (req, res) => {
     }
 });
 
-app.post('/api/restore', async (req, res) => {
+app.post('/api/restore', verificarToken, soloAdmin, (req, res) => {
     try {
         const { menu, mesas, pedidos, facturas, actividad } = req.body;
-        
-        if (menu && Array.isArray(menu)) {
-            await Menu.deleteMany({});
-            await Menu.insertMany(menu);
-        }
-        if (mesas && Array.isArray(mesas)) {
-            await Mesa.deleteMany({});
-            await Mesa.insertMany(mesas);
-        }
-        if (pedidos && Array.isArray(pedidos)) {
-            await Pedido.deleteMany({});
-            await Pedido.insertMany(pedidos);
-        }
-        if (facturas && Array.isArray(facturas)) {
-            await Factura.deleteMany({});
-            await Factura.insertMany(facturas);
-        }
-        if (actividad && Array.isArray(actividad)) {
-            await Actividad.deleteMany({});
-            await Actividad.insertMany(actividad);
-        }
-        
+
+        const restore = db.transaction(() => {
+            if (menu && Array.isArray(menu)) {
+                db.prepare('DELETE FROM menu').run();
+                const stmt = db.prepare('INSERT INTO menu (_id, nombre, categoria, precio, descripcion, disponible, icono, imagen, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                for (const item of menu) {
+                    stmt.run(item._id || generarId(), item.nombre, item.categoria, item.precio, item.descripcion, item.disponible ? 1 : 0, item.icono, item.imagen || null, item.createdAt || now(), item.updatedAt || now());
+                }
+            }
+            if (mesas && Array.isArray(mesas)) {
+                db.prepare('DELETE FROM mesas').run();
+                const stmt = db.prepare('INSERT INTO mesas (_id, numero, capacidad, estado, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)');
+                for (const item of mesas) {
+                    stmt.run(item._id || generarId(), item.numero, item.capacidad, item.estado, item.createdAt || now(), item.updatedAt || now());
+                }
+            }
+            if (pedidos && Array.isArray(pedidos)) {
+                db.prepare('DELETE FROM pedidos').run();
+                const stmt = db.prepare('INSERT INTO pedidos (_id, mesaId, mesaNumero, numeroMesa, items, estado, total, fecha, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                for (const item of pedidos) {
+                    stmt.run(item._id || generarId(), item.mesaId, item.mesaNumero, item.numeroMesa, JSON.stringify(item.items || []), item.estado, item.total, item.fecha || now(), item.createdAt || now(), item.updatedAt || now());
+                }
+            }
+            if (facturas && Array.isArray(facturas)) {
+                db.prepare('DELETE FROM facturas').run();
+                const stmt = db.prepare('INSERT INTO facturas (_id, numeroFactura, numeroMesa, items, subtotal, impuesto, total, metodoPago, fecha, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                for (const item of facturas) {
+                    stmt.run(item._id || generarId(), item.numeroFactura, String(item.numeroMesa), JSON.stringify(item.items || []), item.subtotal, item.impuesto, item.total, item.metodoPago, item.fecha || now(), item.createdAt || now(), item.updatedAt || now());
+                }
+            }
+            if (actividad && Array.isArray(actividad)) {
+                db.prepare('DELETE FROM actividad').run();
+                const stmt = db.prepare('INSERT INTO actividad (_id, tipo, descripcion, usuario, fecha, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)');
+                for (const item of actividad) {
+                    stmt.run(item._id || generarId(), item.tipo, item.descripcion, item.usuario, item.fecha || now(), item.createdAt || now(), item.updatedAt || now());
+                }
+            }
+        });
+        restore();
+
         res.json({ message: 'Datos restaurados correctamente' });
     } catch (error) {
         res.status(500).json({ error: 'Error al restaurar datos' });
@@ -760,6 +890,35 @@ app.post('/api/restore', async (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+    res.json({ status: 'OK', timestamp: new Date().toISOString(), database: 'SQLite' });
+});
+
+// ============= INICIAR SERVIDOR =============
+
+inicializarDatos();
+
+server.listen(PORT, '0.0.0.0', () => {
+    console.log('✅ Conectado a SQLite');
+    console.log(`🚀 Backend corriendo en puerto ${PORT}`);
+    console.log('📦 Base de datos: SQLite (local, gratis)');
+    console.log('🔌 WebSocket activo');
+});
+
+server.on('error', (err) => {
+    console.error('❌ Error al iniciar servidor:', err.message);
+    if (err.code === 'EADDRINUSE') {
+        console.error(`El puerto ${PORT} ya está en uso`);
+    }
+    process.exit(1);
+});
+
+// Cerrar BD al salir
+process.on('SIGINT', () => {
+    db.close();
+    process.exit(0);
+});
+process.on('SIGTERM', () => {
+    db.close();
+    process.exit(0);
 });
 

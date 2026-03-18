@@ -226,8 +226,10 @@ class AdminApp {
 
     verificarSesion() {
         const usuarioGuardado = localStorage.getItem('usuario');
-        if (usuarioGuardado) {
+        const tokenGuardado = localStorage.getItem('token');
+        if (usuarioGuardado && tokenGuardado) {
             this.usuario = JSON.parse(usuarioGuardado);
+            this.token = tokenGuardado;
             this.mostrarPanel();
         } else {
             this.mostrarLogin();
@@ -259,7 +261,9 @@ class AdminApp {
 
             if (data.success) {
                 this.usuario = data.usuario;
+                this.token = data.token;
                 localStorage.setItem('usuario', JSON.stringify(this.usuario));
+                localStorage.setItem('token', data.token);
                 this.mostrarPanel();
             } else {
                 alert('Usuario o contraseña incorrectos');
@@ -272,7 +276,9 @@ class AdminApp {
 
     logout() {
         localStorage.removeItem('usuario');
+        localStorage.removeItem('token');
         this.usuario = null;
+        this.token = null;
         location.reload();
     }
 
@@ -418,10 +424,15 @@ class AdminApp {
     // Refrescar pedidos, mesas y actividad sin recargar toda la página
     async refrescarDatos() {
         try {
+            const authHeaders = { 'Authorization': `Bearer ${this.token}` };
+            const fetchAuth = (url) => fetch(url, { headers: authHeaders }).then(r => {
+                if (r.status === 401 || r.status === 403) { this.logout(); throw new Error('Sesión expirada'); }
+                return r.json();
+            });
             const [pedidosActualizados, mesasActualizadas, actividadActualizada] = await Promise.all([
-                fetch(`${this.API_URL}/pedidos`).then(r => r.json()),
-                fetch(`${this.API_URL}/mesas`).then(r => r.json()),
-                fetch(`${this.API_URL}/actividad`).then(r => r.json())
+                fetchAuth(`${this.API_URL}/pedidos`),
+                fetchAuth(`${this.API_URL}/mesas`),
+                fetchAuth(`${this.API_URL}/actividad`)
             ]);
             
             // Detectar cambios en pedidos
@@ -583,18 +594,24 @@ class AdminApp {
 
     async cargarDatos() {
         try {
+            const authHeaders = { 'Authorization': `Bearer ${this.token}` };
+            const fetchAuth = (url) => fetch(url, { headers: authHeaders }).then(r => {
+                if (r.status === 401 || r.status === 403) { this.logout(); throw new Error('Sesión expirada'); }
+                return r.json();
+            });
+
             const promesas = [
-                fetch(`${this.API_URL}/menu`).then(r => r.json()),
-                fetch(`${this.API_URL}/mesas`).then(r => r.json()),
-                fetch(`${this.API_URL}/pedidos`).then(r => r.json()),
-                fetch(`${this.API_URL}/facturas`).then(r => r.json()),
-                fetch(`${this.API_URL}/actividad`).then(r => r.json())
+                fetchAuth(`${this.API_URL}/menu`),
+                fetchAuth(`${this.API_URL}/mesas`),
+                fetchAuth(`${this.API_URL}/pedidos`),
+                fetchAuth(`${this.API_URL}/facturas`),
+                fetchAuth(`${this.API_URL}/actividad`)
             ];
             
             // Solo cargar usuarios e inventario si es administrador
             if (this.usuario.rol === 'administrador') {
-                promesas.push(fetch(`${this.API_URL}/usuarios`).then(r => r.json()));
-                promesas.push(fetch(`${this.API_URL}/inventario`).then(r => r.json()));
+                promesas.push(fetchAuth(`${this.API_URL}/usuarios`));
+                promesas.push(fetchAuth(`${this.API_URL}/inventario`));
             }
             
             const resultados = await Promise.all(promesas);
@@ -618,12 +635,19 @@ class AdminApp {
         try {
             const options = {
                 method,
-                headers: { 'Content-Type': 'application/json' }
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                }
             };
             
             if (data) options.body = JSON.stringify(data);
             
             const response = await fetch(`${this.API_URL}${endpoint}`, options);
+            if (response.status === 401 || response.status === 403) {
+                this.logout();
+                throw new Error('Sesión expirada');
+            }
             return await response.json();
         } catch (error) {
             console.error('Error en API:', error);
@@ -733,13 +757,38 @@ class AdminApp {
         if (this.usuario.rol === 'administrador') {
             document.getElementById('btn-agregar-platillo')?.addEventListener('click', () => {
                 this.editandoPlatilloId = null;
+                this.imagenBase64 = null;
                 document.getElementById('modal-platillo-titulo').textContent = 'Agregar Platillo';
                 document.getElementById('form-platillo').reset();
+                this.limpiarPreviewImagen();
                 document.getElementById('modal-platillo').classList.add('active');
             });
 
             document.getElementById('btn-cancelar-platillo')?.addEventListener('click', () => {
                 document.getElementById('modal-platillo').classList.remove('active');
+                this.imagenBase64 = null;
+                this.limpiarPreviewImagen();
+            });
+
+            // Manejo de imagen
+            document.getElementById('platillo-imagen')?.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    this.comprimirImagen(file).then(base64 => {
+                        this.imagenBase64 = base64;
+                        this.mostrarPreviewImagen(base64);
+                        document.getElementById('imagen-nombre').textContent = file.name;
+                    }).catch(err => {
+                        console.error('Error al comprimir imagen:', err);
+                        alert('Error al procesar la imagen');
+                    });
+                }
+            });
+
+            document.getElementById('btn-quitar-imagen')?.addEventListener('click', () => {
+                this.imagenBase64 = '';
+                this.limpiarPreviewImagen();
+                document.getElementById('platillo-imagen').value = '';
             });
 
             document.getElementById('btn-agregar-mesa')?.addEventListener('click', () => {
@@ -843,6 +892,53 @@ class AdminApp {
         });
     }
 
+    // ===== UTILIDADES DE IMAGEN =====
+
+    comprimirImagen(file, maxWidth = 400, maxHeight = 300, quality = 0.7) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxWidth || height > maxHeight) {
+                        const ratio = Math.min(maxWidth / width, maxHeight / height);
+                        width = Math.round(width * ratio);
+                        height = Math.round(height * ratio);
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.onerror = reject;
+                img.src = e.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    mostrarPreviewImagen(base64) {
+        const preview = document.getElementById('imagen-preview');
+        const previewImg = document.getElementById('imagen-preview-img');
+        previewImg.src = base64;
+        preview.classList.add('active');
+    }
+
+    limpiarPreviewImagen() {
+        const preview = document.getElementById('imagen-preview');
+        const previewImg = document.getElementById('imagen-preview-img');
+        previewImg.src = '';
+        preview.classList.remove('active');
+        document.getElementById('imagen-nombre').textContent = 'Sin imagen seleccionada';
+    }
+
     // ===== GESTIÓN DE MENÚ (Solo Admin) =====
     
     cargarMenu() {
@@ -868,6 +964,7 @@ class AdminApp {
 
         container.innerHTML = menuFiltrado.map(platillo => `
             <div class="menu-item ${!platillo.disponible ? 'no-disponible' : ''}">
+                ${platillo.imagen ? `<div class="menu-item-imagen"><img src="${platillo.imagen}" alt="${platillo.nombre}"></div>` : ''}
                 <h3>${platillo.nombre}</h3>
                 <span class="categoria">${platillo.categoria}</span>
                 <div class="precio">$${platillo.precio.toFixed(2)}</div>
@@ -894,6 +991,11 @@ class AdminApp {
             descripcion: document.getElementById('platillo-descripcion').value
         };
 
+        // Incluir imagen si se seleccionó una nueva o se quitó
+        if (this.imagenBase64 !== null && this.imagenBase64 !== undefined) {
+            platillo.imagen = this.imagenBase64 || null;
+        }
+
         try {
             if (this.editandoPlatilloId) {
                 const actualizado = await this.apiRequest(`/menu/${this.editandoPlatilloId}`, 'PUT', platillo);
@@ -906,6 +1008,8 @@ class AdminApp {
                 await this.agregarActividad(`Nuevo platillo agregado: ${platillo.nombre}`);
             }
 
+            this.imagenBase64 = null;
+            this.limpiarPreviewImagen();
             document.getElementById('modal-platillo').classList.remove('active');
             this.cargarMenu();
             this.cargarDashboard();
@@ -917,12 +1021,21 @@ class AdminApp {
     editarPlatillo(id) {
         const platillo = this.menu.find(p => p._id === id);
         this.editandoPlatilloId = id;
+        this.imagenBase64 = null;
         
         document.getElementById('modal-platillo-titulo').textContent = 'Editar Platillo';
         document.getElementById('platillo-nombre').value = platillo.nombre;
         document.getElementById('platillo-categoria').value = platillo.categoria;
         document.getElementById('platillo-precio').value = platillo.precio;
         document.getElementById('platillo-descripcion').value = platillo.descripcion || '';
+        document.getElementById('platillo-imagen').value = '';
+
+        if (platillo.imagen) {
+            this.mostrarPreviewImagen(platillo.imagen);
+            document.getElementById('imagen-nombre').textContent = 'Imagen actual del platillo';
+        } else {
+            this.limpiarPreviewImagen();
+        }
         
         document.getElementById('modal-platillo').classList.add('active');
     }
@@ -1186,6 +1299,7 @@ class AdminApp {
 
         menuContainer.innerHTML = platillosFiltrados.map(platillo => `
             <div class="menu-pedido-item" onclick="app.agregarItemPedido('${platillo._id}')">
+                ${platillo.imagen ? `<img src="${platillo.imagen}" alt="${platillo.nombre}" class="menu-pedido-thumb">` : ''}
                 <h4>${platillo.nombre}</h4>
                 <div class="precio">$${platillo.precio.toFixed(2)}</div>
             </div>
@@ -1531,11 +1645,15 @@ class AdminApp {
         const total = pedidos.reduce((sum, p) => sum + p.total, 0);
         
         // Crear factura
+        const subtotal = total;
+        const impuesto = 0;
         const factura = {
             numeroFactura: `F-${Date.now()}`,
             numeroMesa: this.mesaACobrar.mesaNumero,
             mesaNumero: this.mesaACobrar.mesaNumero,
             items: todosItems,
+            subtotal,
+            impuesto,
             total,
             metodoPago,
             fecha: new Date().toISOString()
@@ -1885,8 +2003,11 @@ class AdminApp {
     cargarReportes() {
         if (this.usuario.rol !== 'administrador') return;
         
-        // Configurar evento del botón
-        document.getElementById('btn-generar-reporte')?.addEventListener('click', () => this.generarReporte());
+        // Configurar evento del botón (solo una vez)
+        if (!this._reportesInit) {
+            document.getElementById('btn-generar-reporte')?.addEventListener('click', () => this.generarReporte());
+            this._reportesInit = true;
+        }
         
         // Cargar reporte inicial
         this.generarReporte();
@@ -1900,12 +2021,6 @@ class AdminApp {
         const facturasDelPeriodo = this.facturas.filter(f => {
             const fecha = new Date(f.fecha);
             return fecha >= inicio && fecha <= fin;
-        });
-        
-        // Filtrar pedidos completados por período
-        const pedidosDelPeriodo = this.pedidos.filter(p => {
-            const fecha = new Date(p.fecha);
-            return fecha >= inicio && fecha <= fin && (p.estado === 'entregado' || p.estado === 'pagado');
         });
         
         // Calcular estadísticas
@@ -1944,12 +2059,12 @@ class AdminApp {
                 fin = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59);
                 break;
             case 'semana':
+                // Semana empieza el lunes (estándar en Perú)
                 const diaSemana = ahora.getDay();
-                inicio = new Date(ahora);
-                inicio.setDate(ahora.getDate() - diaSemana);
+                const diasDesdelunes = diaSemana === 0 ? 6 : diaSemana - 1;
+                inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - diasDesdelunes);
                 inicio.setHours(0, 0, 0, 0);
-                fin = new Date(ahora);
-                fin.setHours(23, 59, 59);
+                fin = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59);
                 break;
             case 'mes':
                 inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
@@ -2040,28 +2155,30 @@ class AdminApp {
     
     mostrarVentasPorDia(facturas) {
         const conteo = {};
-        const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
         
         facturas.forEach(f => {
             const fecha = new Date(f.fecha);
+            const clave = fecha.toISOString().slice(0, 10); // YYYY-MM-DD para ordenar
             const dia = fecha.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
-            if (!conteo[dia]) {
-                conteo[dia] = 0;
+            if (!conteo[clave]) {
+                conteo[clave] = { label: dia, total: 0 };
             }
-            conteo[dia] += f.total || 0;
+            conteo[clave].total += f.total || 0;
         });
         
-        const ordenado = Object.entries(conteo).slice(-7);
-        const maxVenta = Math.max(...ordenado.map(([_, v]) => v)) || 1;
+        const ordenado = Object.entries(conteo)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .slice(-7);
+        const maxVenta = Math.max(...ordenado.map(([_, v]) => v.total)) || 1;
         
         document.getElementById('reporte-ventas-dia').innerHTML = ordenado.length > 0
-            ? ordenado.map(([dia, total]) => `
+            ? ordenado.map(([_, data]) => `
                 <div class="reporte-item">
-                    <span class="reporte-item-name">${dia}</span>
+                    <span class="reporte-item-name">${data.label}</span>
                     <div style="flex: 1; margin: 0 15px;">
-                        <div class="reporte-item-bar" style="width: ${(total / maxVenta * 100)}%"></div>
+                        <div class="reporte-item-bar" style="width: ${(data.total / maxVenta * 100)}%"></div>
                     </div>
-                    <span class="reporte-item-value">$${total.toFixed(2)}</span>
+                    <span class="reporte-item-value">$${data.total.toFixed(2)}</span>
                 </div>
             `).join('')
             : '<p style="text-align: center; color: #7f8c8d;">Sin datos</p>';
@@ -2156,9 +2273,12 @@ class AdminApp {
         // Mostrar alertas de stock bajo
         this.mostrarAlertasInventario();
         
-        // Configurar filtros
-        document.getElementById('filtro-inventario-categoria')?.addEventListener('change', () => this.renderizarInventario());
-        document.getElementById('buscar-inventario')?.addEventListener('input', () => this.renderizarInventario());
+        // Configurar filtros (solo una vez)
+        if (!this._inventarioInit) {
+            document.getElementById('filtro-inventario-categoria')?.addEventListener('change', () => this.renderizarInventario());
+            document.getElementById('buscar-inventario')?.addEventListener('input', () => this.renderizarInventario());
+            this._inventarioInit = true;
+        }
         
         this.renderizarInventario();
     }
@@ -2208,6 +2328,8 @@ class AdminApp {
         const iconosCategoria = {
             'Carnes': '🥩',
             'Verduras': '🥬',
+            'Frutas': '🍎',
+            'Granos': '🌾',
             'Lácteos': '🧀',
             'Bebidas': '🥤',
             'Condimentos': '🧂',
@@ -2216,7 +2338,10 @@ class AdminApp {
         
         container.innerHTML = items.map(item => {
             const stockBajo = item.cantidad <= item.stockMinimo;
-            const porcentajeStock = Math.min(100, (item.cantidad / item.stockMinimo) * 100);
+            // Barra proporcional: 100% = 2x el mínimo (nivel óptimo)
+            const nivelOptimo = item.stockMinimo * 2;
+            const porcentajeStock = Math.min(100, (item.cantidad / nivelOptimo) * 100);
+            const colorBarra = stockBajo ? 'bajo' : (item.cantidad >= nivelOptimo ? 'optimo' : '');
             
             return `
                 <div class="inventario-card ${stockBajo ? 'stock-bajo' : ''}">
@@ -2232,16 +2357,17 @@ class AdminApp {
                             <strong>${item.cantidad}</strong> ${item.unidad}
                         </div>
                         <div class="stock-barra-container">
-                            <div class="stock-barra ${stockBajo ? 'bajo' : ''}" style="width: ${porcentajeStock}%"></div>
+                            <div class="stock-barra ${colorBarra}" style="width: ${porcentajeStock}%"></div>
                         </div>
                         <small>Mínimo: ${item.stockMinimo} ${item.unidad}</small>
                     </div>
                     ${item.costo > 0 ? `<div class="inventario-costo">Costo: $${item.costo.toFixed(2)}/${item.unidad}</div>` : ''}
                     <div class="inventario-actions">
-                        <button class="btn-info" onclick="app.ajustarStock('${item._id}', 1)">➕</button>
-                        <button class="btn-secondary" onclick="app.ajustarStock('${item._id}', -1)">➖</button>
-                        <button class="btn-primary" onclick="app.editarInventario('${item._id}')">✏️</button>
-                        <button class="btn-danger" onclick="app.eliminarInventario('${item._id}')">🗑️</button>
+                        <button class="btn-info" onclick="app.ajustarStock('${item._id}', 1)" title="+1">➕</button>
+                        <button class="btn-secondary" onclick="app.ajustarStock('${item._id}', -1)" title="-1">➖</button>
+                        <button class="btn-primary" onclick="app.ajustarStockPersonalizado('${item._id}')" title="Ajustar cantidad">🔢</button>
+                        <button class="btn-primary" onclick="app.editarInventario('${item._id}')" title="Editar">✏️</button>
+                        <button class="btn-danger" onclick="app.eliminarInventario('${item._id}')" title="Eliminar">🗑️</button>
                     </div>
                 </div>
             `;
@@ -2255,7 +2381,34 @@ class AdminApp {
         const nuevaCantidad = Math.max(0, item.cantidad + cantidad);
         
         try {
-            await this.apiRequest(`/inventario/${id}`, 'PUT', { ...item, cantidad: nuevaCantidad });
+            await this.apiRequest(`/inventario/${id}`, 'PUT', { cantidad: nuevaCantidad });
+            item.cantidad = nuevaCantidad;
+            this.renderizarInventario();
+            this.mostrarAlertasInventario();
+        } catch (error) {
+            alert('Error al ajustar stock');
+        }
+    }
+
+    async ajustarStockPersonalizado(id) {
+        const item = this.inventario.find(i => i._id === id);
+        if (!item) return;
+
+        const input = prompt(`Ajustar stock de "${item.nombre}"\nActual: ${item.cantidad} ${item.unidad}\n\nIngresa la cantidad a agregar (o negativo para restar):`, '10');
+        if (input === null) return;
+
+        const cantidad = parseFloat(input);
+        if (isNaN(cantidad)) {
+            alert('Cantidad inválida');
+            return;
+        }
+
+        const nuevaCantidad = Math.max(0, item.cantidad + cantidad);
+
+        try {
+            await this.apiRequest(`/inventario/${id}`, 'PUT', { cantidad: nuevaCantidad });
+            const accion = cantidad >= 0 ? `+${cantidad}` : `${cantidad}`;
+            await this.agregarActividad(`Stock ajustado: ${item.nombre} ${accion} ${item.unidad} (${item.cantidad} → ${nuevaCantidad})`);
             item.cantidad = nuevaCantidad;
             this.renderizarInventario();
             this.mostrarAlertasInventario();

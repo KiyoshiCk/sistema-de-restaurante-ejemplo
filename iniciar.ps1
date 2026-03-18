@@ -10,9 +10,6 @@ Write-Host "  SISTEMA DE RESTAURANTE" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Configurar variable de entorno para MongoDB
-$env:MONGODB_URI = "mongodb+srv://admin:admin123@cluster0.yqpcckd.mongodb.net/restaurante?retryWrites=true&w=majority"
-
 # Configurar reglas de Firewall para permitir acceso en red local
 Write-Host "[*] Configurando Firewall para acceso en red local..." -ForegroundColor Yellow
 $firewallRules = @(
@@ -76,23 +73,21 @@ if ($frontendOK) {
     Write-Host "    [ERROR] Error al iniciar Frontend" -ForegroundColor Red
 }
 
-# Obtener IP local - PRIORIZAR ETHERNET sobre Wi-Fi (evitar adaptadores virtuales)
-$ipCandidates = Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
-    $_.IPAddress -notlike "169.*" -and
-    $_.IPAddress -notlike "127.*" -and
-    $_.AddressState -eq "Preferred" -and
-    $_.InterfaceOperationalStatus -eq "Up" -and
-    $_.InterfaceAlias -notmatch "vEthernet|VirtualBox|VMware|Hyper-V|WSL|Loopback|TAP|Npcap"
-}
+# Obtener IP local - Usar adaptador con gateway (el que tiene conexion real a la red)
+$netConfigs = Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -ne $null }
 
-$ethernetIp = ($ipCandidates | Where-Object { $_.InterfaceAlias -match "Ethernet" } | Select-Object -First 1).IPAddress
-$wifiIp = ($ipCandidates | Where-Object { $_.InterfaceAlias -match "Wi-Fi|WLAN" } | Select-Object -First 1).IPAddress
+$ethernetIp = ($netConfigs | Where-Object { $_.InterfaceAlias -match "Ethernet" } | Select-Object -First 1).IPv4Address.IPAddress
+$wifiIp = ($netConfigs | Where-Object { $_.InterfaceAlias -match "Wi-Fi|WLAN" } | Select-Object -First 1).IPv4Address.IPAddress
 
+# Priorizar Ethernet sobre Wi-Fi
 $ip = $ethernetIp
 if (-not $ip) {
     $ip = $wifiIp
 }
-
+if (-not $ip) {
+    # Fallback: tomar cualquier adaptador con gateway
+    $ip = ($netConfigs | Select-Object -First 1).IPv4Address.IPAddress
+}
 if (-not $ip) {
     $ip = "localhost"
 }

@@ -2,8 +2,13 @@
 node_modules/
 npm-debug.log*
 
-# Datos (volumen de Docker)
-backend/data/
+# Base de datos SQLite
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+
+# JWT Secret (generado automáticamente)
+backend/.jwt_secret
 
 # Archivos de sistema
 .DS_Store

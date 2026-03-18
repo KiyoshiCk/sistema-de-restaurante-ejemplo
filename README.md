@@ -1,8 +1,8 @@
 # 🍽️ Sistema de Gestión de Restaurante
 
-Sistema completo para gestionar restaurantes con menú, mesas, pedidos y facturación.
+Sistema completo para gestionar restaurantes con menú, mesas, pedidos y facturación. Funciona 100% local con **SQLite** (sin necesidad de servicios externos).
 
-## � Estructura del Proyecto
+## 📁 Estructura del Proyecto
 
 ```
 ├── frontend/           # Interfaz de usuario
@@ -13,13 +13,12 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 │   ├── cliente.html   # Vista del cliente
 │   └── cocina.html    # Vista de cocina
 ├── backend/           # Servidor Node.js + Express
-│   ├── server.js      # API REST
-│   └── package.json
-├── netlify/           # Funciones serverless para Netlify
-│   └── functions/
-├── docs/              # Documentación adicional
-├── docker-compose.yml
-├── Dockerfile
+│   ├── server.js      # API REST + WebSocket
+│   ├── package.json
+│   └── restaurante.db # Base de datos SQLite (se crea automáticamente)
+├── docs/              # Documentación
+├── iniciar.ps1        # Script para iniciar todo
+├── detener.ps1        # Script para detener todo
 └── README.md
 ```
 
@@ -30,6 +29,8 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 - **Gestión de Mesas**: Control de disponibilidad y ocupación
 - **Sistema de Pedidos**: Flujo completo desde toma hasta entrega
 - **Facturación**: Historial y reportes de ventas
+- **WebSocket**: Actualizaciones en tiempo real entre admin, cocina y meseros
+- **Acceso en Red Local**: Usa desde celular, tablet u otra PC en tu WiFi
 
 ## 👥 Roles de Usuario
 
@@ -39,68 +40,49 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 | mesero | mesero123 | Mesero |
 | cocinero | cocinero123 | Cocinero |
 
-## 🛠️ Desarrollo Local
+## 🛠️ Inicio Rápido
 
-### Backend
-```bash
+### Opción 1: Script automático (Recomendado)
+```powershell
+cd "f:\sistema de restaurante"
+powershell -ExecutionPolicy Bypass -File iniciar.ps1
+```
+
+### Opción 2: Manual
+```powershell
+# Terminal 1 - Backend
 cd backend
 npm install
-$env:MONGODB_URI="mongodb+srv://admin:admin123@cluster0.yqpcckd.mongodb.net/restaurante"
 node server.js
+
+# Terminal 2 - Frontend
+cd frontend
+python -m http.server 5500 --bind 0.0.0.0
 ```
 
-### Frontend
-Abrir `frontend/index.html` con Live Server en el puerto 5500.
+## 📱 Acceso
 
-## 📦 Instalación con Docker
+Una vez iniciado, accede desde cualquier dispositivo en tu red:
 
-### Opción 1: Con Docker Compose (Recomendado)
+| Página | URL |
+|--------|-----|
+| Inicio | `http://TU_IP:5500/` |
+| Admin | `http://TU_IP:5500/admin.html` |
+| Cliente | `http://TU_IP:5500/cliente.html` |
+| Cocina | `http://TU_IP:5500/cocina.html` |
 
-```bash
-# Construir y ejecutar
-docker-compose up -d
+## 🛑 Detener
 
-# Ver logs
-docker-compose logs -f
-
-# Detener
-docker-compose down
+```powershell
+powershell -ExecutionPolicy Bypass -File detener.ps1
 ```
-
-### Opción 2: Con Docker
-
-```bash
-# Construir imagen
-docker build -t sistema-restaurante .
-
-# Ejecutar contenedor
-docker run -d -p 8080:80 --name sistema-restaurante sistema-restaurante
-
-# Ver logs
-docker logs -f sistema-restaurante
-
-# Detener y eliminar
-docker stop sistema-restaurante
-docker rm sistema-restaurante
-```
-
-## 🌐 Acceso
-
-Una vez iniciado el contenedor, abre tu navegador en:
-
-**http://localhost:8081**
-
-## 💻 Uso sin Docker
-
-Simplemente abre el archivo `index.html` en tu navegador.
 
 ## 🛠️ Tecnologías
 
-- HTML5
-- CSS3
-- JavaScript (Vanilla)
-- Nginx (Docker)
-- LocalStorage para persistencia de datos
+- **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
+- **Backend**: Node.js, Express, Socket.IO
+- **Base de datos**: SQLite (better-sqlite3) - local, gratis, sin servidor
+- **Autenticación**: JWT + bcrypt
 
 ## 📱 Responsive
 

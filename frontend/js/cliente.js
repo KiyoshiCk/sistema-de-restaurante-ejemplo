@@ -118,7 +118,10 @@ class ClienteApp {
         container.innerHTML = menuFiltrado.map(platillo => `
             <div class="menu-cliente-item">
                 <div class="menu-cliente-item-header">
-                    <div class="menu-cliente-item-icono">${iconos[platillo.categoria] || '🍴'}</div>
+                    ${platillo.imagen 
+                        ? `<div class="menu-cliente-item-foto"><img src="${platillo.imagen}" alt="${platillo.nombre}"></div>` 
+                        : `<div class="menu-cliente-item-icono">${iconos[platillo.categoria] || '🍴'}</div>`
+                    }
                     <div class="menu-cliente-item-nombre">${platillo.nombre}</div>
                     <span class="menu-cliente-item-categoria">${platillo.categoria}</span>
                 </div>

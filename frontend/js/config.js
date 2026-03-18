@@ -12,7 +12,7 @@ const getAPIURL = () => {
         return `http://${hostname}:3000/api`;
     }
     
-    // En Netlify u otro hosting: usa /api (redirige a Netlify Functions)
+    // En producción: usa /api
     return '/api';
 };
 
