@@ -120,6 +120,14 @@ const soloAdmin = (req, res, next) => {
     next();
 };
 
+// Middleware para verificar rol de mesero o administrador
+const soloMeseroOAdmin = (req, res, next) => {
+    if (req.usuario.rol !== 'administrador' && req.usuario.rol !== 'mesero') {
+        return res.status(403).json({ error: 'Acceso solo para meseros y administradores' });
+    }
+    next();
+};
+
 // ============= CREAR TABLAS =============
 db.exec(`
     CREATE TABLE IF NOT EXISTS config (
@@ -463,8 +471,20 @@ app.delete('/api/config/logo', verificarToken, soloAdmin, (req, res) => {
 
 // ============= SOCKET.IO =============
 
+// Autenticación en el handshake de WebSocket
+io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+    if (!token) return next(new Error('Token de autenticación requerido'));
+    try {
+        socket.usuario = jwt.verify(token, JWT_SECRET);
+        next();
+    } catch (e) {
+        next(new Error('Token inválido o expirado'));
+    }
+});
+
 io.on('connection', (socket) => {
-    console.log('🔌 Cliente conectado:', socket.id);
+    console.log(`🔌 Cliente conectado: ${socket.id} (${socket.usuario?.rol || 'desconocido'})`);
 
     socket.on('join-room', (room) => {
         socket.join(room);
@@ -589,7 +609,7 @@ app.get('/api/menu', (req, res) => {
     }
 });
 
-app.post('/api/menu', verificarToken, (req, res) => {
+app.post('/api/menu', verificarToken, soloAdmin, (req, res) => {
     try {
         const { nombre, categoria, precio, descripcion, disponible, icono, imagen } = req.body;
 
@@ -609,7 +629,7 @@ app.post('/api/menu', verificarToken, (req, res) => {
     }
 });
 
-app.put('/api/menu/:id', verificarToken, (req, res) => {
+app.put('/api/menu/:id', verificarToken, soloAdmin, (req, res) => {
     try {
         const { nombre, categoria, precio, descripcion, disponible, icono, imagen } = req.body;
         const existing = db.prepare('SELECT * FROM menu WHERE _id = ?').get(req.params.id);
@@ -638,7 +658,7 @@ app.put('/api/menu/:id', verificarToken, (req, res) => {
     }
 });
 
-app.delete('/api/menu/:id', verificarToken, (req, res) => {
+app.delete('/api/menu/:id', verificarToken, soloAdmin, (req, res) => {
     try {
         const result = db.prepare('DELETE FROM menu WHERE _id = ?').run(req.params.id);
         if (result.changes > 0) {
@@ -664,7 +684,7 @@ app.get('/api/mesas', verificarToken, (req, res) => {
     }
 });
 
-app.post('/api/mesas', verificarToken, (req, res) => {
+app.post('/api/mesas', verificarToken, soloAdmin, (req, res) => {
     try {
         const { numero, capacidad, estado } = req.body;
 
@@ -685,7 +705,7 @@ app.post('/api/mesas', verificarToken, (req, res) => {
     }
 });
 
-app.put('/api/mesas/:id', verificarToken, (req, res) => {
+app.put('/api/mesas/:id', verificarToken, soloAdmin, (req, res) => {
     try {
         const existing = db.prepare('SELECT * FROM mesas WHERE _id = ?').get(req.params.id);
         if (!existing) return res.status(404).json({ error: 'Mesa no encontrada' });
@@ -703,7 +723,7 @@ app.put('/api/mesas/:id', verificarToken, (req, res) => {
     }
 });
 
-app.delete('/api/mesas/:id', verificarToken, (req, res) => {
+app.delete('/api/mesas/:id', verificarToken, soloAdmin, (req, res) => {
     try {
         const result = db.prepare('DELETE FROM mesas WHERE _id = ?').run(req.params.id);
         if (result.changes > 0) {
@@ -731,7 +751,7 @@ app.get('/api/pedidos', verificarToken, (req, res) => {
     }
 });
 
-app.post('/api/pedidos', verificarToken, (req, res) => {
+app.post('/api/pedidos', verificarToken, soloMeseroOAdmin, (req, res) => {
     try {
         const _id = generarId();
         const pedidoData = { ...req.body };
@@ -753,6 +773,16 @@ app.put('/api/pedidos/:id', verificarToken, (req, res) => {
         const existing = db.prepare('SELECT * FROM pedidos WHERE _id = ?').get(req.params.id);
         if (!existing) return res.status(404).json({ error: 'Pedido no encontrado' });
 
+        // Cocinero solo puede cambiar estado a 'en-preparacion' o 'listo'
+        if (req.usuario.rol === 'cocinero') {
+            const estadosPermitidos = ['en-preparacion', 'listo'];
+            if (req.body.estado && !estadosPermitidos.includes(req.body.estado)) {
+                return res.status(403).json({ error: 'Cocinero solo puede marcar como en-preparacion o listo' });
+            }
+            // Cocinero solo puede modificar el estado, nada más
+            req.body = { estado: req.body.estado };
+        }
+
         const items = req.body.items ? JSON.stringify(req.body.items) : existing.items;
         db.prepare('UPDATE pedidos SET mesaId=?, mesaNumero=?, items=?, estado=?, total=?, updatedAt=? WHERE _id=?')
             .run(
@@ -773,7 +803,7 @@ app.put('/api/pedidos/:id', verificarToken, (req, res) => {
     }
 });
 
-app.delete('/api/pedidos/:id', verificarToken, (req, res) => {
+app.delete('/api/pedidos/:id', verificarToken, soloAdmin, (req, res) => {
     try {
         const pedido = db.prepare('SELECT * FROM pedidos WHERE _id = ?').get(req.params.id);
         if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });

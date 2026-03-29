@@ -24,6 +24,7 @@ class CocinaApp {
         }
         
         this.socket = io(this.SOCKET_URL, {
+            auth: { token: this.token },
             reconnection: true,
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
@@ -414,6 +415,10 @@ class CocinaApp {
         container.innerHTML = pedidosFiltrados.map(pedido => this.renderPedidoCard(pedido, false)).join('');
     }
 
+    escapeHTML(str) {
+        return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
     renderPedidoCard(pedido, conAnimacion = false) {
         const tiempoTranscurrido = this.calcularTiempo(pedido.fecha);
         const esUrgente = tiempoTranscurrido.minutos > 15 && pedido.estado === 'pendiente';
@@ -447,7 +452,7 @@ class CocinaApp {
         
         const claseAnimacion = conAnimacion ? 'nuevo' : '';
         
-        const mesaNum = pedido.mesaNumero || 'N/A';
+        const mesaNum = this.escapeHTML(pedido.mesaNumero ?? 'N/A');
         return `
             <div class="pedido-cocina-card ${pedido.estado} ${claseAnimacion}" data-pedido-id="${pedido._id}">
                 <div class="pedido-cocina-header">
@@ -463,9 +468,9 @@ class CocinaApp {
                     ${pedido.items.map(item => `
                         <div class="item-cocina">
                             <span class="cantidad">${item.cantidad}x</span>
-                            <span class="nombre">${item.nombre}</span>
+                            <span class="nombre">${this.escapeHTML(item.nombre)}</span>
                         </div>
-                        ${item.comentario ? `<div class="item-cocina-comentario"><i class="fa-solid fa-comment"></i> ${item.comentario}</div>` : ''}
+                        ${item.comentario ? `<div class="item-cocina-comentario"><i class="fa-solid fa-comment"></i> ${this.escapeHTML(item.comentario)}</div>` : ''}
                     `).join('')}
                 </div>
                 
