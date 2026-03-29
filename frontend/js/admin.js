@@ -32,6 +32,7 @@ class AdminApp {
         }
         
         this.socket = io(this.SOCKET_URL, {
+            auth: { token: this.token },
             reconnection: true,
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
