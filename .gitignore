@@ -1,0 +1,26 @@
+# Node modules
+node_modules/
+npm-debug.log*
+
+# Base de datos SQLite
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+backend/*.db.backup*
+
+# JWT Secret (generado automáticamente)
+backend/.jwt_secret
+
+# Uploads (logo y archivos subidos)
+backend/uploads/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log

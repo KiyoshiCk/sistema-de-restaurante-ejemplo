@@ -1,0 +1,28 @@
+# robots.txt - Restaurante en Moche, Perú
+# https://tu-dominio.com/robots.txt
+
+User-agent: *
+
+# Páginas públicas permitidas
+Allow: /
+Allow: /cliente.html
+Allow: /sitemap.xml
+
+# Paneles internos - bloquear rastreo
+Disallow: /admin.html
+Disallow: /cocina.html
+
+# Archivos JavaScript y CSS permitidos (necesarios para renderizado)
+Allow: /css/
+Allow: /js/config.js
+Allow: /js/cliente.js
+Allow: /js/ubicacion-cliente.js
+Allow: /js/leaflet-loader.js
+
+# Scripts internos - bloquear
+Disallow: /js/admin.js
+Disallow: /js/cocina.js
+Disallow: /js/ubicacion-admin.js
+
+# Sitemap
+Sitemap: https://tu-dominio.com/sitemap.xml
