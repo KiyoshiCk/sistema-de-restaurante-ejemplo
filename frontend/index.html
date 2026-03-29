@@ -3,18 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restaurante en Moche, Perú - Bienvenido</title>
-    <meta name="description" content="Sistema de gestión para restaurante en Moche, Perú. Menú digital, pedidos y más.">
-    <meta name="keywords" content="restaurante, Moche, Perú, comida, cerca de mí, menú, barrio, local">
-    <meta property="og:title" content="Restaurante en Moche, Perú" />
-    <meta property="og:description" content="Disfruta la mejor experiencia gastronómica en Moche, Perú. Menú digital y pedidos." />
-    <meta property="og:type" content="website" />
+    <title>Restaurante en Moche, Perú - Menú Digital y Pedidos</title>
+    <meta name="description" content="Restaurante en Moche, Perú. Menú digital, pedidos en línea y reservas. Disfruta la mejor gastronomía local con platos típicos y bebidas. Cerca de la Huaca del Sol y la Luna.">
+    <meta name="keywords" content="restaurante Moche, comida en Moche Perú, menú digital, restaurante cerca de mí, comida peruana, platos típicos Moche, restaurante La Libertad, Trujillo restaurante">
+    <meta name="author" content="Restaurante Moche">
+    <link rel="canonical" href="https://tu-dominio.com/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="restaurant" />
+    <meta property="og:title" content="Restaurante en Moche, Perú - Menú Digital" />
+    <meta property="og:description" content="Disfruta la mejor experiencia gastronómica en Moche, Perú. Menú digital, pedidos y reservas." />
     <meta property="og:locale" content="es_PE" />
+    <meta property="og:site_name" content="Restaurante Moche" />
+    <meta property="og:url" content="https://tu-dominio.com/" />
+    <meta property="og:image" content="https://tu-dominio.com/img/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Restaurante en Moche, Perú" />
+    <meta property="restaurant:contact_info:street_address" content="Moche, La Libertad" />
+    <meta property="restaurant:contact_info:locality" content="Moche" />
+    <meta property="restaurant:contact_info:region" content="La Libertad" />
+    <meta property="restaurant:contact_info:country_name" content="Perú" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Restaurante en Moche, Perú" />
+    <meta name="twitter:description" content="Menú digital y pedidos online. La mejor gastronomía en Moche." />
+    <meta name="twitter:image" content="https://tu-dominio.com/img/og-image.jpg" />
+
+    <!-- Geo Meta Tags -->
+    <meta name="geo.region" content="PE-LAL" />
+    <meta name="geo.placename" content="Moche, La Libertad, Perú" />
+    <meta name="geo.position" content="-8.1714;-79.0117" />
+    <meta name="ICBM" content="-8.1714, -79.0117" />
+
     <meta name="robots" content="index, follow">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+    <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>R</text></svg>">
     <meta http-equiv="refresh" content="0;url=cliente.html">
+
+    <!-- Schema.org JSON-LD - Restaurant -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Restaurant",
+        "name": "Restaurante Moche",
+        "description": "Restaurante en Moche, Perú. Menú digital con platos típicos, bebidas y postres. La mejor gastronomía local.",
+        "url": "https://tu-dominio.com",
+        "telephone": "+51-XXX-XXX-XXX",
+        "image": "https://tu-dominio.com/img/og-image.jpg",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Tu dirección aquí",
+            "addressLocality": "Moche",
+            "addressRegion": "La Libertad",
+            "postalCode": "13601",
+            "addressCountry": "PE"
+        },
+        "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": -8.1714,
+            "longitude": -79.0117
+        },
+        "servesCuisine": ["Peruana", "Criolla", "Local"],
+        "priceRange": "S/",
+        "openingHoursSpecification": [
+            {
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+                "opens": "11:00",
+                "closes": "22:00"
+            },
+            {
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": "Sunday",
+                "opens": "11:00",
+                "closes": "20:00"
+            }
+        ],
+        "hasMenu": {
+            "@type": "Menu",
+            "name": "Menú Digital",
+            "url": "https://tu-dominio.com/cliente.html"
+        },
+        "acceptsReservations": "true",
+        "currenciesAccepted": "PEN",
+        "paymentAccepted": "Efectivo, Yape, Plin, Tarjeta",
+        "areaServed": {
+            "@type": "City",
+            "name": "Moche"
+        },
+        "sameAs": []
+    }
+    </script>
 </head>
 <body>
     <p aria-live="polite">Redirigiendo al menú...</p>
+    <script>
+        fetch('/api/config/logo').then(r=>r.json()).then(d=>{
+            if(d.logo){const f=document.getElementById('favicon');if(f)f.href='/uploads/'+d.logo;}
+        }).catch(()=>{});
+    </script>
 </body>
 </html>

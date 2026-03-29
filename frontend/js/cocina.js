@@ -31,23 +31,23 @@ class CocinaApp {
         });
         
         this.socket.on('connect', () => {
-            console.log('🔌 Cocina conectada a WebSocket');
+            console.log('Cocina conectada a WebSocket');
             this.socket.emit('join-room', 'cocina');
             // Sincronizar al conectar/reconectar
             this.cargarPedidos();
         });
 
         this.socket.on('disconnect', () => {
-            console.log('🔌 Cocina desconectada de WebSocket');
+            console.log('Cocina desconectada de WebSocket');
         });
 
         this.socket.on('reconnect', () => {
-            console.log('🔄 Cocina reconectada');
+            console.log('Cocina reconectada');
         });
 
         // Escuchar nuevos pedidos en tiempo real - INSTANTÁNEO
         this.socket.on('nuevo-pedido', (pedido) => {
-            console.log('📦 Nuevo pedido recibido:', pedido);
+            console.log('Nuevo pedido recibido:', pedido);
             // Evitar duplicados: solo agregar si no existe
             const existe = this.pedidos.some(p => p._id === pedido._id);
             if (!existe && pedido.estado !== 'entregado' && pedido.estado !== 'cancelado') {
@@ -61,7 +61,7 @@ class CocinaApp {
 
         // Escuchar actualizaciones de pedidos - INSTANTÁNEO
         this.socket.on('pedido-actualizado', (pedido) => {
-            console.log('📝 Pedido actualizado:', pedido);
+            console.log('Pedido actualizado:', pedido);
             const index = this.pedidos.findIndex(p => p._id === pedido._id);
             if (pedido.estado === 'entregado' || pedido.estado === 'cancelado') {
                 // Eliminar de la lista
@@ -83,7 +83,7 @@ class CocinaApp {
 
         // Escuchar pedidos eliminados
         this.socket.on('pedido-eliminado', (data) => {
-            console.log('🗑️ Pedido eliminado:', data);
+            console.log('Pedido eliminado:', data);
             this.pedidos = this.pedidos.filter(p => p._id !== data._id);
             this.actualizarEstadisticas();
             this.renderizarPedidos();
@@ -136,9 +136,9 @@ class CocinaApp {
                 localStorage.setItem('token_cocina', data.token);
                 this.mostrarPanel();
             } else if (data.success && data.usuario.rol !== 'cocinero') {
-                alert('⚠️ Este panel es solo para cocineros. Use el panel de administración para otros roles.');
+                alert('Este panel es solo para cocineros. Use el panel de administración para otros roles.');
             } else {
-                alert('❌ Usuario o contraseña incorrectos');
+                alert('Usuario o contraseña incorrectos');
             }
         } catch (error) {
             alert('Error al conectar con el servidor');
@@ -158,7 +158,7 @@ class CocinaApp {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('cocina-screen').style.display = 'block';
         
-        document.getElementById('user-name').textContent = `👨‍🍳 ${this.usuario.nombre}`;
+        document.getElementById('user-name').textContent = `${this.usuario.nombre}`;
         
         this.actualizarFechaHora();
         setInterval(() => this.actualizarFechaHora(), 1000);
@@ -173,11 +173,42 @@ class CocinaApp {
         // Solicitar permisos de notificación
         this.solicitarPermisoNotificaciones();
         
+        // Cargar logo
+        this.cargarLogo();
+        
         // Cargar pedidos inicial
         await this.cargarPedidos();
         
         // Fallback: Actualizar pedidos cada 30 segundos si WebSocket falla
         setInterval(() => this.cargarPedidos(), 30000);
+    }
+
+    async cargarLogo() {
+        try {
+            const baseUrl = this.API_URL.replace('/api', '');
+            const res = await fetch(`${this.API_URL}/config/logo`);
+            const data = await res.json();
+            if (data.logo) {
+                const logoUrl = `${baseUrl}${data.logo}?t=${Date.now()}`;
+                // Logo en header de cocina
+                const logoEl = document.getElementById('cocina-logo');
+                if (logoEl) {
+                    logoEl.src = logoUrl;
+                    logoEl.style.display = 'inline';
+                }
+                // Logo en login de cocina
+                const loginLogo = document.getElementById('cocina-login-logo');
+                if (loginLogo) {
+                    loginLogo.src = logoUrl;
+                    loginLogo.style.display = 'block';
+                }
+                // Favicon dinámico
+                const favicon = document.getElementById('favicon');
+                if (favicon) favicon.href = logoUrl;
+            }
+        } catch (e) {
+            console.error('Error al cargar logo:', e);
+        }
     }
 
     actualizarFechaHora() {
@@ -213,7 +244,7 @@ class CocinaApp {
             // Filtrar solo pedidos activos (no entregados ni cancelados)
             const pedidosAnteriores = [...this.pedidos];
             this.pedidos = pedidos.filter(p => 
-                p.estado !== 'entregado' && p.estado !== 'cancelado'
+                p.estado !== 'entregado' && p.estado !== 'cancelado' && p.estado !== 'cobrado'
             );
             
             // Verificar si hay nuevos pedidos pendientes
@@ -276,7 +307,7 @@ class CocinaApp {
                 if (tiempoEl) {
                     const tiempoTranscurrido = this.calcularTiempo(pedido.fecha);
                     const esUrgente = tiempoTranscurrido.minutos > 15 && pedido.estado === 'pendiente';
-                    tiempoEl.textContent = `⏱️ ${tiempoTranscurrido.texto}`;
+                    tiempoEl.textContent = `${tiempoTranscurrido.texto}`;
                     tiempoEl.classList.toggle('urgente', esUrgente);
                 }
             }
@@ -302,7 +333,7 @@ class CocinaApp {
         if (pedidosFiltrados.length === 0) {
             container.innerHTML = `
                 <div class="sin-pedidos" style="grid-column: 1/-1;">
-                    <div class="icono">✅</div>
+                    <div class="icono"><i class="fa-solid fa-circle-check"></i></div>
                     <h2>¡Todo al día!</h2>
                     <p>No hay pedidos ${this.filtroActual !== 'todos' ? 'con este estado' : 'pendientes'}</p>
                 </div>
@@ -372,7 +403,7 @@ class CocinaApp {
         if (pedidosFiltrados.length === 0) {
             container.innerHTML = `
                 <div class="sin-pedidos" style="grid-column: 1/-1;">
-                    <div class="icono">✅</div>
+                    <div class="icono"><i class="fa-solid fa-circle-check"></i></div>
                     <h2>¡Todo al día!</h2>
                     <p>No hay pedidos ${this.filtroActual !== 'todos' ? 'con este estado' : 'pendientes'}</p>
                 </div>
@@ -388,41 +419,41 @@ class CocinaApp {
         const esUrgente = tiempoTranscurrido.minutos > 15 && pedido.estado === 'pendiente';
         
         const estadoTexto = {
-            'pendiente': '🔴 PENDIENTE',
-            'en-preparacion': '🟡 EN PREPARACIÓN',
-            'listo': '🟢 LISTO'
+            'pendiente': '<i class="fa-solid fa-circle" style="color:#e74c3c"></i> PENDIENTE',
+            'en-preparacion': '<i class="fa-solid fa-circle" style="color:#f39c12"></i> EN PREPARACIÓN',
+            'listo': '<i class="fa-solid fa-circle" style="color:#27ae60"></i> LISTO'
         };
         
         let botonesHTML = '';
         if (pedido.estado === 'pendiente') {
             botonesHTML = `
                 <button class="btn-cocina btn-preparar" onclick="app.cambiarEstado('${pedido._id}', 'en-preparacion')">
-                    🍳 Comenzar a Preparar
+                    <i class="fa-solid fa-fire-burner"></i> Comenzar a Preparar
                 </button>
             `;
         } else if (pedido.estado === 'en-preparacion') {
             botonesHTML = `
                 <button class="btn-cocina btn-listo" onclick="app.cambiarEstado('${pedido._id}', 'listo')">
-                    ✅ Marcar como Listo
+                    <i class="fa-solid fa-circle-check"></i> Marcar como Listo
                 </button>
             `;
         } else if (pedido.estado === 'listo') {
             botonesHTML = `
                 <button class="btn-cocina" style="background: #95a5a6; color: white;" disabled>
-                    ⏳ Esperando entrega al cliente
+                    <i class="fa-solid fa-hourglass-half"></i> Esperando entrega al cliente
                 </button>
             `;
         }
         
         const claseAnimacion = conAnimacion ? 'nuevo' : '';
         
-        const mesaNum = pedido.mesaNumero || pedido.numeroMesa || 'N/A';
+        const mesaNum = pedido.mesaNumero || 'N/A';
         return `
             <div class="pedido-cocina-card ${pedido.estado} ${claseAnimacion}" data-pedido-id="${pedido._id}">
                 <div class="pedido-cocina-header">
-                    <div class="mesa-numero-cocina">🪑 Mesa ${mesaNum}</div>
+                    <div class="mesa-numero-cocina"><i class="fa-solid fa-chair"></i> Mesa ${mesaNum}</div>
                     <div class="tiempo-pedido ${esUrgente ? 'urgente' : ''}">
-                        ⏱️ ${tiempoTranscurrido.texto}
+                        <i class="fa-solid fa-stopwatch"></i> ${tiempoTranscurrido.texto}
                     </div>
                 </div>
                 
@@ -434,7 +465,7 @@ class CocinaApp {
                             <span class="cantidad">${item.cantidad}x</span>
                             <span class="nombre">${item.nombre}</span>
                         </div>
-                        ${item.comentario ? `<div class="item-cocina-comentario">📝 ${item.comentario}</div>` : ''}
+                        ${item.comentario ? `<div class="item-cocina-comentario"><i class="fa-solid fa-comment"></i> ${item.comentario}</div>` : ''}
                     `).join('')}
                 </div>
                 
@@ -478,7 +509,7 @@ class CocinaApp {
             if (response.ok) {
                 // Registrar actividad
                 const pedido = this.pedidos.find(p => p._id === pedidoId);
-                const mesaNum = pedido?.mesaNumero || pedido?.numeroMesa || 'N/A';
+                const mesaNum = pedido?.mesaNumero || 'N/A';
                 const mensajeEstado = nuevoEstado === 'en-preparacion' 
                     ? `Cocina comenzó a preparar pedido de Mesa ${mesaNum}`
                     : `Pedido de Mesa ${mesaNum} está LISTO para servir`;
@@ -505,7 +536,9 @@ class CocinaApp {
                     'Authorization': `Bearer ${this.token}`
                 },
                 body: JSON.stringify({ 
-                    descripcion: `🍳 ${this.usuario.nombre}: ${accion}` 
+                    descripcion: accion,
+                    usuario: this.usuario.nombre,
+                    tipo: this.usuario.rol
                 })
             });
         } catch (error) {
@@ -522,7 +555,7 @@ class CocinaApp {
         
         // Enviar notificación push si el usuario no está viendo la página
         if (document.hidden) {
-            this.enviarNotificacionPush('🍳 ¡Nuevo Pedido!', 'Hay un nuevo pedido en cocina');
+            this.enviarNotificacionPush('¡Nuevo Pedido!', 'Hay un nuevo pedido en cocina');
         }
         
         setTimeout(() => {
@@ -555,8 +588,8 @@ class CocinaApp {
             try {
                 const notificacion = new Notification(titulo, {
                     body: mensaje,
-                    icon: '🍳',
-                    badge: '🍳',
+                    icon: '/favicon.ico',
+                    badge: '/favicon.ico',
                     tag: 'cocina-nuevo-pedido',
                     requireInteraction: true
                 });

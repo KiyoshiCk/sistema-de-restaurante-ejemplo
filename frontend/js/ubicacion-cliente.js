@@ -20,7 +20,7 @@
             btn.target = '_blank';
             btn.rel = 'noopener';
             btn.className = 'btn-ubicacion-maps-floating';
-            btn.innerHTML = '📍 ' + label;
+            btn.innerHTML = '<i class="fa-solid fa-location-dot"></i><span class="ubicacion-label">' + label + '</span>';
             document.body.appendChild(btn);
         } catch (e) {
             // No mostrar botón si falla

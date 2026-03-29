@@ -8,6 +8,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 
 const app = express();
 const server = http.createServer(app);
@@ -62,6 +64,36 @@ app.use(cors({
 }));
 app.use(bodyParser.json({ limit: '10mb' }));
 
+// ============= UPLOADS (Logo) =============
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Servir archivos estáticos de uploads
+app.use('/uploads', express.static(uploadsDir));
+
+// Configurar multer para subida de logo
+const logoStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadsDir),
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, `logo${ext}`);
+    }
+});
+const uploadLogo = multer({
+    storage: logoStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB máximo
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Solo se permiten imágenes (JPG, PNG, GIF, WEBP, SVG)'));
+        }
+    }
+});
+
 // ============= MIDDLEWARE DE AUTENTICACIÓN =============
 const verificarToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -92,9 +124,27 @@ const soloAdmin = (req, res, next) => {
 db.exec(`
     CREATE TABLE IF NOT EXISTS config (
         _id TEXT PRIMARY KEY,
-        ciudad TEXT DEFAULT 'Moche',
+        nombre TEXT DEFAULT '',
+        slogan TEXT DEFAULT '',
+        descripcion TEXT DEFAULT '',
+        telefono TEXT DEFAULT '',
+        email TEXT DEFAULT '',
+        whatsapp TEXT DEFAULT '',
+        horarioSemana TEXT DEFAULT '',
+        horarioDomingo TEXT DEFAULT '',
+        horaAbre TEXT DEFAULT '',
+        horaCierra TEXT DEFAULT '',
+        horaAbreDom TEXT DEFAULT '',
+        horaCierraDom TEXT DEFAULT '',
+        metodosPago TEXT DEFAULT '',
+        moneda TEXT DEFAULT 'S/',
+        monedaCodigo TEXT DEFAULT 'PEN',
+        cocinas TEXT DEFAULT '',
+        ciudad TEXT DEFAULT '',
         barrio TEXT DEFAULT '',
         direccion TEXT DEFAULT '',
+        codigoPostal TEXT DEFAULT '',
+        region TEXT DEFAULT '',
         lat REAL DEFAULT -8.1713,
         lng REAL DEFAULT -78.5143,
         createdAt TEXT DEFAULT (datetime('now')),
@@ -127,19 +177,20 @@ db.exec(`
         _id TEXT PRIMARY KEY,
         mesaId TEXT,
         mesaNumero INTEGER,
-        numeroMesa INTEGER,
         items TEXT DEFAULT '[]',
         estado TEXT,
         total REAL,
         fecha TEXT DEFAULT (datetime('now')),
         createdAt TEXT DEFAULT (datetime('now')),
-        updatedAt TEXT DEFAULT (datetime('now'))
+        updatedAt TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (mesaId) REFERENCES mesas(_id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS facturas (
         _id TEXT PRIMARY KEY,
         numeroFactura TEXT,
-        numeroMesa TEXT,
+        mesaNumero INTEGER,
+        pedidoIds TEXT DEFAULT '[]',
         items TEXT DEFAULT '[]',
         subtotal REAL,
         impuesto REAL,
@@ -179,10 +230,95 @@ db.exec(`
         unidad TEXT DEFAULT 'unidades',
         stockMinimo REAL DEFAULT 10,
         costo REAL DEFAULT 0,
+        costoAnterior REAL DEFAULT 0,
         createdAt TEXT DEFAULT (datetime('now')),
         updatedAt TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS historial_costos (
+        _id TEXT PRIMARY KEY,
+        inventarioId TEXT NOT NULL,
+        costoAnterior REAL NOT NULL,
+        costoNuevo REAL NOT NULL,
+        variacion REAL NOT NULL,
+        fecha TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (inventarioId) REFERENCES inventario(_id) ON DELETE CASCADE
+    );
 `);
+
+// ============= ÍNDICES =============
+try {
+    db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_pedidos_estado ON pedidos(estado);
+        CREATE INDEX IF NOT EXISTS idx_pedidos_mesaId ON pedidos(mesaId);
+        CREATE INDEX IF NOT EXISTS idx_pedidos_fecha ON pedidos(fecha);
+        CREATE INDEX IF NOT EXISTS idx_facturas_fecha ON facturas(fecha);
+        CREATE INDEX IF NOT EXISTS idx_facturas_mesaNumero ON facturas(mesaNumero);
+        CREATE INDEX IF NOT EXISTS idx_inventario_categoria ON inventario(categoria);
+        CREATE INDEX IF NOT EXISTS idx_actividad_fecha ON actividad(fecha);
+        CREATE INDEX IF NOT EXISTS idx_historial_costos_inventarioId ON historial_costos(inventarioId);
+    `);
+} catch {}
+
+// Migración: agregar costoAnterior si no existe
+try {
+    db.prepare('SELECT costoAnterior FROM inventario LIMIT 1').get();
+} catch {
+    try { db.prepare('ALTER TABLE inventario ADD COLUMN costoAnterior REAL DEFAULT 0').run(); } catch {}
+}
+
+// Migración: agregar pedidoIds a facturas si no existe
+try {
+    db.prepare('SELECT pedidoIds FROM facturas LIMIT 1').get();
+} catch {
+    try { db.prepare("ALTER TABLE facturas ADD COLUMN pedidoIds TEXT DEFAULT '[]'").run(); } catch {}
+}
+
+// Migración: copiar numeroMesa a mesaNumero en pedidos existentes
+try {
+    db.prepare('SELECT numeroMesa FROM pedidos LIMIT 1').get();
+    // Si la columna existe, copiar datos y dejarla (SQLite no puede DROP COLUMN fácilmente)
+    db.prepare('UPDATE pedidos SET mesaNumero = numeroMesa WHERE mesaNumero IS NULL AND numeroMesa IS NOT NULL').run();
+} catch {}
+
+// Migración: agregar campos de identidad del restaurante a config
+const configMigrations = [
+    { col: 'nombre', sql: "ALTER TABLE config ADD COLUMN nombre TEXT DEFAULT ''" },
+    { col: 'slogan', sql: "ALTER TABLE config ADD COLUMN slogan TEXT DEFAULT ''" },
+    { col: 'descripcion', sql: "ALTER TABLE config ADD COLUMN descripcion TEXT DEFAULT ''" },
+    { col: 'telefono', sql: "ALTER TABLE config ADD COLUMN telefono TEXT DEFAULT ''" },
+    { col: 'email', sql: "ALTER TABLE config ADD COLUMN email TEXT DEFAULT ''" },
+    { col: 'whatsapp', sql: "ALTER TABLE config ADD COLUMN whatsapp TEXT DEFAULT ''" },
+    { col: 'horarioSemana', sql: "ALTER TABLE config ADD COLUMN horarioSemana TEXT DEFAULT ''" },
+    { col: 'horarioDomingo', sql: "ALTER TABLE config ADD COLUMN horarioDomingo TEXT DEFAULT ''" },
+    { col: 'horaAbre', sql: "ALTER TABLE config ADD COLUMN horaAbre TEXT DEFAULT ''" },
+    { col: 'horaCierra', sql: "ALTER TABLE config ADD COLUMN horaCierra TEXT DEFAULT ''" },
+    { col: 'horaAbreDom', sql: "ALTER TABLE config ADD COLUMN horaAbreDom TEXT DEFAULT ''" },
+    { col: 'horaCierraDom', sql: "ALTER TABLE config ADD COLUMN horaCierraDom TEXT DEFAULT ''" },
+    { col: 'metodosPago', sql: "ALTER TABLE config ADD COLUMN metodosPago TEXT DEFAULT ''" },
+    { col: 'moneda', sql: "ALTER TABLE config ADD COLUMN moneda TEXT DEFAULT 'S/'" },
+    { col: 'monedaCodigo', sql: "ALTER TABLE config ADD COLUMN monedaCodigo TEXT DEFAULT 'PEN'" },
+    { col: 'cocinas', sql: "ALTER TABLE config ADD COLUMN cocinas TEXT DEFAULT ''" },
+    { col: 'codigoPostal', sql: "ALTER TABLE config ADD COLUMN codigoPostal TEXT DEFAULT ''" },
+    { col: 'region', sql: "ALTER TABLE config ADD COLUMN region TEXT DEFAULT ''" },
+];
+for (const m of configMigrations) {
+    try { db.prepare(`SELECT ${m.col} FROM config LIMIT 1`).get(); } catch {
+        try { db.prepare(m.sql).run(); } catch {}
+    }
+}
+
+// Migración: limpiar defaults hardcodeados de versiones anteriores
+try {
+    const cfg = db.prepare('SELECT nombre FROM config LIMIT 1').get();
+    if (cfg && cfg.nombre === 'Mi Restaurante') {
+        db.prepare(`UPDATE config SET 
+            nombre='', horarioSemana='', horarioDomingo='', 
+            horaAbre='', horaCierra='', horaAbreDom='', horaCierraDom='',
+            metodosPago='', cocinas='', ciudad=''
+            WHERE nombre='Mi Restaurante'`).run();
+    }
+} catch {}
 
 // ============= HELPERS =============
 const formatRow = (row, jsonFields = []) => {
@@ -226,20 +362,102 @@ app.put('/api/config', verificarToken, soloAdmin, (req, res) => {
             db.prepare('INSERT INTO config (_id) VALUES (?)').run(_id);
             config = db.prepare('SELECT * FROM config WHERE _id = ?').get(_id);
         }
-        const ciudad = req.body.ciudad || config.ciudad;
-        const barrio = req.body.barrio || config.barrio;
-        const direccion = req.body.direccion || config.direccion;
-        const lat = typeof req.body.lat === 'number' ? req.body.lat : config.lat;
-        const lng = typeof req.body.lng === 'number' ? req.body.lng : config.lng;
 
-        db.prepare('UPDATE config SET ciudad=?, barrio=?, direccion=?, lat=?, lng=?, updatedAt=? WHERE _id=?')
-            .run(ciudad, barrio, direccion, lat, lng, now(), config._id);
+        // Merge: usar valor enviado o mantener el existente
+        const campos = [
+            'nombre', 'slogan', 'descripcion', 'telefono', 'email', 'whatsapp',
+            'horarioSemana', 'horarioDomingo', 'horaAbre', 'horaCierra',
+            'horaAbreDom', 'horaCierraDom', 'metodosPago', 'moneda', 'monedaCodigo',
+            'cocinas', 'ciudad', 'barrio', 'direccion', 'codigoPostal', 'region'
+        ];
+        const valores = {};
+        for (const c of campos) {
+            valores[c] = req.body[c] !== undefined ? req.body[c] : config[c];
+        }
+        valores.lat = typeof req.body.lat === 'number' ? req.body.lat : config.lat;
+        valores.lng = typeof req.body.lng === 'number' ? req.body.lng : config.lng;
+
+        const setClauses = [...campos, 'lat', 'lng'].map(c => `${c}=?`).join(', ');
+        const params = [...campos.map(c => valores[c]), valores.lat, valores.lng, now(), config._id];
+
+        db.prepare(`UPDATE config SET ${setClauses}, updatedAt=? WHERE _id=?`).run(...params);
 
         const updated = db.prepare('SELECT * FROM config WHERE _id = ?').get(config._id);
         res.json(updated);
     } catch (error) {
         logError('Error al actualizar configuración', error);
         res.status(500).json({ error: 'Error al actualizar configuración' });
+    }
+});
+
+// ============= LOGO DEL RESTAURANTE =============
+
+// Subir/cambiar logo
+app.post('/api/config/logo', verificarToken, soloAdmin, (req, res) => {
+    uploadLogo.single('logo')(req, res, (err) => {
+        if (err) {
+            if (err instanceof multer.MulterError) {
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({ error: 'La imagen no debe superar 5MB' });
+                }
+                return res.status(400).json({ error: 'Error al subir archivo: ' + err.message });
+            }
+            return res.status(400).json({ error: err.message });
+        }
+        if (!req.file) {
+            return res.status(400).json({ error: 'No se envió ninguna imagen' });
+        }
+
+        // Eliminar logos anteriores con extensiones diferentes
+        const exts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+        const currentExt = path.extname(req.file.filename).toLowerCase();
+        exts.forEach(ext => {
+            if (ext !== currentExt) {
+                const oldFile = path.join(uploadsDir, `logo${ext}`);
+                if (fs.existsSync(oldFile)) {
+                    fs.unlinkSync(oldFile);
+                }
+            }
+        });
+
+        const logoUrl = `/uploads/${req.file.filename}`;
+        res.json({ message: 'Logo actualizado correctamente', logo: logoUrl });
+    });
+});
+
+// Obtener logo actual
+app.get('/api/config/logo', (req, res) => {
+    try {
+        const exts = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+        for (const ext of exts) {
+            const logoPath = path.join(uploadsDir, `logo${ext}`);
+            if (fs.existsSync(logoPath)) {
+                return res.json({ logo: `/uploads/logo${ext}` });
+            }
+        }
+        res.json({ logo: null });
+    } catch (error) {
+        logError('Error al obtener logo', error);
+        res.status(500).json({ error: 'Error al obtener logo' });
+    }
+});
+
+// Eliminar logo
+app.delete('/api/config/logo', verificarToken, soloAdmin, (req, res) => {
+    try {
+        const exts = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+        let deleted = false;
+        exts.forEach(ext => {
+            const logoPath = path.join(uploadsDir, `logo${ext}`);
+            if (fs.existsSync(logoPath)) {
+                fs.unlinkSync(logoPath);
+                deleted = true;
+            }
+        });
+        res.json({ message: deleted ? 'Logo eliminado' : 'No había logo para eliminar', logo: null });
+    } catch (error) {
+        logError('Error al eliminar logo', error);
+        res.status(500).json({ error: 'Error al eliminar logo' });
     }
 });
 
@@ -502,7 +720,10 @@ app.delete('/api/mesas/:id', verificarToken, (req, res) => {
 
 app.get('/api/pedidos', verificarToken, (req, res) => {
     try {
-        const pedidos = db.prepare('SELECT * FROM pedidos').all();
+        const query = req.query.todos === '1'
+            ? 'SELECT * FROM pedidos ORDER BY fecha DESC'
+            : "SELECT * FROM pedidos WHERE estado NOT IN ('cobrado', 'cancelado') ORDER BY fecha DESC";
+        const pedidos = db.prepare(query).all();
         res.json(formatRows(pedidos, ['items']));
     } catch (error) {
         logError('Error al obtener pedidos', error);
@@ -514,12 +735,10 @@ app.post('/api/pedidos', verificarToken, (req, res) => {
     try {
         const _id = generarId();
         const pedidoData = { ...req.body };
-        if (pedidoData.mesaNumero && !pedidoData.numeroMesa) pedidoData.numeroMesa = pedidoData.mesaNumero;
-        if (pedidoData.numeroMesa && !pedidoData.mesaNumero) pedidoData.mesaNumero = pedidoData.numeroMesa;
 
         const items = JSON.stringify(pedidoData.items || []);
-        db.prepare('INSERT INTO pedidos (_id, mesaId, mesaNumero, numeroMesa, items, estado, total) VALUES (?, ?, ?, ?, ?, ?, ?)')
-            .run(_id, pedidoData.mesaId || null, pedidoData.mesaNumero || null, pedidoData.numeroMesa || null, items, pedidoData.estado, pedidoData.total);
+        db.prepare('INSERT INTO pedidos (_id, mesaId, mesaNumero, items, estado, total) VALUES (?, ?, ?, ?, ?, ?)')
+            .run(_id, pedidoData.mesaId || null, pedidoData.mesaNumero || null, items, pedidoData.estado, pedidoData.total);
 
         const pedido = formatRow(db.prepare('SELECT * FROM pedidos WHERE _id = ?').get(_id), ['items']);
         emitirEvento('nuevo-pedido', pedido);
@@ -535,11 +754,10 @@ app.put('/api/pedidos/:id', verificarToken, (req, res) => {
         if (!existing) return res.status(404).json({ error: 'Pedido no encontrado' });
 
         const items = req.body.items ? JSON.stringify(req.body.items) : existing.items;
-        db.prepare('UPDATE pedidos SET mesaId=?, mesaNumero=?, numeroMesa=?, items=?, estado=?, total=?, updatedAt=? WHERE _id=?')
+        db.prepare('UPDATE pedidos SET mesaId=?, mesaNumero=?, items=?, estado=?, total=?, updatedAt=? WHERE _id=?')
             .run(
                 req.body.mesaId ?? existing.mesaId,
                 req.body.mesaNumero ?? existing.mesaNumero,
-                req.body.numeroMesa ?? existing.numeroMesa,
                 items,
                 req.body.estado ?? existing.estado,
                 req.body.total ?? existing.total,
@@ -561,7 +779,7 @@ app.delete('/api/pedidos/:id', verificarToken, (req, res) => {
         if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
 
         db.prepare('DELETE FROM pedidos WHERE _id = ?').run(req.params.id);
-        emitirEvento('pedido-eliminado', { _id: req.params.id, mesaNumero: pedido.mesaNumero || pedido.numeroMesa });
+        emitirEvento('pedido-eliminado', { _id: req.params.id, mesaNumero: pedido.mesaNumero });
         res.json({ message: 'Pedido eliminado' });
     } catch (error) {
         res.status(500).json({ error: 'Error al eliminar pedido' });
@@ -572,8 +790,8 @@ app.delete('/api/pedidos/:id', verificarToken, (req, res) => {
 
 app.get('/api/facturas', verificarToken, (req, res) => {
     try {
-        const facturas = db.prepare('SELECT * FROM facturas').all();
-        res.json(formatRows(facturas, ['items']));
+        const facturas = db.prepare('SELECT * FROM facturas ORDER BY fecha DESC').all();
+        res.json(formatRows(facturas, ['items', 'pedidoIds']));
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener facturas' });
     }
@@ -582,11 +800,11 @@ app.get('/api/facturas', verificarToken, (req, res) => {
 app.post('/api/facturas', verificarToken, (req, res) => {
     try {
         const _id = generarId();
-        const { numeroFactura, numeroMesa, items, subtotal, impuesto, total, metodoPago } = req.body;
-        db.prepare('INSERT INTO facturas (_id, numeroFactura, numeroMesa, items, subtotal, impuesto, total, metodoPago) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-            .run(_id, numeroFactura, String(numeroMesa), JSON.stringify(items || []), subtotal, impuesto, total, metodoPago);
+        const { numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago } = req.body;
+        db.prepare('INSERT INTO facturas (_id, numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            .run(_id, numeroFactura, mesaNumero, JSON.stringify(pedidoIds || []), JSON.stringify(items || []), subtotal, impuesto, total, metodoPago);
 
-        const factura = formatRow(db.prepare('SELECT * FROM facturas WHERE _id = ?').get(_id), ['items']);
+        const factura = formatRow(db.prepare('SELECT * FROM facturas WHERE _id = ?').get(_id), ['items', 'pedidoIds']);
         emitirEvento('nueva-factura', factura);
         res.status(201).json(factura);
     } catch (error) {
@@ -610,8 +828,8 @@ app.post('/api/inventario', verificarToken, soloAdmin, (req, res) => {
     try {
         const _id = generarId();
         const { nombre, categoria, cantidad, unidad, stockMinimo, costo } = req.body;
-        db.prepare('INSERT INTO inventario (_id, nombre, categoria, cantidad, unidad, stockMinimo, costo) VALUES (?, ?, ?, ?, ?, ?, ?)')
-            .run(_id, nombre, categoria || 'General', cantidad || 0, unidad || 'unidades', stockMinimo || 10, costo || 0);
+        db.prepare('INSERT INTO inventario (_id, nombre, categoria, cantidad, unidad, stockMinimo, costo, costoAnterior) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+            .run(_id, nombre, categoria || 'General', cantidad || 0, unidad || 'unidades', stockMinimo || 10, costo || 0, 0);
         const item = db.prepare('SELECT * FROM inventario WHERE _id = ?').get(_id);
         res.status(201).json(item);
     } catch (error) {
@@ -625,14 +843,25 @@ app.put('/api/inventario/:id', verificarToken, soloAdmin, (req, res) => {
         if (!existing) return res.status(404).json({ error: 'Item no encontrado' });
 
         const { nombre, categoria, cantidad, unidad, stockMinimo, costo } = req.body;
-        db.prepare('UPDATE inventario SET nombre=?, categoria=?, cantidad=?, unidad=?, stockMinimo=?, costo=?, updatedAt=? WHERE _id=?')
+        const costoFinal = costo ?? existing.costo;
+        const costoAnteriorFinal = existing.costo;
+
+        // Registrar cambio de costo si el precio cambió
+        if (costo !== undefined && costo !== null && costo !== existing.costo && existing.costo > 0) {
+            const variacion = ((costo - existing.costo) / existing.costo) * 100;
+            db.prepare('INSERT INTO historial_costos (_id, inventarioId, costoAnterior, costoNuevo, variacion) VALUES (?, ?, ?, ?, ?)')
+                .run(generarId(), req.params.id, existing.costo, costo, Math.round(variacion * 100) / 100);
+        }
+
+        db.prepare('UPDATE inventario SET nombre=?, categoria=?, cantidad=?, unidad=?, stockMinimo=?, costo=?, costoAnterior=?, updatedAt=? WHERE _id=?')
             .run(
                 nombre ?? existing.nombre,
                 categoria ?? existing.categoria,
                 cantidad ?? existing.cantidad,
                 unidad ?? existing.unidad,
                 stockMinimo ?? existing.stockMinimo,
-                costo ?? existing.costo,
+                costoFinal,
+                (costo !== undefined && costo !== null && costo !== existing.costo) ? costoAnteriorFinal : (existing.costoAnterior || 0),
                 now(),
                 req.params.id
             );
@@ -645,6 +874,7 @@ app.put('/api/inventario/:id', verificarToken, soloAdmin, (req, res) => {
 
 app.delete('/api/inventario/:id', verificarToken, soloAdmin, (req, res) => {
     try {
+        db.prepare('DELETE FROM historial_costos WHERE inventarioId = ?').run(req.params.id);
         const result = db.prepare('DELETE FROM inventario WHERE _id = ?').run(req.params.id);
         if (result.changes > 0) {
             res.json({ message: 'Item eliminado' });
@@ -662,6 +892,15 @@ app.get('/api/inventario/alertas', verificarToken, (req, res) => {
         res.json(alertas);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener alertas' });
+    }
+});
+
+app.get('/api/inventario/:id/historial-costos', verificarToken, (req, res) => {
+    try {
+        const historial = db.prepare('SELECT * FROM historial_costos WHERE inventarioId = ? ORDER BY fecha DESC LIMIT 20').all(req.params.id);
+        res.json(historial);
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener historial de costos' });
     }
 });
 
@@ -829,7 +1068,10 @@ app.get('/api/backup', verificarToken, soloAdmin, (req, res) => {
             menu: formatRows(db.prepare('SELECT * FROM menu').all()),
             mesas: db.prepare('SELECT * FROM mesas').all(),
             pedidos: formatRows(db.prepare('SELECT * FROM pedidos').all(), ['items']),
-            facturas: formatRows(db.prepare('SELECT * FROM facturas').all(), ['items']),
+            facturas: formatRows(db.prepare('SELECT * FROM facturas').all(), ['items', 'pedidoIds']),
+            inventario: db.prepare('SELECT * FROM inventario').all(),
+            historial_costos: db.prepare('SELECT * FROM historial_costos').all(),
+            usuarios: db.prepare('SELECT _id, username, password, nombre, rol, activo, createdAt, updatedAt FROM usuarios').all(),
             actividad: db.prepare('SELECT * FROM actividad').all(),
             fecha: new Date().toISOString()
         };
@@ -841,7 +1083,7 @@ app.get('/api/backup', verificarToken, soloAdmin, (req, res) => {
 
 app.post('/api/restore', verificarToken, soloAdmin, (req, res) => {
     try {
-        const { menu, mesas, pedidos, facturas, actividad } = req.body;
+        const { menu, mesas, pedidos, facturas, inventario, historial_costos, usuarios, actividad } = req.body;
 
         const restore = db.transaction(() => {
             if (menu && Array.isArray(menu)) {
@@ -860,16 +1102,37 @@ app.post('/api/restore', verificarToken, soloAdmin, (req, res) => {
             }
             if (pedidos && Array.isArray(pedidos)) {
                 db.prepare('DELETE FROM pedidos').run();
-                const stmt = db.prepare('INSERT INTO pedidos (_id, mesaId, mesaNumero, numeroMesa, items, estado, total, fecha, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                const stmt = db.prepare('INSERT INTO pedidos (_id, mesaId, mesaNumero, items, estado, total, fecha, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
                 for (const item of pedidos) {
-                    stmt.run(item._id || generarId(), item.mesaId, item.mesaNumero, item.numeroMesa, JSON.stringify(item.items || []), item.estado, item.total, item.fecha || now(), item.createdAt || now(), item.updatedAt || now());
+                    stmt.run(item._id || generarId(), item.mesaId, item.mesaNumero || item.numeroMesa, JSON.stringify(item.items || []), item.estado, item.total, item.fecha || now(), item.createdAt || now(), item.updatedAt || now());
                 }
             }
             if (facturas && Array.isArray(facturas)) {
                 db.prepare('DELETE FROM facturas').run();
-                const stmt = db.prepare('INSERT INTO facturas (_id, numeroFactura, numeroMesa, items, subtotal, impuesto, total, metodoPago, fecha, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                const stmt = db.prepare('INSERT INTO facturas (_id, numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago, fecha, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
                 for (const item of facturas) {
-                    stmt.run(item._id || generarId(), item.numeroFactura, String(item.numeroMesa), JSON.stringify(item.items || []), item.subtotal, item.impuesto, item.total, item.metodoPago, item.fecha || now(), item.createdAt || now(), item.updatedAt || now());
+                    stmt.run(item._id || generarId(), item.numeroFactura, item.mesaNumero || item.numeroMesa, JSON.stringify(item.pedidoIds || []), JSON.stringify(item.items || []), item.subtotal, item.impuesto, item.total, item.metodoPago, item.fecha || now(), item.createdAt || now(), item.updatedAt || now());
+                }
+            }
+            if (inventario && Array.isArray(inventario)) {
+                db.prepare('DELETE FROM inventario').run();
+                const stmt = db.prepare('INSERT INTO inventario (_id, nombre, categoria, cantidad, unidad, stockMinimo, costo, costoAnterior, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                for (const item of inventario) {
+                    stmt.run(item._id || generarId(), item.nombre, item.categoria || 'General', item.cantidad || 0, item.unidad || 'unidades', item.stockMinimo || 10, item.costo || 0, item.costoAnterior || 0, item.createdAt || now(), item.updatedAt || now());
+                }
+            }
+            if (historial_costos && Array.isArray(historial_costos)) {
+                db.prepare('DELETE FROM historial_costos').run();
+                const stmt = db.prepare('INSERT INTO historial_costos (_id, inventarioId, costoAnterior, costoNuevo, variacion, fecha) VALUES (?, ?, ?, ?, ?, ?)');
+                for (const item of historial_costos) {
+                    stmt.run(item._id || generarId(), item.inventarioId, item.costoAnterior, item.costoNuevo, item.variacion, item.fecha || now());
+                }
+            }
+            if (usuarios && Array.isArray(usuarios)) {
+                db.prepare('DELETE FROM usuarios').run();
+                const stmt = db.prepare('INSERT INTO usuarios (_id, username, password, nombre, rol, activo, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+                for (const item of usuarios) {
+                    stmt.run(item._id || generarId(), item.username, item.password, item.nombre, item.rol, item.activo ? 1 : 0, item.createdAt || now(), item.updatedAt || now());
                 }
             }
             if (actividad && Array.isArray(actividad)) {

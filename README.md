@@ -24,11 +24,20 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 
 ## 🚀 Características
 
-- **Dashboard**: Estadísticas en tiempo real
-- **Gestión de Menú**: Agregar, editar y eliminar platillos por categorías
-- **Gestión de Mesas**: Control de disponibilidad y ocupación
-- **Sistema de Pedidos**: Flujo completo desde toma hasta entrega
-- **Facturación**: Historial y reportes de ventas
+- **Dashboard**: Estadísticas en tiempo real con actividad por usuario y rol
+- **Gestión de Menú**: CRUD de platillos con fotos, categorías, iconos y disponibilidad
+- **Gestión de Mesas**: Control de disponibilidad, ocupación, resumen visual y consumo activo
+- **Sistema de Pedidos**: Flujo completo pendiente → preparación → listo → entregado, con filtros por estado
+- **Cobro y División de Cuenta**: Cobrar mesas con método de pago, dividir cuenta entre personas
+- **Facturación**: Historial de facturas con estadísticas por día, semana y mes
+- **Reportes**: Ventas por período, platillos top, mesas activas, horas pico, ventas por categoría
+- **Inventario**: Control de stock con 5 niveles de estado, alertas por severidad, historial de costos, ajuste personalizado con actualización de precios
+- **Gestión de Usuarios**: CRUD de usuarios con roles (admin, mesero, cocinero) y contraseñas hasheadas
+- **Ubicación**: Mapa interactivo con Leaflet para configurar dirección del restaurante
+- **Logo Personalizable**: Subida de logo que se refleja en favicon, header y vista del cliente
+- **Backup/Restore**: Exportar e importar todos los datos del sistema (menú, mesas, pedidos, facturas, inventario, usuarios)
+- **Vista Cocina**: Panel dedicado con pedidos en tiempo real y notificaciones
+- **Vista Cliente**: Menú digital público con hero parallax, SEO completo (Schema.org, Open Graph, sitemap)
 - **WebSocket**: Actualizaciones en tiempo real entre admin, cocina y meseros
 - **Acceso en Red Local**: Usa desde celular, tablet u otra PC en tu WiFi
 

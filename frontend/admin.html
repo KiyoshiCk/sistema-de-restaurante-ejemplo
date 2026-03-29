@@ -11,7 +11,8 @@
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="es_PE" />
     <meta name="robots" content="noindex, follow">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+    <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='%233498db' d='M416 0C400 0 288 32 288 176v112c0 35.3 28.7 64 64 64h32v128c0 17.7 14.3 32 32 32s32-14.3 32-32V0zM64 16C64 7.2 56.8 0 48 0S32 7.2 32 16v144H16c-8.8 0-16 7.2-16 16s7.2 16 16 16h16v32H16c-8.8 0-16 7.2-16 16s7.2 16 16 16h16v256c0 17.7 14.3 32 32 32s32-14.3 32-32V256h16c8.8 0 16-7.2 16-16s-7.2-16-16-16H80V192h16c8.8 0 16-7.2 16-16s-7.2-16-16-16H80V16z'/></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -19,7 +20,8 @@
     <div id="login-screen" class="login-screen">
         <div class="login-container">
             <div class="login-header">
-                <h1>🍽️ Restaurante</h1>
+                <img id="login-logo" class="login-logo" src="" alt="" style="display:none;">
+                <h1><i class="fa-solid fa-utensils"></i> Restaurante</h1>
                 <p>Panel de Administración</p>
             </div>
             <form id="login-form" class="login-form">
@@ -33,7 +35,7 @@
                 </div>
                 <button type="submit" class="btn-primary btn-login">Iniciar Sesión</button>
                 <div class="login-help">
-                    <p>👨‍🍳 Cocinero: <a href="cocina.html">Ir al panel de cocina</a></p>
+                    <p><i class="fa-solid fa-kitchen-set"></i> Cocinero: <a href="cocina.html">Ir al panel de cocina</a></p>
                 </div>
             </form>
             <a href="cliente.html" class="btn-volver-cliente">← Ver Menú del Cliente</a>
@@ -44,29 +46,29 @@
     <div id="app-screen" class="app-screen" style="display: none;">
         <div class="container">
             <header>
-                <h1>🍽️ Sistema de Gestión - Restaurante</h1>
+                <h1><img id="admin-header-logo" class="header-logo" src="" alt="" style="display:none;"><i class="fa-solid fa-utensils"></i> Sistema de Gestión - Restaurante</h1>
                 <h2 class="sr-only">Panel de gestión para restaurante</h2>
                 <div class="header-info" role="region" aria-label="Información de usuario y fecha">
                     <div id="fecha-hora"></div>
                     <div class="user-info">
                         <span id="user-role-badge" class="role-badge"></span>
                         <span id="user-name"></span>
-                        <button class="btn-logout" id="btn-logout">🚪 Salir</button>
+                        <button class="btn-logout" id="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
                     </div>
                 </div>
             </header>
 
             <nav class="main-nav" id="main-nav">
                 <!-- Se carga dinámicamente según el rol -->
-                <button class="nav-btn" data-page="dashboard" type="button"><span class="icon">📊</span>Dashboard</button>
-                <button class="nav-btn" data-page="menu" type="button"><span class="icon">📋</span>Gestión Menú</button>
-                <button class="nav-btn" data-page="mesas" type="button"><span class="icon">🪑</span>Mesas</button>
-                <button class="nav-btn" data-page="pedidos" type="button"><span class="icon">🛎️</span>Pedidos</button>
-                <button class="nav-btn" data-page="inventario" type="button"><span class="icon">📦</span>Inventario</button>
-                <button class="nav-btn" data-page="reportes" type="button"><span class="icon">📈</span>Reportes</button>
-                <button class="nav-btn" data-page="facturacion" type="button"><span class="icon">💰</span>Facturación</button>
-                <button class="nav-btn" data-page="usuarios" type="button"><span class="icon">👥</span>Usuarios</button>
-                <button class="nav-btn" id="btn-nav-ubicacion" type="button"><span class="icon">📍</span>Ubicación</button>
+                <button class="nav-btn" data-page="dashboard" type="button"><span class="icon"><i class="fa-solid fa-gauge"></i></span>Dashboard</button>
+                <button class="nav-btn" data-page="menu" type="button"><span class="icon"><i class="fa-solid fa-clipboard-list"></i></span>Gestión Menú</button>
+                <button class="nav-btn" data-page="mesas" type="button"><span class="icon"><i class="fa-solid fa-chair"></i></span>Mesas</button>
+                <button class="nav-btn" data-page="pedidos" type="button"><span class="icon"><i class="fa-solid fa-bell-concierge"></i></span>Pedidos</button>
+                <button class="nav-btn" data-page="inventario" type="button"><span class="icon"><i class="fa-solid fa-boxes-stacked"></i></span>Inventario</button>
+                <button class="nav-btn" data-page="reportes" type="button"><span class="icon"><i class="fa-solid fa-chart-line"></i></span>Reportes</button>
+                <button class="nav-btn" data-page="facturacion" type="button"><span class="icon"><i class="fa-solid fa-cash-register"></i></span>Facturación</button>
+                <button class="nav-btn" data-page="usuarios" type="button"><span class="icon"><i class="fa-solid fa-users"></i></span>Usuarios</button>
+                <button class="nav-btn" id="btn-nav-ubicacion" type="button"><span class="icon"><i class="fa-solid fa-location-dot"></i></span>Ubicación</button>
             </nav>
 
             <main id="content">
@@ -104,7 +106,7 @@
                         </div>
                         <div class="stat-card" id="ventas-card">
                             <h3>Ventas Hoy</h3>
-                            <p class="stat-number" id="ventas-hoy">$0.00</p>
+                            <p class="stat-number" id="ventas-hoy">S/0.00</p>
                         </div>
                         <div class="stat-card">
                             <h3>Platillos en Menú</h3>
@@ -119,36 +121,167 @@
 
                 <!-- Sección de Ubicación (independiente) -->
                 <section id="config-ubicacion" class="page">
-                    <div class="config-ubicacion" style="margin-top:40px;">
-                        <h2>Ubicación del Restaurante</h2>
-                        <form id="form-ubicacion" style="max-width:600px;">
-                            <div class="form-group">
-                                <label for="ciudad">Ciudad:</label>
-                                <input type="text" id="ciudad" name="ciudad" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="barrio">Barrio:</label>
-                                <input type="text" id="barrio" name="barrio">
-                            </div>
-                            <div class="form-group">
-                                <label for="direccion">Dirección:</label>
-                                <input type="text" id="direccion" name="direccion">
-                            </div>
-                            <div class="form-row">
+
+                    <!-- Datos del Restaurante -->
+                    <div class="config-restaurante" style="margin-top:40px;">
+                        <h2><i class="fa-solid fa-store"></i> Datos del Restaurante</h2>
+                        <p class="config-ubicacion-desc">Configura la identidad de tu restaurante. Estos datos se muestran en la vista del cliente, SEO y redes sociales.</p>
+                        <form id="form-datos-restaurante">
+                            <div class="datos-restaurante-grid">
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label for="cfg-nombre"><i class="fa-solid fa-signature"></i> Nombre del Restaurante</label>
+                                    <input type="text" id="cfg-nombre" placeholder="Ej: Restaurante El Sabor Norteño" required>
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label for="cfg-slogan"><i class="fa-solid fa-quote-left"></i> Slogan</label>
+                                    <input type="text" id="cfg-slogan" placeholder="Ej: Sabores auténticos de nuestra tierra">
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label for="cfg-descripcion"><i class="fa-solid fa-align-left"></i> Descripción (SEO)</label>
+                                    <textarea id="cfg-descripcion" rows="2" placeholder="Breve descripción para Google y redes sociales..."></textarea>
+                                </div>
+
+                                <h4 class="config-subsection"><i class="fa-solid fa-address-book"></i> Contacto</h4>
                                 <div class="form-group">
-                                    <label for="lat">Latitud:</label>
-                                    <input type="number" step="any" id="lat" name="lat" required>
+                                    <label for="cfg-telefono"><i class="fa-solid fa-phone"></i> Teléfono</label>
+                                    <input type="text" id="cfg-telefono" placeholder="Ej: +51 944 123 456">
                                 </div>
                                 <div class="form-group">
-                                    <label for="lng">Longitud:</label>
-                                    <input type="number" step="any" id="lng" name="lng" required>
+                                    <label for="cfg-email"><i class="fa-solid fa-envelope"></i> Email</label>
+                                    <input type="email" id="cfg-email" placeholder="Ej: contacto@mirestaurante.com">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cfg-whatsapp"><i class="fa-brands fa-whatsapp"></i> WhatsApp</label>
+                                    <input type="text" id="cfg-whatsapp" placeholder="Ej: 51944123456 (sin + ni espacios)">
+                                </div>
+
+                                <h4 class="config-subsection"><i class="fa-solid fa-clock"></i> Horarios</h4>
+                                <div class="form-group">
+                                    <label for="cfg-horarioSemana"><i class="fa-solid fa-calendar-week"></i> Horario Lun-Sáb (texto)</label>
+                                    <input type="text" id="cfg-horarioSemana" placeholder="Lun - Sáb: 11:00 AM - 10:00 PM">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cfg-horarioDomingo"><i class="fa-solid fa-calendar-day"></i> Horario Domingo (texto)</label>
+                                    <input type="text" id="cfg-horarioDomingo" placeholder="Domingo: 11:00 AM - 8:00 PM">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cfg-horaAbre"><i class="fa-solid fa-door-open"></i> Hora apertura (L-S)</label>
+                                    <input type="time" id="cfg-horaAbre">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cfg-horaCierra"><i class="fa-solid fa-door-closed"></i> Hora cierre (L-S)</label>
+                                    <input type="time" id="cfg-horaCierra">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cfg-horaAbreDom"><i class="fa-solid fa-door-open"></i> Hora apertura (Dom)</label>
+                                    <input type="time" id="cfg-horaAbreDom">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cfg-horaCierraDom"><i class="fa-solid fa-door-closed"></i> Hora cierre (Dom)</label>
+                                    <input type="time" id="cfg-horaCierraDom">
+                                </div>
+
+                                <h4 class="config-subsection"><i class="fa-solid fa-money-bill-wave"></i> Pagos y Moneda</h4>
+                                <div class="form-group">
+                                    <label for="cfg-metodosPago"><i class="fa-solid fa-credit-card"></i> Métodos de Pago</label>
+                                    <input type="text" id="cfg-metodosPago" placeholder="Efectivo, Yape, Plin, Tarjeta">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cfg-moneda"><i class="fa-solid fa-coins"></i> Símbolo Moneda</label>
+                                    <input type="text" id="cfg-moneda" placeholder="S/" maxlength="5">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cfg-monedaCodigo"><i class="fa-solid fa-money-check"></i> Código ISO Moneda</label>
+                                    <input type="text" id="cfg-monedaCodigo" placeholder="PEN" maxlength="3">
+                                </div>
+
+                                <h4 class="config-subsection"><i class="fa-solid fa-utensils"></i> Gastronomía</h4>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label for="cfg-cocinas"><i class="fa-solid fa-bowl-food"></i> Tipos de cocina (separados por coma)</label>
+                                    <input type="text" id="cfg-cocinas" placeholder="Peruana, Criolla, Local, Marina">
                                 </div>
                             </div>
-                            <button type="button" id="btn-mapa" class="btn-info" style="margin-bottom:10px;">Seleccionar en el mapa</button>
-                            <button type="submit" class="btn-primary">Guardar ubicación</button>
+                            <div class="ubicacion-actions">
+                                <button type="submit" class="btn-primary btn-guardar-ubicacion">
+                                    <i class="fa-solid fa-floppy-disk"></i> Guardar datos del restaurante
+                                </button>
+                            </div>
                         </form>
-                        <div id="mapa-ubicacion" style="height:350px;max-width:600px;margin:20px 0;display:none;"></div>
-                        <div id="ubicacion-guardada" style="margin-top:10px;color:green;display:none;">Ubicación guardada correctamente.</div>
+                        <div id="datos-restaurante-guardado" class="ubicacion-success" style="display:none;">
+                            <i class="fa-solid fa-circle-check"></i> Datos del restaurante guardados correctamente
+                        </div>
+                    </div>
+
+                    <!-- Logo del Restaurante -->
+                    <div class="config-logo" style="margin-top:40px;">
+                        <h2><i class="fa-solid fa-image"></i> Logo del Restaurante</h2>
+                        <p class="config-logo-desc">Sube el logo de tu restaurante. Se mostrará en el menú digital y en el panel de administración.</p>
+                        <div class="logo-preview-container" id="logo-preview-container">
+                            <div class="logo-preview-placeholder" id="logo-placeholder">
+                                <span><i class="fa-solid fa-utensils fa-2x"></i></span>
+                                <p>Sin logo</p>
+                            </div>
+                            <img id="logo-preview-actual" class="logo-preview-img" src="" alt="Logo del restaurante" style="display:none;">
+                        </div>
+                        <div class="logo-actions">
+                            <label for="input-logo" class="btn-primary btn-upload-logo">
+                                <i class="fa-solid fa-camera"></i> Seleccionar imagen
+                            </label>
+                            <input type="file" id="input-logo" accept="image/*" style="display:none;">
+                            <button type="button" class="btn-danger" id="btn-eliminar-logo" style="display:none;"><i class="fa-solid fa-trash"></i> Eliminar logo</button>
+                        </div>
+                        <div id="logo-mensaje" class="logo-mensaje" style="display:none;"></div>
+                    </div>
+
+                    <div class="config-ubicacion" style="margin-top:40px;">
+                        <h2><i class="fa-solid fa-map-location-dot"></i> Ubicación del Restaurante</h2>
+                        <p class="config-ubicacion-desc">Configura la dirección de tu restaurante para que tus clientes puedan encontrarte fácilmente en Google Maps.</p>
+                        <form id="form-ubicacion">
+                            <div class="ubicacion-form-grid">
+                                <div class="form-group">
+                                    <label for="ciudad"><i class="fa-solid fa-city"></i> Ciudad</label>
+                                    <input type="text" id="ciudad" name="ciudad" placeholder="Ej: Trujillo" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="barrio"><i class="fa-solid fa-street-view"></i> Barrio / Distrito</label>
+                                    <input type="text" id="barrio" name="barrio" placeholder="Ej: Moche">
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label for="direccion"><i class="fa-solid fa-road"></i> Dirección</label>
+                                    <input type="text" id="direccion" name="direccion" placeholder="Ej: Av. La Marina 123">
+                                </div>
+                                <div class="form-group">
+                                    <label for="region"><i class="fa-solid fa-map"></i> Región / Departamento</label>
+                                    <input type="text" id="region" name="region" placeholder="Ej: La Libertad">
+                                </div>
+                                <div class="form-group">
+                                    <label for="codigoPostal"><i class="fa-solid fa-mailbox"></i> Código Postal</label>
+                                    <input type="text" id="codigoPostal" name="codigoPostal" placeholder="Ej: 13601">
+                                </div>
+                                <div class="form-group">
+                                    <label for="lat"><i class="fa-solid fa-location-crosshairs"></i> Latitud</label>
+                                    <input type="number" step="any" id="lat" name="lat" placeholder="-8.1714" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="lng"><i class="fa-solid fa-location-crosshairs"></i> Longitud</label>
+                                    <input type="number" step="any" id="lng" name="lng" placeholder="-79.0117" required>
+                                </div>
+                            </div>
+                            <div class="ubicacion-mapa-section">
+                                <button type="button" id="btn-mapa" class="btn-mapa-selector">
+                                    <i class="fa-solid fa-map-pin"></i> Seleccionar en el mapa
+                                </button>
+                                <div id="mapa-ubicacion" class="mapa-container"></div>
+                            </div>
+                            <div class="ubicacion-actions">
+                                <button type="submit" class="btn-primary btn-guardar-ubicacion">
+                                    <i class="fa-solid fa-floppy-disk"></i> Guardar ubicación
+                                </button>
+                            </div>
+                        </form>
+                        <div id="ubicacion-guardada" class="ubicacion-success">
+                            <i class="fa-solid fa-circle-check"></i> Ubicación guardada correctamente
+                        </div>
                     </div>
                 </section>
 
@@ -176,9 +309,10 @@
                 <!-- Gestión de Mesas -->
                 <section id="mesas" class="page">
                     <div class="section-header">
-                        <h2>Gestión de Mesas</h2>
-                        <button class="btn-primary admin-only" id="btn-agregar-mesa">+ Agregar Mesa</button>
+                        <h2><i class="fa-solid fa-chair"></i> Gestión de Mesas</h2>
+                        <button class="btn-primary admin-only" id="btn-agregar-mesa"><i class="fa-solid fa-plus"></i> Agregar Mesa</button>
                     </div>
+                    <div class="mesas-resumen" id="mesas-resumen"></div>
                     <div class="mesas-grid" id="lista-mesas"></div>
                 </section>
 
@@ -188,32 +322,81 @@
                         <h2>Gestión de Pedidos</h2>
                         <button class="btn-primary" id="btn-nuevo-pedido">+ Nuevo Pedido</button>
                     </div>
+                    <!-- Filtros de estado -->
+                    <div class="pedidos-filtros" id="pedidos-filtros">
+                        <button class="filtro-estado-btn active" data-estado="todos">
+                            <i class="fa-solid fa-list"></i> Todos <span class="filtro-badge" id="badge-todos"></span>
+                        </button>
+                        <button class="filtro-estado-btn" data-estado="pendiente">
+                            <i class="fa-solid fa-clock"></i> Pendientes <span class="filtro-badge" id="badge-pendiente"></span>
+                        </button>
+                        <button class="filtro-estado-btn" data-estado="en-preparacion">
+                            <i class="fa-solid fa-fire"></i> En Preparación <span class="filtro-badge" id="badge-en-preparacion"></span>
+                        </button>
+                        <button class="filtro-estado-btn" data-estado="listo">
+                            <i class="fa-solid fa-circle-check"></i> Listos <span class="filtro-badge" id="badge-listo"></span>
+                        </button>
+                        <button class="filtro-estado-btn" data-estado="entregado">
+                            <i class="fa-solid fa-utensils"></i> Entregados <span class="filtro-badge" id="badge-entregado"></span>
+                        </button>
+                    </div>
                     <div class="pedidos-container">
                         <div class="pedidos-list" id="lista-pedidos"></div>
                     </div>
                 </section>
 
+                <!-- Cobrar (Mesero y Admin) -->
+                <section id="cobrar" class="page">
+                    <div class="section-header">
+                        <h2><i class="fa-solid fa-cash-register"></i> Cobrar Mesas</h2>
+                    </div>
+                    <div class="mesas-para-cobrar" id="mesas-para-cobrar"></div>
+                </section>
+
                 <!-- Reportes (Solo Admin) -->
                 <section id="reportes" class="page admin-only">
-                    <h2>📈 Reportes y Estadísticas</h2>
+                    <h2><i class="fa-solid fa-chart-line"></i> Reportes y Estadísticas</h2>
                     
                     <div class="reportes-filtros">
-                        <select id="reporte-periodo">
-                            <option value="hoy">Hoy</option>
-                            <option value="semana">Esta Semana</option>
-                            <option value="mes" selected>Este Mes</option>
-                            <option value="anio">Este Año</option>
-                        </select>
-                        <button class="btn-primary" id="btn-generar-reporte">📊 Generar Reporte</button>
+                        <div class="reportes-periodo-rapido">
+                            <button class="periodo-btn" data-periodo="hoy" type="button"><i class="fa-solid fa-calendar-day"></i> Hoy</button>
+                            <button class="periodo-btn" data-periodo="semana" type="button"><i class="fa-solid fa-calendar-week"></i> Semana</button>
+                            <button class="periodo-btn active" data-periodo="mes" type="button"><i class="fa-solid fa-calendar"></i> Mes</button>
+                            <button class="periodo-btn" data-periodo="anio" type="button"><i class="fa-solid fa-calendar-check"></i> Año</button>
+                            <button class="periodo-btn" data-periodo="personalizado" type="button"><i class="fa-solid fa-sliders"></i> Personalizado</button>
+                        </div>
+                    </div>
+
+                    <div class="reportes-rango-fechas" id="rango-fechas-container" style="display: none;">
+                        <div class="rango-fechas-inputs">
+                            <div class="fecha-grupo">
+                                <label for="reporte-fecha-inicio"><i class="fa-solid fa-calendar-plus"></i> Desde</label>
+                                <input type="date" id="reporte-fecha-inicio" class="fecha-input">
+                            </div>
+                            <div class="fecha-separador"><i class="fa-solid fa-arrow-right"></i></div>
+                            <div class="fecha-grupo">
+                                <label for="reporte-fecha-fin"><i class="fa-solid fa-calendar-minus"></i> Hasta</label>
+                                <input type="date" id="reporte-fecha-fin" class="fecha-input">
+                            </div>
+                            <button class="btn-primary" id="btn-generar-reporte"><i class="fa-solid fa-chart-pie"></i> Generar</button>
+                        </div>
+                        <div class="fecha-error" id="fecha-error" style="display: none;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> <span id="fecha-error-texto"></span>
+                        </div>
+                    </div>
+
+                    <div class="reporte-periodo-info" id="reporte-periodo-info">
+                        <i class="fa-solid fa-circle-info"></i> 
+                        <span id="reporte-periodo-texto">Mostrando datos de: Este Mes</span>
                     </div>
 
                     <div class="reportes-grid">
                         <div class="reporte-card">
-                            <h3>💵 Resumen de Ventas</h3>
+                            <h3><i class="fa-solid fa-money-bill-wave"></i> Resumen de Ventas</h3>
                             <div class="reporte-stats">
                                 <div class="reporte-stat">
                                     <span class="stat-label">Total Ventas</span>
-                                    <span class="stat-value" id="reporte-total-ventas">$0.00</span>
+                                    <span class="stat-value" id="reporte-total-ventas">S/0.00</span>
                                 </div>
                                 <div class="reporte-stat">
                                     <span class="stat-label">Pedidos Completados</span>
@@ -221,33 +404,33 @@
                                 </div>
                                 <div class="reporte-stat">
                                     <span class="stat-label">Ticket Promedio</span>
-                                    <span class="stat-value" id="reporte-ticket-promedio">$0.00</span>
+                                    <span class="stat-value" id="reporte-ticket-promedio">S/0.00</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="reporte-card">
-                            <h3>🍽️ Platillos Más Vendidos</h3>
+                            <h3><i class="fa-solid fa-utensils"></i> Platillos Más Vendidos</h3>
                             <div id="reporte-platillos-top" class="reporte-lista"></div>
                         </div>
 
                         <div class="reporte-card">
-                            <h3>🪑 Mesas Más Activas</h3>
+                            <h3><i class="fa-solid fa-chair"></i> Mesas Más Activas</h3>
                             <div id="reporte-mesas-top" class="reporte-lista"></div>
                         </div>
 
                         <div class="reporte-card">
-                            <h3>📅 Ventas por Día</h3>
+                            <h3><i class="fa-solid fa-calendar-days"></i> Ventas por Día</h3>
                             <div id="reporte-ventas-dia" class="reporte-lista"></div>
                         </div>
 
                         <div class="reporte-card">
-                            <h3>⏰ Horas Pico</h3>
+                            <h3><i class="fa-solid fa-clock"></i> Horas Pico</h3>
                             <div id="reporte-horas-pico" class="reporte-lista"></div>
                         </div>
 
                         <div class="reporte-card">
-                            <h3>📂 Ventas por Categoría</h3>
+                            <h3><i class="fa-solid fa-folder-open"></i> Ventas por Categoría</h3>
                             <div id="reporte-categorias" class="reporte-lista"></div>
                         </div>
                     </div>
@@ -256,25 +439,29 @@
                 <!-- Inventario (Solo Admin) -->
                 <section id="inventario" class="page admin-only">
                     <div class="section-header">
-                        <h2>📦 Control de Inventario</h2>
-                        <button class="btn-primary" id="btn-agregar-inventario">+ Agregar Item</button>
+                        <h2><i class="fa-solid fa-boxes-stacked"></i> Control de Inventario</h2>
+                        <button class="btn-primary" id="btn-agregar-inventario"><i class="fa-solid fa-plus"></i> Agregar Item</button>
                     </div>
                     
+                    <div class="inventario-resumen" id="inventario-resumen"></div>
                     <div class="inventario-alertas" id="inventario-alertas"></div>
                     
-                    <div class="filters">
-                        <select id="filtro-inventario-categoria">
-                            <option value="">Todas las categorías</option>
-                            <option value="Carnes">Carnes</option>
-                            <option value="Verduras">Verduras</option>
-                            <option value="Frutas">Frutas</option>
-                            <option value="Granos">Granos</option>
-                            <option value="Lácteos">Lácteos</option>
-                            <option value="Bebidas">Bebidas</option>
-                            <option value="Condimentos">Condimentos</option>
-                            <option value="Otros">Otros</option>
-                        </select>
-                        <input type="text" id="buscar-inventario" placeholder="Buscar item...">
+                    <div class="inventario-filtros">
+                        <div class="inventario-categorias" id="inventario-categorias">
+                            <button class="inv-cat-btn active" data-cat=""><i class="fa-solid fa-border-all"></i> Todos</button>
+                            <button class="inv-cat-btn" data-cat="Carnes"><i class="fa-solid fa-drumstick-bite"></i> Carnes</button>
+                            <button class="inv-cat-btn" data-cat="Verduras"><i class="fa-solid fa-leaf"></i> Verduras</button>
+                            <button class="inv-cat-btn" data-cat="Frutas"><i class="fa-solid fa-apple-whole"></i> Frutas</button>
+                            <button class="inv-cat-btn" data-cat="Granos"><i class="fa-solid fa-wheat-awn"></i> Granos</button>
+                            <button class="inv-cat-btn" data-cat="Lácteos"><i class="fa-solid fa-cheese"></i> Lácteos</button>
+                            <button class="inv-cat-btn" data-cat="Bebidas"><i class="fa-solid fa-glass-water"></i> Bebidas</button>
+                            <button class="inv-cat-btn" data-cat="Condimentos"><i class="fa-solid fa-jar"></i> Condimentos</button>
+                            <button class="inv-cat-btn" data-cat="Otros"><i class="fa-solid fa-boxes-stacked"></i> Otros</button>
+                        </div>
+                        <div class="inventario-busqueda">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="buscar-inventario" placeholder="Buscar en inventario...">
+                        </div>
                     </div>
                     
                     <div class="inventario-grid" id="lista-inventario"></div>
@@ -286,15 +473,15 @@
                     <div class="facturacion-stats">
                         <div class="stat-card">
                             <h3>Total Hoy</h3>
-                            <p class="stat-number" id="total-dia">$0.00</p>
+                            <p class="stat-number" id="total-dia">S/0.00</p>
                         </div>
                         <div class="stat-card">
                             <h3>Total Semana</h3>
-                            <p class="stat-number" id="total-semana">$0.00</p>
+                            <p class="stat-number" id="total-semana">S/0.00</p>
                         </div>
                         <div class="stat-card">
                             <h3>Total Mes</h3>
-                            <p class="stat-number" id="total-mes">$0.00</p>
+                            <p class="stat-number" id="total-mes">S/0.00</p>
                         </div>
                     </div>
                     <div class="historial-container">
@@ -306,7 +493,7 @@
                 <!-- Gestión de Usuarios (Solo Admin) -->
                 <section id="usuarios" class="page admin-only">
                     <div class="section-header">
-                        <h2>👥 Gestión de Usuarios</h2>
+                        <h2><i class="fa-solid fa-users"></i> Gestión de Usuarios</h2>
                         <button class="btn-primary" id="btn-agregar-usuario">+ Nuevo Usuario</button>
                     </div>
                     <div class="usuarios-grid" id="lista-usuarios"></div>
@@ -347,7 +534,7 @@
                         <div class="imagen-upload-container">
                             <input type="file" id="platillo-imagen" accept="image/*" class="input-file-hidden">
                             <label for="platillo-imagen" class="btn-upload">
-                                📷 Seleccionar imagen
+                                <i class="fa-solid fa-camera"></i> Seleccionar imagen
                             </label>
                             <span id="imagen-nombre" class="imagen-nombre">Sin imagen seleccionada</span>
                         </div>
@@ -377,17 +564,17 @@
                     <div class="pedido-items">
                         <h3>Platillos</h3>
                         <div class="filtros-pedido">
-                            <button type="button" class="filtro-cat active" data-categoria="">🍽️ Todos</button>
-                            <button type="button" class="filtro-cat" data-categoria="Entradas">🥗 Entradas</button>
-                            <button type="button" class="filtro-cat" data-categoria="Platos Fuertes">🍖 Platos Fuertes</button>
-                            <button type="button" class="filtro-cat" data-categoria="Postres">🍰 Postres</button>
-                            <button type="button" class="filtro-cat" data-categoria="Bebidas">🥤 Bebidas</button>
+                            <button type="button" class="filtro-cat active" data-categoria=""><i class="fa-solid fa-utensils"></i> Todos</button>
+                            <button type="button" class="filtro-cat" data-categoria="Entradas"><i class="fa-solid fa-leaf"></i> Entradas</button>
+                            <button type="button" class="filtro-cat" data-categoria="Platos Fuertes"><i class="fa-solid fa-drumstick-bite"></i> Platos Fuertes</button>
+                            <button type="button" class="filtro-cat" data-categoria="Postres"><i class="fa-solid fa-cake-candles"></i> Postres</button>
+                            <button type="button" class="filtro-cat" data-categoria="Bebidas"><i class="fa-solid fa-glass-water"></i> Bebidas</button>
                         </div>
                         <div id="menu-pedido" class="menu-pedido-grid"></div>
                         <h3>Items Seleccionados</h3>
                         <div id="items-seleccionados"></div>
                         <div class="pedido-total">
-                            <strong>Total: $<span id="pedido-total">0.00</span></strong>
+                            <strong>Total: S/<span id="pedido-total">0.00</span></strong>
                         </div>
                     </div>
                     <div class="form-actions">
@@ -443,16 +630,16 @@
                         <label>Rol:</label>
                         <select id="usuario-rol" required>
                             <option value="">Seleccionar rol...</option>
-                            <option value="administrador">👑 Administrador</option>
-                            <option value="mesero">👤 Mesero</option>
-                            <option value="cocinero">👨‍🍳 Cocinero</option>
+                            <option value="administrador">Administrador</option>
+                            <option value="mesero">Mesero</option>
+                            <option value="cocinero">Cocinero</option>
                         </select>
                     </div>
                     <div class="form-group" id="grupo-activo" style="display: none;">
                         <label>Estado:</label>
                         <select id="usuario-activo">
-                            <option value="true">✅ Activo</option>
-                            <option value="false">❌ Inactivo</option>
+                            <option value="true">Activo</option>
+                            <option value="false">Inactivo</option>
                         </select>
                     </div>
                     <div class="form-actions">
@@ -467,7 +654,7 @@
         <div id="modal-cobrar" class="modal">
             <div class="modal-content modal-cobrar-content">
                 <span class="close">&times;</span>
-                <h2>💰 Cuenta de Mesa <span id="cobrar-mesa-numero"></span></h2>
+                <h2><i class="fa-solid fa-cash-register"></i> Cuenta de Mesa <span id="cobrar-mesa-numero"></span></h2>
                 <div class="cuenta-detalle">
                     <div class="cuenta-items" id="cuenta-items">
                         <!-- Items del pedido -->
@@ -475,19 +662,19 @@
                     <div class="cuenta-totales">
                         <div class="cuenta-linea cuenta-total">
                             <span>TOTAL:</span>
-                            <span id="cuenta-total">$0.00</span>
+                            <span id="cuenta-total">S/0.00</span>
                         </div>
                     </div>
                     <div class="cuenta-pago">
                         <label>Método de Pago:</label>
                         <select id="metodo-pago">
-                            <option value="efectivo">💵 Efectivo</option>
-                            <option value="tarjeta">💳 Tarjeta</option>
-                            <option value="transferencia">📱 Transferencia</option>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="tarjeta">Tarjeta</option>
+                            <option value="transferencia">Transferencia</option>
                         </select>
                     </div>
                     <div class="cuenta-actions">
-                        <button class="btn-success btn-cobrar" id="btn-procesar-pago">✅ Procesar Pago</button>
+                        <button class="btn-success btn-cobrar" id="btn-procesar-pago"><i class="fa-solid fa-circle-check"></i> Procesar Pago</button>
                         <button class="btn-secondary" id="btn-cancelar-cobro">Cancelar</button>
                     </div>
                 </div>
@@ -497,28 +684,28 @@
         <!-- Modal Inventario -->
         <div id="modal-inventario" class="modal">
             <div class="modal-content">
-                <h2 id="modal-inventario-titulo">Nuevo Item</h2>
+                <h2 id="modal-inventario-titulo"><i class="fa-solid fa-boxes-stacked"></i> Nuevo Item</h2>
                 <form id="form-inventario">
                     <div class="form-group">
-                        <label>Nombre del Item:</label>
+                        <label><i class="fa-solid fa-tag"></i> Nombre del Item:</label>
                         <input type="text" id="inventario-nombre" required placeholder="Ej: Tomates">
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Categoría:</label>
+                            <label><i class="fa-solid fa-layer-group"></i> Categoría:</label>
                             <select id="inventario-categoria" required>
-                                <option value="Carnes">🥩 Carnes</option>
-                                <option value="Verduras">🥬 Verduras</option>
-                                <option value="Frutas">🍎 Frutas</option>
-                                <option value="Granos">🌾 Granos</option>
-                                <option value="Lácteos">🧀 Lácteos</option>
-                                <option value="Bebidas">🥤 Bebidas</option>
-                                <option value="Condimentos">🧂 Condimentos</option>
-                                <option value="Otros">📦 Otros</option>
+                                <option value="Carnes">Carnes</option>
+                                <option value="Verduras">Verduras</option>
+                                <option value="Frutas">Frutas</option>
+                                <option value="Granos">Granos</option>
+                                <option value="Lácteos">Lácteos</option>
+                                <option value="Bebidas">Bebidas</option>
+                                <option value="Condimentos">Condimentos</option>
+                                <option value="Otros">Otros</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Unidad:</label>
+                            <label><i class="fa-solid fa-ruler"></i> Unidad:</label>
                             <select id="inventario-unidad">
                                 <option value="unidades">Unidades</option>
                                 <option value="kg">Kilogramos</option>
@@ -530,20 +717,20 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Cantidad Actual:</label>
+                            <label><i class="fa-solid fa-cubes-stacked"></i> Cantidad Actual:</label>
                             <input type="number" id="inventario-cantidad" required min="0" step="0.01" value="0">
                         </div>
                         <div class="form-group">
-                            <label>Stock Mínimo:</label>
+                            <label><i class="fa-solid fa-triangle-exclamation"></i> Stock Mínimo:</label>
                             <input type="number" id="inventario-stock-minimo" required min="0" step="0.01" value="10">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Costo por Unidad:</label>
+                        <label><i class="fa-solid fa-sack-dollar"></i> Costo por Unidad (S/):</label>
                         <input type="number" id="inventario-costo" min="0" step="0.01" value="0" placeholder="0.00">
                     </div>
                     <div class="form-actions">
-                        <button type="submit" class="btn-primary">Guardar</button>
+                        <button type="submit" class="btn-primary"><i class="fa-solid fa-check"></i> Guardar</button>
                         <button type="button" class="btn-secondary" id="btn-cancelar-inventario">Cancelar</button>
                     </div>
                 </form>
@@ -555,7 +742,7 @@
     <div id="modal-division" class="modal">
         <div class="modal-content modal-large">
             <span class="close" onclick="app.cerrarModalDivision()">&times;</span>
-            <h2>💰 Dividir Cuenta - Mesa <span id="division-mesa-numero"></span></h2>
+            <h2><i class="fa-solid fa-cash-register"></i> Dividir Cuenta - Mesa <span id="division-mesa-numero"></span></h2>
             
             <div class="division-container">
                 <div class="division-config">
@@ -574,11 +761,11 @@
                 <div class="division-resultado">
                     <div class="division-total-original">
                         <strong>Total Original:</strong>
-                        <span id="division-total">$0.00</span>
+                        <span id="division-total">S/0.00</span>
                     </div>
                     <div class="division-por-persona">
                         <strong>Por Persona:</strong>
-                        <span id="division-por-persona">$0.00</span>
+                        <span id="division-por-persona">S/0.00</span>
                     </div>
                 </div>
                 
@@ -587,7 +774,7 @@
                 </div>
                 
                 <div class="division-actions">
-                    <button class="btn-primary" onclick="app.procesarDivision()">💳 Procesar Pagos Individuales</button>
+                    <button class="btn-primary" onclick="app.procesarDivision()"><i class="fa-solid fa-credit-card"></i> Procesar Pagos Individuales</button>
                     <button class="btn-secondary" onclick="app.cerrarModalDivision()">Cancelar</button>
                 </div>
             </div>

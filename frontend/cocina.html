@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍳 Cocina - Restaurante en Moche, Perú</title>
+    <title>Cocina - Restaurante en Moche, Perú</title>
     <meta name="description" content="Panel de cocina del restaurante en Moche, Perú. Gestión de pedidos y platillos en tiempo real.">
     <meta name="keywords" content="restaurante, cocina, Moche, Perú, pedidos, platillos, barrio, local">
     <meta property="og:title" content="Cocina - Restaurante en Moche, Perú" />
@@ -11,7 +11,8 @@
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="es_PE" />
     <meta name="robots" content="noindex, follow">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+    <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='%23e74c3c' d='M416 0C400 0 288 32 288 176v112c0 35.3 28.7 64 64 64h32v128c0 17.7 14.3 32 32 32s32-14.3 32-32V0zM64 16C64 7.2 56.8 0 48 0S32 7.2 32 16v144H16c-8.8 0-16 7.2-16 16s7.2 16 16 16h16v32H16c-8.8 0-16 7.2-16 16s7.2 16 16 16h16v256c0 17.7 14.3 32 32 32s32-14.3 32-32V256h16c8.8 0 16-7.2 16-16s-7.2-16-16-16H80V192h16c8.8 0 16-7.2 16-16s-7.2-16-16-16H80V16z'/></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
     <style>
         /* Estilos específicos para la vista de cocina */
@@ -472,7 +473,8 @@
     <!-- Pantalla de Login -->
     <div id="login-screen" class="login-cocina">
         <div class="login-container">
-            <h1>🍳 Panel de Cocina</h1>
+            <img id="cocina-login-logo" class="login-logo" src="" alt="" style="display:none;">
+            <h1><i class="fa-solid fa-kitchen-set"></i> Panel de Cocina</h1>
             <h2 class="sr-only">Panel de cocina para restaurante en Moche, Perú</h2>
             <form id="login-form" aria-label="Formulario de acceso a cocina">
                 <div class="form-group">
@@ -483,12 +485,8 @@
                     <label>Contraseña:</label>
                     <input type="password" id="login-password" required>
                 </div>
-                <button type="submit" class="btn-login">🔓 Ingresar a Cocina</button>
+                <button type="submit" class="btn-login"><i class="fa-solid fa-right-to-bracket"></i> Ingresar a Cocina</button>
             </form>
-            <div class="credenciales">
-                <strong>Credenciales:</strong><br>
-                Usuario: <code>cocinero</code> | Contraseña: <code>cocinero123</code>
-            </div>
             <a href="index.html" class="volver-link">← Volver al inicio</a>
         </div>
     </div>
@@ -497,12 +495,12 @@
     <div id="cocina-screen" style="display: none;">
         <div class="cocina-container">
             <header class="cocina-header">
-                <h1>🍳 Panel de Cocina - Moche, Perú</h1>
+                <h1><img id="cocina-logo" class="header-logo" src="" alt="" style="display:none;height:36px;margin-right:10px;border-radius:6px;vertical-align:middle;"><i class="fa-solid fa-kitchen-set"></i> Panel de Cocina - Moche, Perú</h1>
                 <h2 class="sr-only">Gestión de pedidos en cocina para restaurante en Moche, Perú</h2>
                 <div class="user-info">
                     <span id="fecha-hora"></span>
                     <span id="user-name"></span>
-                    <button class="btn-logout-cocina" id="btn-logout">🚪 Salir</button>
+                    <button class="btn-logout-cocina" id="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
                 </div>
             </header>
 
@@ -510,24 +508,24 @@
             <div class="estadisticas-cocina">
                 <div class="stat-cocina pendientes">
                     <div class="numero" id="stat-pendientes">0</div>
-                    <div class="label">🔴 Pendientes</div>
+                    <div class="label"><i class="fa-solid fa-circle" style="color:#e74c3c"></i> Pendientes</div>
                 </div>
                 <div class="stat-cocina en-prep">
                     <div class="numero" id="stat-preparacion">0</div>
-                    <div class="label">🟡 En Preparación</div>
+                    <div class="label"><i class="fa-solid fa-circle" style="color:#f39c12"></i> En Preparación</div>
                 </div>
                 <div class="stat-cocina listos">
                     <div class="numero" id="stat-listos">0</div>
-                    <div class="label">🟢 Listos</div>
+                    <div class="label"><i class="fa-solid fa-circle" style="color:#27ae60"></i> Listos</div>
                 </div>
             </div>
 
             <!-- Filtros -->
             <div class="filtros-cocina">
-                <button class="filtro-btn active" data-filtro="todos">📋 Todos</button>
-                <button class="filtro-btn" data-filtro="pendiente">🔴 Pendientes</button>
-                <button class="filtro-btn" data-filtro="en-preparacion">🟡 En Preparación</button>
-                <button class="filtro-btn" data-filtro="listo">🟢 Listos</button>
+                <button class="filtro-btn active" data-filtro="todos"><i class="fa-solid fa-list"></i> Todos</button>
+                <button class="filtro-btn" data-filtro="pendiente"><i class="fa-solid fa-circle" style="color:#e74c3c"></i> Pendientes</button>
+                <button class="filtro-btn" data-filtro="en-preparacion"><i class="fa-solid fa-circle" style="color:#f39c12"></i> En Preparación</button>
+                <button class="filtro-btn" data-filtro="listo"><i class="fa-solid fa-circle" style="color:#27ae60"></i> Listos</button>
             </div>
 
             <!-- Lista de Pedidos -->
@@ -538,7 +536,7 @@
 
         <!-- Notificación de nuevo pedido -->
         <div class="notificacion-nuevo" id="notificacion">
-            🔔 <strong>¡Nuevo pedido!</strong>
+            <i class="fa-solid fa-bell"></i> <strong>¡Nuevo pedido!</strong>
         </div>
     </div>
 

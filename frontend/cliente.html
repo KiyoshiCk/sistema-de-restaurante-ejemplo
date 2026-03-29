@@ -3,16 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menú Digital Restaurante | Carta Online</title>
-    <meta name="description" content="Menú digital del restaurante. Platos, bebidas y postres. ¡Rápido, moderno y accesible!">
-    <meta name="keywords" content="restaurante, menú digital, carta online, comida, cerca de mí, postres, bebidas, platos, barrio, local">
-    <meta property="og:title" content="Menú Digital Restaurante" />
-    <meta property="og:description" content="Descubre el menú digital del restaurante. Platos, bebidas y postres para todos los gustos." />
-    <meta property="og:type" content="website" />
+    <title id="meta-title">Menú Digital | Carta Online</title>
+    <meta name="description" id="meta-description" content="Menú digital del restaurante. Descubre nuestros platos, bebidas, postres y más. Carta online rápida y accesible.">
+    <meta name="keywords" content="menú digital, carta online restaurante, comida, restaurante cerca de mí, platos típicos">
+    <meta name="author" id="meta-author" content="">
+    <link rel="canonical" href="">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="restaurant.menu" />
+    <meta property="og:title" id="og-title" content="Menú Digital" />
+    <meta property="og:description" id="og-description" content="Descubre nuestro menú digital." />
     <meta property="og:locale" content="es_PE" />
+    <meta property="og:site_name" id="og-site-name" content="" />
+    <meta property="og:url" content="" />
+    <meta property="og:image" content="" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" id="og-image-alt" content="Menú del Restaurante" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" id="tw-title" content="Menú Digital" />
+    <meta name="twitter:description" id="tw-description" content="Carta online del restaurante." />
+    <meta name="twitter:image" content="" />
+
+    <!-- Geo Meta Tags (se llenan dinámicamente) -->
+    <meta name="geo.region" id="geo-region" content="" />
+    <meta name="geo.placename" id="geo-placename" content="" />
+    <meta name="geo.position" id="geo-position" content="" />
+    <meta name="ICBM" id="geo-icbm" content="" />
+
     <meta name="robots" content="index, follow">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+    <link rel="icon" id="favicon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='%233498db' d='M416 0C400 0 288 32 288 176v112c0 35.3 28.7 64 64 64h32v128c0 17.7 14.3 32 32 32s32-14.3 32-32V0zM64 16C64 7.2 56.8 0 48 0S32 7.2 32 16v144H16c-8.8 0-16 7.2-16 16s7.2 16 16 16h16v32H16c-8.8 0-16 7.2-16 16s7.2 16 16 16h16v256c0 17.7 14.3 32 32 32s32-14.3 32-32V256h16c8.8 0 16-7.2 16-16s-7.2-16-16-16H80V192h16c8.8 0 16-7.2 16-16s-7.2-16-16-16H80V16z'/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Schema.org JSON-LD - Se genera dinámicamente desde la configuración del backend -->
+    <script type="application/ld+json" id="schema-jsonld">
+    {
+        "@context": "https://schema.org",
+        "@type": "Restaurant",
+        "name": "Restaurante"
+    }
+    </script>
 </head>
 <body class="cliente-view">
     <!-- Hero Section con Parallax -->
@@ -22,39 +58,101 @@
         
         <!-- Elementos flotantes decorativos -->
         <div class="floating-elements">
-            <span class="float-item" style="animation-delay: 0s;">🍕</span>
-            <span class="float-item" style="animation-delay: 1.5s;">🍔</span>
-            <span class="float-item" style="animation-delay: 3s;">🍷</span>
-            <span class="float-item" style="animation-delay: 0.8s;">🍰</span>
-            <span class="float-item" style="animation-delay: 2.2s;">🥗</span>
-            <span class="float-item" style="animation-delay: 4s;">☕</span>
+            <span class="float-item" style="animation-delay: 0s;"><i class="fa-solid fa-pizza-slice"></i></span>
+            <span class="float-item" style="animation-delay: 1.5s;"><i class="fa-solid fa-burger"></i></span>
+            <span class="float-item" style="animation-delay: 3s;"><i class="fa-solid fa-wine-glass"></i></span>
+            <span class="float-item" style="animation-delay: 0.8s;"><i class="fa-solid fa-cake-candles"></i></span>
+            <span class="float-item" style="animation-delay: 2.2s;"><i class="fa-solid fa-leaf"></i></span>
+            <span class="float-item" style="animation-delay: 4s;"><i class="fa-solid fa-mug-hot"></i></span>
         </div>
         
         <div class="parallax-content">
-            <h1 class="parallax-title">🍽️ Nuestro Menú</h1>
-            <p class="parallax-subtitle">Disfruta de nuestros deliciosos platillos en Moche, Perú</p>
+            <div id="logo-restaurante" class="logo-restaurante" style="display:none;">
+                <img id="logo-restaurante-img" src="" alt="Logo del restaurante" class="logo-restaurante-img">
+            </div>
+            <span class="hero-badge"><i class="fa-solid fa-star"></i> Bienvenido</span>
+            <h1 class="parallax-title" id="parallax-title">Nuestro Menú</h1>
+            <div class="parallax-divider"></div>
+            <p class="parallax-subtitle" id="parallax-subtitle">Disfruta de nuestros deliciosos platillos</p>
             <a href="#menu-section" class="scroll-indicator">
-                <span>Ver Menú</span>
+                <span>Explorar Menú</span>
                 <div class="scroll-arrow"></div>
             </a>
         </div>
     </section>
 
     <div class="container-cliente" id="menu-section">
+        <div class="menu-section-header">
+            <span class="section-label"><i class="fa-solid fa-book-open"></i> Carta</span>
+            <h2 class="menu-digital-title">Nuestros Platillos</h2>
+            <p class="menu-digital-subtitle">Selecciona una categoría para explorar</p>
+        </div>
 
-        <h2 class="menu-digital-title">Menú Digital del Restaurante</h2>
         <div class="menu-cliente-categorias" role="navigation" aria-label="Categorías del menú">
-            <button class="categoria-btn active" data-categoria="">Todos</button>
-            <button class="categoria-btn" data-categoria="Entradas">Entradas</button>
-            <button class="categoria-btn" data-categoria="Platos Fuertes">Platos Fuertes</button>
-            <button class="categoria-btn" data-categoria="Postres">Postres</button>
-            <button class="categoria-btn" data-categoria="Bebidas">Bebidas</button>
+            <button class="categoria-btn active" data-categoria="">
+                <i class="fa-solid fa-border-all"></i>
+                <span>Todos</span>
+            </button>
+            <button class="categoria-btn" data-categoria="Entradas">
+                <i class="fa-solid fa-leaf"></i>
+                <span>Entradas</span>
+            </button>
+            <button class="categoria-btn" data-categoria="Platos Fuertes">
+                <i class="fa-solid fa-utensils"></i>
+                <span>Platos Fuertes</span>
+            </button>
+            <button class="categoria-btn" data-categoria="Postres">
+                <i class="fa-solid fa-cake-candles"></i>
+                <span>Postres</span>
+            </button>
+            <button class="categoria-btn" data-categoria="Bebidas">
+                <i class="fa-solid fa-glass-water"></i>
+                <span>Bebidas</span>
+            </button>
         </div>
 
         <div class="menu-cliente-grid" id="menu-cliente-grid">
-            <p style="text-align: center; color: #7f8c8d; grid-column: 1/-1; padding: 40px;">Cargando menú...</p>
+            <div class="menu-loading">
+                <div class="loading-spinner"></div>
+                <p>Cargando menú...</p>
+            </div>
         </div>
     </div>
+
+    <!-- Footer del Restaurante -->
+    <footer class="cliente-footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <img id="footer-logo" class="footer-logo" src="" alt="" style="display:none;">
+                <h3 id="footer-nombre"><i class="fa-solid fa-utensils"></i> <span>Restaurante</span></h3>
+                <p id="footer-slogan"></p>
+            </div>
+            <div class="footer-info">
+                <div class="footer-col" id="footer-col-horario">
+                    <h4><i class="fa-solid fa-clock"></i> Horario</h4>
+                    <p id="footer-horario-semana"></p>
+                    <p id="footer-horario-domingo"></p>
+                </div>
+                <div class="footer-col" id="footer-col-ubicacion">
+                    <h4><i class="fa-solid fa-location-dot"></i> Ubicación</h4>
+                    <p id="footer-direccion"></p>
+                    <p id="footer-ciudad"></p>
+                </div>
+                <div class="footer-col" id="footer-col-contacto">
+                    <h4><i class="fa-solid fa-address-card"></i> Contacto</h4>
+                    <p id="footer-telefono"></p>
+                    <p id="footer-email"></p>
+                </div>
+                <div class="footer-col" id="footer-col-pagos">
+                    <h4><i class="fa-solid fa-credit-card"></i> Pagos</h4>
+                    <p id="footer-pagos"></p>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; <script>document.write(new Date().getFullYear())</script> <span id="footer-copyright-nombre">Restaurante</span>. Todos los derechos reservados.</p>
+        </div>
+    </footer>
 
     <script src="js/config.js"></script>
     <script src="js/ubicacion-cliente.js"></script>

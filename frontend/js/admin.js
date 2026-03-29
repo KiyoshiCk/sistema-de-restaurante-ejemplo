@@ -20,6 +20,7 @@ class AdminApp {
         this.editandoUsuarioId = null;
         this.inventario = [];
         this.editandoInventarioId = null;
+        this.filtroPedidoEstado = 'todos';
         
         this.verificarSesion();
     }
@@ -38,7 +39,7 @@ class AdminApp {
         });
         
         this.socket.on('connect', () => {
-            console.log('🔌 Conectado a WebSocket');
+            console.log('Conectado a WebSocket');
             // Unirse a la sala según el rol
             this.socket.emit('join-room', this.usuario.rol);
             // Sincronizar datos al conectar/reconectar
@@ -46,31 +47,41 @@ class AdminApp {
         });
 
         this.socket.on('disconnect', () => {
-            console.log('🔌 Desconectado de WebSocket');
-            this.mostrarNotificacion('⚠️ Conexión perdida', 'Intentando reconectar...');
+            console.log('Desconectado de WebSocket');
+            this.mostrarNotificacion('Conexión perdida', 'Intentando reconectar...');
         });
 
         this.socket.on('reconnect', (attemptNumber) => {
-            console.log('🔄 Reconectado después de', attemptNumber, 'intentos');
-            this.mostrarNotificacion('✅ Reconectado', 'Sincronizando datos...');
+            console.log('Reconectado después de', attemptNumber, 'intentos');
+            this.mostrarNotificacion('Reconectado', 'Sincronizando datos...');
         });
 
         // Escuchar eventos en tiempo real - ACTUALIZACIONES INSTANTÁNEAS
         this.socket.on('nuevo-pedido', (pedido) => {
-            console.log('📦 Nuevo pedido recibido:', pedido);
+            console.log('Nuevo pedido recibido:', pedido);
             // Evitar duplicados: solo agregar si no existe
             const existe = this.pedidos.some(p => p._id === pedido._id);
             if (!existe) {
-                this.mostrarNotificacion('🆕 Nuevo pedido', `Mesa ${pedido.mesaNumero || pedido.numeroMesa}`);
+                this.mostrarNotificacion('Nuevo pedido', `Mesa ${pedido.mesaNumero}`);
                 this.pedidos.unshift(pedido);
                 this.cargarPedidosSinAnimacion();
+                this.actualizarBadgesPedidos();
+                this.actualizarBadgeNavPedidos();
                 this.cargarDashboard();
             }
         });
 
         this.socket.on('pedido-actualizado', (pedido) => {
-            console.log('📝 Pedido actualizado:', pedido);
-            this.mostrarNotificacion('📝 Pedido actualizado', `Mesa ${pedido.mesaNumero || pedido.numeroMesa} - ${pedido.estado}`);
+            console.log('Pedido actualizado:', pedido);
+            // Detectar cambio a "listo" para notificación especial al mesero
+            const pedidoAnterior = this.pedidos.find(p => p._id === pedido._id);
+            const cambioAListo = pedidoAnterior && pedidoAnterior.estado !== 'listo' && pedido.estado === 'listo';
+            
+            if (cambioAListo && this.puedeEntregar()) {
+                this.notificarPedidoListo(pedido);
+            } else {
+                this.mostrarNotificacion('Pedido actualizado', `Mesa ${pedido.mesaNumero} - ${this.obtenerTextoEstado(pedido.estado)}`);
+            }
             // Actualización instantánea: actualizar pedido localmente
             const index = this.pedidos.findIndex(p => p._id === pedido._id);
             if (index !== -1) {
@@ -79,6 +90,8 @@ class AdminApp {
                 this.pedidos.unshift(pedido);
             }
             this.cargarPedidosSinAnimacion();
+            this.actualizarBadgesPedidos();
+            this.actualizarBadgeNavPedidos();
             this.cargarDashboard();
             // Actualizar sección de cobrar si está visible
             if (document.getElementById('cobrar')?.classList.contains('active')) {
@@ -87,10 +100,12 @@ class AdminApp {
         });
 
         this.socket.on('pedido-eliminado', (data) => {
-            console.log('🗑️ Pedido eliminado:', data);
+            console.log('Pedido eliminado:', data);
             // Eliminar pedido localmente
             this.pedidos = this.pedidos.filter(p => p._id !== data._id);
             this.cargarPedidosSinAnimacion();
+            this.actualizarBadgesPedidos();
+            this.actualizarBadgeNavPedidos();
             this.cargarDashboard();
             // Actualizar sección de cobrar si está visible
             if (document.getElementById('cobrar')?.classList.contains('active')) {
@@ -113,7 +128,7 @@ class AdminApp {
         });
 
         this.socket.on('nueva-factura', (factura) => {
-            console.log('💰 Nueva factura:', factura);
+            console.log('Nueva factura:', factura);
             // Agregar factura localmente
             this.facturas.push(factura);
             if (this.usuario.rol === 'administrador') {
@@ -122,7 +137,7 @@ class AdminApp {
         });
 
         this.socket.on('nueva-actividad', (actividad) => {
-            console.log('📋 Nueva actividad:', actividad);
+            console.log('Nueva actividad:', actividad);
             // Agregar al inicio del array local sin recargar todo
             this.actividad.unshift(actividad);
             this.mostrarActividadReciente();
@@ -130,7 +145,7 @@ class AdminApp {
 
         // Evento para forzar recarga completa (útil cuando hay desincronización)
         this.socket.on('sync-completo', () => {
-            console.log('🔄 Sincronización completa solicitada');
+            console.log('Sincronización completa solicitada');
             this.cargarDatos();
         });
     }
@@ -161,8 +176,8 @@ class AdminApp {
         if (tienePermiso) {
             const notifOpciones = {
                 body: opciones.body || '',
-                icon: opciones.icon || '🍽️',
-                badge: '🍽️',
+                icon: opciones.icon || '/uploads/logo.png',
+                badge: '/uploads/logo.png',
                 tag: opciones.tag || 'restaurante',
                 requireInteraction: opciones.requireInteraction || false,
                 ...opciones
@@ -289,7 +304,7 @@ class AdminApp {
         // Mostrar información del usuario
         document.getElementById('user-name').textContent = this.usuario.nombre;
         const badge = document.getElementById('user-role-badge');
-        badge.textContent = this.usuario.rol === 'administrador' ? '👑 Admin' : '👤 Mesero';
+        badge.innerHTML = this.usuario.rol === 'administrador' ? '<i class="fa-solid fa-crown"></i> Admin' : '<i class="fa-solid fa-user"></i> Mesero';
         badge.className = `role-badge ${this.usuario.rol}`;
         
         // Cargar navegación según rol
@@ -314,55 +329,55 @@ class AdminApp {
         if (this.usuario.rol === 'administrador') {
             nav.innerHTML = `
                 <button class="nav-btn active" data-page="dashboard">
-                    <span class="icon">📊</span>
+                    <span class="icon"><i class="fa-solid fa-gauge"></i></span>
                     Dashboard
                 </button>
                 <button class="nav-btn" data-page="menu">
-                    <span class="icon">📋</span>
+                    <span class="icon"><i class="fa-solid fa-clipboard-list"></i></span>
                     Gestión Menú
                 </button>
                 <button class="nav-btn" data-page="mesas">
-                    <span class="icon">🪑</span>
+                    <span class="icon"><i class="fa-solid fa-chair"></i></span>
                     Mesas
                 </button>
                 <button class="nav-btn" data-page="pedidos">
-                    <span class="icon">🛎️</span>
+                    <span class="icon"><i class="fa-solid fa-bell-concierge"></i></span>
                     Pedidos
                 </button>
                 <button class="nav-btn" data-page="inventario">
-                    <span class="icon">📦</span>
+                    <span class="icon"><i class="fa-solid fa-boxes-stacked"></i></span>
                     Inventario
                 </button>
                 <button class="nav-btn" data-page="reportes">
-                    <span class="icon">📈</span>
+                    <span class="icon"><i class="fa-solid fa-chart-line"></i></span>
                     Reportes
                 </button>
                 <button class="nav-btn" data-page="facturacion">
-                    <span class="icon">💰</span>
+                    <span class="icon"><i class="fa-solid fa-cash-register"></i></span>
                     Facturación
                 </button>
                 <button class="nav-btn" data-page="usuarios">
-                    <span class="icon">👥</span>
+                    <span class="icon"><i class="fa-solid fa-users"></i></span>
                     Usuarios
                 </button>
                 <button class="nav-btn" data-page="config-ubicacion">
-                    <span class="icon">📍</span>
+                    <span class="icon"><i class="fa-solid fa-location-dot"></i></span>
                     Ubicación
                 </button>
             `;
         } else if (this.usuario.rol === 'mesero') {
-            // Mesero: dashboard, mesas, pedidos y cobrar
+            // Mesero: dashboard, mesas, pedidos, cobrar
             nav.innerHTML = `
                 <button class="nav-btn active" data-page="dashboard">
-                    <span class="icon">📊</span>
+                    <span class="icon"><i class="fa-solid fa-gauge"></i></span>
                     Dashboard
                 </button>
                 <button class="nav-btn" data-page="mesas">
-                    <span class="icon">🪑</span>
+                    <span class="icon"><i class="fa-solid fa-chair"></i></span>
                     Mesas
                 </button>
                 <button class="nav-btn" data-page="pedidos">
-                    <span class="icon">🛎️</span>
+                    <span class="icon"><i class="fa-solid fa-bell-concierge"></i></span>
                     Pedidos
                 </button>
             `;
@@ -370,11 +385,11 @@ class AdminApp {
             // Cocinero: solo dashboard y pedidos
             nav.innerHTML = `
                 <button class="nav-btn active" data-page="dashboard">
-                    <span class="icon">📊</span>
+                    <span class="icon"><i class="fa-solid fa-gauge"></i></span>
                     Dashboard
                 </button>
                 <button class="nav-btn" data-page="pedidos">
-                    <span class="icon">🛎️</span>
+                    <span class="icon"><i class="fa-solid fa-bell-concierge"></i></span>
                     Pedidos
                 </button>
             `;
@@ -410,15 +425,36 @@ class AdminApp {
             this.cargarMenu();
             this.cargarFacturacion();
             this.cargarUsuarios();
+            this.initLogo();
         }
+        // Cargar logo y favicon para todos los roles
+        this.cargarLogo();
         this.cargarMesas();
         this.cargarPedidos();
+        this.setupFiltrosPedidos();
+
+        // Ocultar botón "Nuevo Pedido" para cocineros
+        if (this.usuario.rol === 'cocinero') {
+            const btnNuevoPedido = document.getElementById('btn-nuevo-pedido');
+            if (btnNuevoPedido) btnNuevoPedido.style.display = 'none';
+        }
+
+        // Cargar sección cobrar para mesero
+        if (this.usuario.rol === 'mesero' || this.usuario.rol === 'administrador') {
+            this.cargarMesasParaCobrar();
+        }
         
         setInterval(() => this.actualizarFechaHora(), 1000);
         
         // Auto-refresh como fallback cada 10 segundos (WebSocket es el principal)
-        // Reducido para no sobrecargar cuando WebSocket funciona
         setInterval(() => this.refrescarDatos(), 10000);
+
+        // Actualizar tiempos de pedidos cada 30 segundos
+        setInterval(() => {
+            if (document.getElementById('pedidos')?.classList.contains('active')) {
+                this.cargarPedidos();
+            }
+        }, 30000);
     }
 
     // Refrescar pedidos, mesas y actividad sin recargar toda la página
@@ -496,18 +532,29 @@ class AdminApp {
 
     cargarPedidosSinAnimacion() {
         const container = document.getElementById('lista-pedidos');
-        // Mostrar todos los pedidos activos (no cancelados)
-        const pedidosActivos = this.pedidos
+        // Mostrar pedidos activos (no cancelados), con filtro
+        let pedidosActivos = this.pedidos
             .filter(p => p.estado !== 'cancelado')
             .sort((a, b) => {
-                // Ordenar: pendiente, preparando, listo, entregado
-                const orden = { 'pendiente': 0, 'preparando': 1, 'listo': 2, 'entregado': 3 };
+                // Ordenar: pendiente, en-preparacion, listo, entregado
+                const orden = { 'pendiente': 0, 'en-preparacion': 1, 'listo': 2, 'entregado': 3 };
                 if (orden[a.estado] !== orden[b.estado]) return orden[a.estado] - orden[b.estado];
                 return new Date(a.fecha) - new Date(b.fecha);
             });
 
+        // Aplicar filtro de estado
+        if (this.filtroPedidoEstado && this.filtroPedidoEstado !== 'todos') {
+            pedidosActivos = pedidosActivos.filter(p => p.estado === this.filtroPedidoEstado);
+        }
+
+        this.actualizarBadgesPedidos();
+        this.actualizarBadgeNavPedidos();
+
         if (pedidosActivos.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No hay pedidos activos</p>';
+            const msg = this.filtroPedidoEstado !== 'todos'
+                ? `No hay pedidos con estado "${this.obtenerTextoEstado(this.filtroPedidoEstado)}"`
+                : 'No hay pedidos activos';
+            container.innerHTML = `<p style="text-align: center; color: #7f8c8d; padding: 40px 0;"><i class="fa-solid fa-inbox" style="font-size: 2em; display: block; margin-bottom: 10px; opacity: 0.4;"></i>${msg}</p>`;
             return;
         }
 
@@ -538,45 +585,85 @@ class AdminApp {
 
     renderPedidoCard(pedido) {
         // Buscar número de mesa de varias formas
-        let mesaNumero = pedido.mesaNumero || pedido.numeroMesa;
+        let mesaNumero = pedido.mesaNumero;
         if (!mesaNumero && pedido.mesaId) {
             const mesa = this.mesas.find(m => m._id === pedido.mesaId);
             if (mesa) mesaNumero = mesa.numero;
         }
         mesaNumero = mesaNumero || 'N/A';
+
+        // Calcular tiempo transcurrido
+        const tiempoTexto = this.calcularTiempoTranscurrido(pedido.fecha || pedido.createdAt);
+        const minutos = this.calcularMinutos(pedido.fecha || pedido.createdAt);
+        const esUrgente = minutos > 15 && pedido.estado !== 'entregado';
+
+        // Icono del estado
+        const iconosEstado = {
+            'pendiente': 'fa-clock',
+            'en-preparacion': 'fa-fire',
+            'listo': 'fa-circle-check',
+            'entregado': 'fa-utensils'
+        };
+        const iconoEstado = iconosEstado[pedido.estado] || 'fa-circle-question';
         
         return `
             <div class="pedido-card ${pedido.estado === 'entregado' ? 'pedido-entregado' : ''}" data-pedido-id="${pedido._id}">
                 <div class="pedido-header">
-                    <span class="pedido-mesa">Mesa ${mesaNumero}</span>
-                    <span class="pedido-estado ${pedido.estado}">${this.obtenerTextoEstado(pedido.estado)}</span>
+                    <div class="pedido-header-left">
+                        <span class="pedido-mesa"><i class="fa-solid fa-chair"></i> Mesa ${mesaNumero}</span>
+                        <span class="pedido-tiempo ${esUrgente ? 'urgente' : ''}"><i class="fa-regular fa-clock"></i> ${tiempoTexto}</span>
+                    </div>
+                    <span class="pedido-estado ${pedido.estado}"><i class="fa-solid ${iconoEstado}"></i> ${this.obtenerTextoEstado(pedido.estado)}</span>
                 </div>
                 <div class="pedido-items">
                     ${pedido.items.map(item => `
                         <div class="pedido-item">
-                            <span>${item.cantidad}x ${item.nombre}</span>
-                            <span>$${(item.precio * item.cantidad).toFixed(2)}</span>
+                            <span><strong>${item.cantidad}x</strong> ${item.nombre}</span>
+                            <span>S/${(item.precio * item.cantidad).toFixed(2)}</span>
                         </div>
-                        ${item.comentario ? `<div class="pedido-item-comentario">📝 ${item.comentario}</div>` : ''}
+                        ${item.comentario ? `<div class="pedido-item-comentario"><i class="fa-solid fa-comment"></i> ${item.comentario}</div>` : ''}
                     `).join('')}
                 </div>
-                <div class="pedido-total">Total: $${pedido.total.toFixed(2)}</div>
+                <div class="pedido-total"><i class="fa-solid fa-receipt"></i> Total: S/${pedido.total.toFixed(2)}</div>
                 <div class="pedido-actions">
-                    ${this.puedePreparar() && pedido.estado === 'pendiente' ? `<button class="btn-primary" onclick="app.cambiarEstadoPedido('${pedido._id}', 'preparando')">🔥 Preparar</button>` : ''}
-                    ${this.puedePreparar() && pedido.estado === 'preparando' ? `<button class="btn-success" onclick="app.cambiarEstadoPedido('${pedido._id}', 'listo')">✅ Marcar Listo</button>` : ''}
-                    ${this.puedeEntregar() && pedido.estado === 'listo' ? `<button class="btn-success" onclick="app.entregarPedido('${pedido._id}')">🍽️ Entregar</button>` : ''}
-                    ${this.puedeEntregar() && pedido.estado === 'entregado' ? `<button class="btn-cobrar" onclick="app.cobrarPedido('${pedido._id}')">💵 Cobrar</button>` : ''}
-                    ${this.usuario.rol === 'administrador' && pedido.estado !== 'entregado' ? `<button class="btn-danger" onclick="app.cancelarPedido('${pedido._id}')">❌ Cancelar</button>` : ''}
+                    ${this.puedePreparar() && pedido.estado === 'pendiente' ? `<button class="btn-primary" onclick="app.cambiarEstadoPedido('${pedido._id}', 'en-preparacion')"><i class="fa-solid fa-fire"></i> Preparar</button>` : ''}
+                    ${this.puedePreparar() && pedido.estado === 'en-preparacion' ? `<button class="btn-success" onclick="app.cambiarEstadoPedido('${pedido._id}', 'listo')"><i class="fa-solid fa-circle-check"></i> Marcar Listo</button>` : ''}
+                    ${!this.puedePreparar() && pedido.estado === 'pendiente' ? `<div class="pedido-estado-info pendiente-info"><i class="fa-solid fa-clock"></i> Esperando que cocina lo tome</div>` : ''}
+                    ${!this.puedePreparar() && pedido.estado === 'en-preparacion' ? `<div class="pedido-estado-info preparando-info"><i class="fa-solid fa-fire fa-beat"></i> Cocina está preparando este pedido</div>` : ''}
+                    ${this.puedeEntregar() && pedido.estado === 'listo' ? `<button class="btn-success" onclick="app.entregarPedido('${pedido._id}')"><i class="fa-solid fa-utensils"></i> Entregar</button>` : ''}
+                    ${this.puedeEntregar() && pedido.estado === 'entregado' ? `<button class="btn-cobrar" onclick="app.cobrarPedido('${pedido._id}')"><i class="fa-solid fa-money-bill"></i> Cobrar</button>` : ''}
+                    ${(this.usuario.rol === 'administrador' || this.usuario.rol === 'mesero') && pedido.estado !== 'entregado' && pedido.estado !== 'listo' ? `<button class="btn-danger btn-cancelar-pedido" onclick="app.cancelarPedido('${pedido._id}')"><i class="fa-solid fa-xmark"></i> Cancelar</button>` : ''}
                 </div>
             </div>
         `;
+    }
+
+    calcularTiempoTranscurrido(fecha) {
+        if (!fecha) return '';
+        const ahora = new Date();
+        const creado = new Date(fecha);
+        const diff = Math.floor((ahora - creado) / 1000);
+        
+        if (diff < 60) return 'Hace un momento';
+        if (diff < 3600) {
+            const min = Math.floor(diff / 60);
+            return `${min} min`;
+        }
+        const hrs = Math.floor(diff / 3600);
+        const min = Math.floor((diff % 3600) / 60);
+        return `${hrs}h ${min}m`;
+    }
+
+    calcularMinutos(fecha) {
+        if (!fecha) return 0;
+        return Math.floor((new Date() - new Date(fecha)) / 60000);
     }
 
     notificarCambioPedidos() {
         // Mostrar indicador visual de actualización
         const indicator = document.createElement('div');
         indicator.className = 'refresh-indicator';
-        indicator.innerHTML = '🔄 Pedidos actualizados';
+        indicator.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> Pedidos actualizados';
         indicator.style.cssText = `
             position: fixed;
             bottom: 20px;
@@ -696,7 +783,7 @@ class AdminApp {
     cargarDashboard() {
         const mesasOcupadas = this.mesas.filter(m => m.estado === 'ocupada').length;
         const pedidosActivos = this.pedidos.filter(p => 
-            p.estado !== 'entregado' && p.estado !== 'cancelado' && p.estado !== 'pagado'
+            p.estado !== 'entregado' && p.estado !== 'cancelado' && p.estado !== 'cobrado'
         ).length;
         const pedidosPendientes = this.pedidos.filter(p => p.estado === 'pendiente').length;
         const pedidosListos = this.pedidos.filter(p => p.estado === 'listo').length;
@@ -716,7 +803,7 @@ class AdminApp {
             const ventasHoy = this.facturas
                 .filter(f => new Date(f.fecha).toDateString() === hoy)
                 .reduce((sum, f) => sum + (f.total || 0), 0);
-            document.getElementById('ventas-hoy').textContent = `$${ventasHoy.toFixed(2)}`;
+            document.getElementById('ventas-hoy').textContent = `S/${ventasHoy.toFixed(2)}`;
         }
 
         this.mostrarActividadReciente();
@@ -732,18 +819,45 @@ class AdminApp {
             return;
         }
 
-        container.innerHTML = actividadReciente.map(act => `
-            <div class="activity-item">
-                <div><strong>${act.descripcion || act.accion || 'Sin descripción'}</strong></div>
-                <div class="time">${new Date(act.fecha).toLocaleString('es-ES')}</div>
-            </div>
-        `).join('');
+        const iconosRol = {
+            'administrador': '<i class="fa-solid fa-user-shield"></i>',
+            'mesero': '<i class="fa-solid fa-bell-concierge"></i>',
+            'cocinero': '<i class="fa-solid fa-fire"></i>'
+        };
+        const coloresRol = {
+            'administrador': '#e74c3c',
+            'mesero': '#3498db',
+            'cocinero': '#e67e22'
+        };
+
+        container.innerHTML = actividadReciente.map(act => {
+            const rol = act.tipo || '';
+            const usuario = act.usuario || '';
+            const icono = iconosRol[rol] || '<i class="fa-solid fa-user"></i>';
+            const color = coloresRol[rol] || '#95a5a6';
+            const rolTexto = rol ? rol.charAt(0).toUpperCase() + rol.slice(1) : '';
+            
+            return `
+                <div class="activity-item">
+                    <div class="activity-content">
+                        <div class="activity-user">
+                            <span class="activity-rol-badge" style="background: ${color}">${icono} ${rolTexto}</span>
+                            <span class="activity-nombre">${usuario}</span>
+                        </div>
+                        <div class="activity-desc">${act.descripcion || 'Sin descripción'}</div>
+                    </div>
+                    <div class="time">${new Date(act.fecha).toLocaleString('es-ES')}</div>
+                </div>
+            `;
+        }).join('');
     }
 
     async agregarActividad(accion) {
         try {
             const nuevaActividad = await this.apiRequest('/actividad', 'POST', { 
-                descripcion: `${this.usuario.nombre}: ${accion}` 
+                descripcion: accion,
+                usuario: this.usuario.nombre,
+                tipo: this.usuario.rol
             });
             // Agregar al inicio del array (más reciente primero)
             this.actividad.unshift(nuevaActividad);
@@ -967,17 +1081,17 @@ class AdminApp {
                 ${platillo.imagen ? `<div class="menu-item-imagen"><img src="${platillo.imagen}" alt="${platillo.nombre}"></div>` : ''}
                 <h3>${platillo.nombre}</h3>
                 <span class="categoria">${platillo.categoria}</span>
-                <div class="precio">$${platillo.precio.toFixed(2)}</div>
+                <div class="precio">S/${platillo.precio.toFixed(2)}</div>
                 <p class="descripcion">${platillo.descripcion || 'Sin descripción'}</p>
                 <div class="disponibilidad-status">
-                    ${platillo.disponible ? '✅ Disponible' : '❌ No disponible'}
+                    ${platillo.disponible ? '<i class="fa-solid fa-circle-check" style="color:#27ae60"></i> Disponible' : '<i class="fa-solid fa-circle-xmark" style="color:#e74c3c"></i> No disponible'}
                 </div>
                 <div class="menu-item-actions">
                     <button class="btn-secondary" onclick="app.toggleDisponibilidad('${platillo._id}')">
-                        ${platillo.disponible ? '🚫 Marcar no disponible' : '✅ Marcar disponible'}
+                        ${platillo.disponible ? '<i class="fa-solid fa-ban"></i> Marcar no disponible' : '<i class="fa-solid fa-circle-check"></i> Marcar disponible'}
                     </button>
-                    <button class="btn-primary" onclick="app.editarPlatillo('${platillo._id}')">✏️ Editar</button>
-                    <button class="btn-danger" onclick="app.eliminarPlatillo('${platillo._id}')">🗑️ Eliminar</button>
+                    <button class="btn-primary" onclick="app.editarPlatillo('${platillo._id}')"><i class="fa-solid fa-pen-to-square"></i> Editar</button>
+                    <button class="btn-danger" onclick="app.eliminarPlatillo('${platillo._id}')"><i class="fa-solid fa-trash"></i> Eliminar</button>
                 </div>
             </div>
         `).join('');
@@ -1079,46 +1193,134 @@ class AdminApp {
     
     cargarMesas() {
         const container = document.getElementById('lista-mesas');
+        const resumen = document.getElementById('mesas-resumen');
         
-        if (this.mesas.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #7f8c8d; grid-column: 1/-1;">No hay mesas registradas</p>';
+        // Resumen de mesas
+        const totalMesas = this.mesas.length;
+        const disponibles = this.mesas.filter(m => m.estado === 'disponible').length;
+        const ocupadas = this.mesas.filter(m => m.estado === 'ocupada').length;
+
+        if (resumen) {
+            resumen.innerHTML = `
+                <div class="mesa-stat">
+                    <div class="mesa-stat-icon" style="background: var(--info-color);"><i class="fa-solid fa-chair"></i></div>
+                    <div class="mesa-stat-info">
+                        <span class="mesa-stat-num">${totalMesas}</span>
+                        <span class="mesa-stat-label">Total</span>
+                    </div>
+                </div>
+                <div class="mesa-stat">
+                    <div class="mesa-stat-icon" style="background: var(--success-color);"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="mesa-stat-info">
+                        <span class="mesa-stat-num">${disponibles}</span>
+                        <span class="mesa-stat-label">Disponibles</span>
+                    </div>
+                </div>
+                <div class="mesa-stat">
+                    <div class="mesa-stat-icon" style="background: var(--danger-color);"><i class="fa-solid fa-bell-concierge"></i></div>
+                    <div class="mesa-stat-info">
+                        <span class="mesa-stat-num">${ocupadas}</span>
+                        <span class="mesa-stat-label">Ocupadas</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (totalMesas === 0) {
+            container.innerHTML = `
+                <div class="mesas-empty">
+                    <i class="fa-solid fa-chair"></i>
+                    <h3>No hay mesas registradas</h3>
+                    <p>Agrega tu primera mesa para comenzar</p>
+                </div>`;
             return;
         }
 
         const puedeEliminar = this.usuario.rol === 'administrador';
 
-        container.innerHTML = this.mesas.map(mesa => `
-            <div class="mesa-card ${mesa.estado}">
-                <div class="mesa-numero" onclick="app.toggleMesa('${mesa._id}')">Mesa ${mesa.numero}</div>
-                <span class="mesa-estado ${mesa.estado}">${mesa.estado === 'disponible' ? 'Disponible' : 'Ocupada'}</span>
-                <p>Capacidad: ${mesa.capacidad} personas</p>
-                <div class="mesa-actions" style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
-                    <button class="btn-info" onclick="event.stopPropagation(); app.verHistorialMesa('${mesa._id}', ${mesa.numero})" style="flex: 1; font-size: 0.85em;">📋 Historial</button>
-                    ${puedeEliminar ? `<button class="btn-danger" onclick="event.stopPropagation(); app.eliminarMesa('${mesa._id}')" style="flex: 1; font-size: 0.85em;">🗑️ Eliminar</button>` : ''}
+        container.innerHTML = this.mesas
+            .sort((a, b) => a.numero - b.numero)
+            .map(mesa => {
+                // Contar pedidos activos de esta mesa
+                const pedidosMesa = this.pedidos.filter(p => 
+                    (p.mesaId === mesa._id || p.mesaNumero === mesa.numero) &&
+                    p.estado !== 'cancelado' && p.estado !== 'cobrado'
+                );
+                const pedidosActivos = pedidosMesa.filter(p => p.estado !== 'entregado');
+                const pedidosEntregados = pedidosMesa.filter(p => p.estado === 'entregado');
+                const totalConsumo = pedidosMesa.reduce((sum, p) => sum + (p.total || 0), 0);
+
+                // Icono de capacidad
+                const iconoCapacidad = mesa.capacidad <= 2 ? 'fa-user-group' 
+                    : mesa.capacidad <= 4 ? 'fa-users' 
+                    : 'fa-people-group';
+
+                return `
+                <div class="mesa-card ${mesa.estado}" data-mesa-id="${mesa._id}">
+                    <div class="mesa-card-header">
+                        <div class="mesa-card-numero">
+                            <div class="mesa-card-icon ${mesa.estado}">
+                                <i class="fa-solid fa-chair"></i>
+                            </div>
+                            <div>
+                                <span class="mesa-card-title">Mesa ${mesa.numero}</span>
+                                <span class="mesa-card-cap"><i class="fa-solid ${iconoCapacidad}"></i> ${mesa.capacidad} personas</span>
+                            </div>
+                        </div>
+                        <span class="mesa-estado-badge ${mesa.estado}">
+                            <i class="fa-solid ${mesa.estado === 'disponible' ? 'fa-circle-check' : 'fa-utensils'}"></i>
+                            ${mesa.estado === 'disponible' ? 'Disponible' : 'Ocupada'}
+                        </span>
+                    </div>
+
+                    ${mesa.estado === 'ocupada' && pedidosMesa.length > 0 ? `
+                    <div class="mesa-card-info">
+                        ${pedidosActivos.length > 0 ? `<div class="mesa-info-row"><i class="fa-solid fa-fire"></i> ${pedidosActivos.length} pedido${pedidosActivos.length > 1 ? 's' : ''} activo${pedidosActivos.length > 1 ? 's' : ''}</div>` : ''}
+                        ${pedidosEntregados.length > 0 ? `<div class="mesa-info-row entregado"><i class="fa-solid fa-circle-check"></i> ${pedidosEntregados.length} listo${pedidosEntregados.length > 1 ? 's' : ''} para cobrar</div>` : ''}
+                        <div class="mesa-info-total"><i class="fa-solid fa-receipt"></i> Consumo: S/${totalConsumo.toFixed(2)}</div>
+                    </div>
+                    ` : mesa.estado === 'disponible' ? `
+                    <div class="mesa-card-info libre">
+                        <i class="fa-solid fa-sparkles"></i> Lista para recibir clientes
+                    </div>
+                    ` : ''}
+
+                    <div class="mesa-card-actions">
+                        <button class="mesa-btn mesa-btn-toggle ${mesa.estado}" onclick="app.toggleMesa('${mesa._id}')" title="${mesa.estado === 'disponible' ? 'Marcar como ocupada' : 'Liberar mesa'}">
+                            <i class="fa-solid ${mesa.estado === 'disponible' ? 'fa-lock-open' : 'fa-lock'}"></i>
+                            ${mesa.estado === 'disponible' ? 'Ocupar' : 'Liberar'}
+                        </button>
+                        <button class="mesa-btn mesa-btn-historial" onclick="event.stopPropagation(); app.verHistorialMesa('${mesa._id}', ${mesa.numero})" title="Ver historial">
+                            <i class="fa-solid fa-clock-rotate-left"></i> Historial
+                        </button>
+                        ${puedeEliminar ? `<button class="mesa-btn mesa-btn-eliminar" onclick="event.stopPropagation(); app.eliminarMesa('${mesa._id}')" title="Eliminar mesa">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>` : ''}
+                    </div>
                 </div>
-            </div>
-        `).join('');
+                `;
+            }).join('');
     }
     
     verHistorialMesa(mesaId, mesaNumero) {
         // Buscar todos los pedidos/facturas de esta mesa
         const historial = this.facturas
-            .filter(f => f.mesaId === mesaId || f.mesaNumero === mesaNumero || f.numeroMesa === mesaNumero)
+            .filter(f => f.mesaNumero === mesaNumero)
             .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
             .slice(0, 20);
         
         const pedidosActivos = this.pedidos
-            .filter(p => (p.mesaId === mesaId || p.mesaNumero === mesaNumero) && p.estado !== 'cancelado')
+            .filter(p => (p.mesaId === mesaId || p.mesaNumero === mesaNumero) && p.estado !== 'cancelado' && p.estado !== 'cobrado')
             .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
         
         let contenido = `
             <div style="max-height: 60vh; overflow-y: auto;">
-                <h4 style="margin-bottom: 15px;">🔄 Pedidos Activos</h4>
+                <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-arrows-rotate"></i> Pedidos Activos</h4>
         `;
         
         if (pedidosActivos.length > 0) {
             contenido += pedidosActivos.map(p => `
-                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${p.estado === 'pendiente' ? '#f39c12' : p.estado === 'preparando' ? '#3498db' : p.estado === 'listo' ? '#27ae60' : '#95a5a6'};">
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${p.estado === 'pendiente' ? '#f39c12' : p.estado === 'en-preparacion' ? '#3498db' : p.estado === 'listo' ? '#27ae60' : '#95a5a6'};">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                         <strong>${new Date(p.fecha).toLocaleString('es-ES')}</strong>
                         <span class="pedido-estado ${p.estado}" style="font-size: 0.85em;">${this.obtenerTextoEstado(p.estado)}</span>
@@ -1126,33 +1328,33 @@ class AdminApp {
                     <div style="font-size: 0.9em;">
                         ${p.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}
                     </div>
-                    <div style="text-align: right; font-weight: bold; color: var(--primary-color);">$${p.total.toFixed(2)}</div>
+                    <div style="text-align: right; font-weight: bold; color: var(--primary-color);">S/${p.total.toFixed(2)}</div>
                 </div>
             `).join('');
         } else {
             contenido += '<p style="color: #7f8c8d; text-align: center;">Sin pedidos activos</p>';
         }
         
-        contenido += `<h4 style="margin: 20px 0 15px;">📜 Historial de Facturas</h4>`;
+        contenido += `<h4 style="margin: 20px 0 15px;"><i class="fa-solid fa-scroll"></i> Historial de Facturas</h4>`;
         
         if (historial.length > 0) {
             const totalHistorico = historial.reduce((sum, f) => sum + (f.total || 0), 0);
             contenido += `<p style="background: #e8f5e9; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
-                <strong>Total histórico:</strong> $${totalHistorico.toFixed(2)} en ${historial.length} visitas
+                <strong>Total histórico:</strong> S/${totalHistorico.toFixed(2)} en ${historial.length} visitas
             </p>`;
             
             contenido += historial.map(f => `
                 <div style="background: #fff; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #e0e0e0;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                         <strong>${new Date(f.fecha).toLocaleString('es-ES')}</strong>
-                        <span style="color: #27ae60;">✓ Pagado</span>
+                        <span style="color: #27ae60;"><i class="fa-solid fa-circle-check"></i> Pagado</span>
                     </div>
                     <div style="font-size: 0.9em; color: #666;">
                         ${(f.items || []).map(i => `${i.cantidad}x ${i.nombre}`).join(', ') || 'Sin detalles'}
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-top: 8px;">
                         <small style="color: #666;">Método: ${f.metodoPago || 'N/A'}</small>
-                        <strong style="color: var(--primary-color);">$${(f.total || 0).toFixed(2)}</strong>
+                        <strong style="color: var(--primary-color);">S/${(f.total || 0).toFixed(2)}</strong>
                     </div>
                 </div>
             `).join('');
@@ -1163,7 +1365,7 @@ class AdminApp {
         contenido += '</div>';
         
         // Mostrar en modal
-        this.mostrarModalInfo(`📋 Historial Mesa ${mesaNumero}`, contenido);
+        this.mostrarModalInfo(`<i class="fa-solid fa-list"></i> Historial Mesa ${mesaNumero}`, contenido);
     }
     
     mostrarModalInfo(titulo, contenido) {
@@ -1185,7 +1387,7 @@ class AdminApp {
             document.body.appendChild(modal);
         }
         
-        document.getElementById('modal-info-titulo').textContent = titulo;
+        document.getElementById('modal-info-titulo').innerHTML = titulo;
         document.getElementById('modal-info-contenido').innerHTML = contenido;
         modal.classList.add('active');
     }
@@ -1301,7 +1503,7 @@ class AdminApp {
             <div class="menu-pedido-item" onclick="app.agregarItemPedido('${platillo._id}')">
                 ${platillo.imagen ? `<img src="${platillo.imagen}" alt="${platillo.nombre}" class="menu-pedido-thumb">` : ''}
                 <h4>${platillo.nombre}</h4>
-                <div class="precio">$${platillo.precio.toFixed(2)}</div>
+                <div class="precio">S/${platillo.precio.toFixed(2)}</div>
             </div>
         `).join('');
     }
@@ -1342,7 +1544,7 @@ class AdminApp {
                         <button onclick="app.cambiarCantidad(${index}, -1)">-</button>
                         <span>${item.cantidad}</span>
                         <button onclick="app.cambiarCantidad(${index}, 1)">+</button>
-                        <span style="margin-left: 10px; font-weight: bold;">$${(item.precio * item.cantidad).toFixed(2)}</span>
+                        <span style="margin-left: 10px; font-weight: bold;">S/${(item.precio * item.cantidad).toFixed(2)}</span>
                     </div>
                 </div>
                 <div class="item-comentario">
@@ -1404,7 +1606,7 @@ class AdminApp {
             mesa.estado = 'ocupada';
             await this.apiRequest(`/mesas/${mesaId}`, 'PUT', mesa);
             
-            await this.agregarActividad(`Nuevo pedido para Mesa ${mesa.numero} - $${total.toFixed(2)}`);
+            await this.agregarActividad(`Nuevo pedido para Mesa ${mesa.numero} - S/${total.toFixed(2)}`);
             
             document.getElementById('modal-pedido').classList.remove('active');
             this.cargarPedidos();
@@ -1417,22 +1619,142 @@ class AdminApp {
 
     cargarPedidos() {
         const container = document.getElementById('lista-pedidos');
-        // Mostrar todos los pedidos activos (no cancelados)
-        const pedidosActivos = this.pedidos
+        // Mostrar pedidos activos (no cancelados), aplicando filtro si existe
+        let pedidosActivos = this.pedidos
             .filter(p => p.estado !== 'cancelado')
             .sort((a, b) => {
-                // Ordenar: pendiente, preparando, listo, entregado
-                const orden = { 'pendiente': 0, 'preparando': 1, 'listo': 2, 'entregado': 3 };
+                // Ordenar: pendiente, en-preparacion, listo, entregado
+                const orden = { 'pendiente': 0, 'en-preparacion': 1, 'listo': 2, 'entregado': 3 };
                 if (orden[a.estado] !== orden[b.estado]) return orden[a.estado] - orden[b.estado];
                 return new Date(a.fecha) - new Date(b.fecha);
             });
         
+        // Aplicar filtro de estado
+        if (this.filtroPedidoEstado && this.filtroPedidoEstado !== 'todos') {
+            pedidosActivos = pedidosActivos.filter(p => p.estado === this.filtroPedidoEstado);
+        }
+        
+        this.actualizarBadgesPedidos();
+        this.actualizarBadgeNavPedidos();
+
         if (pedidosActivos.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No hay pedidos activos</p>';
+            const msg = this.filtroPedidoEstado !== 'todos' 
+                ? `No hay pedidos con estado "${this.obtenerTextoEstado(this.filtroPedidoEstado)}"`
+                : 'No hay pedidos activos';
+            container.innerHTML = `<p style="text-align: center; color: #7f8c8d; padding: 40px 0;"><i class="fa-solid fa-inbox" style="font-size: 2em; display: block; margin-bottom: 10px; opacity: 0.4;"></i>${msg}</p>`;
             return;
         }
 
         container.innerHTML = pedidosActivos.map(pedido => this.renderPedidoCard(pedido)).join('');
+    }
+
+    // ============= FILTROS DE PEDIDOS =============
+    setupFiltrosPedidos() {
+        const container = document.getElementById('pedidos-filtros');
+        if (!container) return;
+
+        container.addEventListener('click', (e) => {
+            const btn = e.target.closest('.filtro-estado-btn');
+            if (!btn) return;
+
+            container.querySelectorAll('.filtro-estado-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            this.filtroPedidoEstado = btn.dataset.estado;
+            this.cargarPedidos();
+        });
+    }
+
+    actualizarBadgesPedidos() {
+        const activos = this.pedidos.filter(p => p.estado !== 'cancelado');
+        const conteos = {
+            todos: activos.length,
+            pendiente: activos.filter(p => p.estado === 'pendiente').length,
+            'en-preparacion': activos.filter(p => p.estado === 'en-preparacion').length,
+            listo: activos.filter(p => p.estado === 'listo').length,
+            entregado: activos.filter(p => p.estado === 'entregado').length
+        };
+
+        Object.entries(conteos).forEach(([estado, count]) => {
+            const badge = document.getElementById(`badge-${estado}`);
+            if (badge) {
+                badge.textContent = count > 0 ? count : '';
+                badge.style.display = count > 0 ? 'inline-flex' : 'none';
+            }
+        });
+    }
+
+    actualizarBadgeNavPedidos() {
+        const listos = this.pedidos.filter(p => p.estado === 'listo').length;
+        const navBtn = document.querySelector('[data-page="pedidos"]');
+        if (!navBtn) return;
+
+        let badge = navBtn.querySelector('.nav-badge-listo');
+        if (listos > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'nav-badge-listo';
+                navBtn.appendChild(badge);
+            }
+            badge.textContent = listos;
+        } else if (badge) {
+            badge.remove();
+        }
+    }
+
+    notificarPedidoListo(pedido) {
+        const mesa = pedido.mesaNumero || 'N/A';
+        // Notificación visual prominente
+        this.mostrarNotificacionListo(mesa);
+        // Sonido de alerta
+        this.reproducirSonidoListo();
+        // Notificación del navegador
+        if (Notification.permission === 'granted') {
+            new Notification('🍽️ ¡Pedido Listo!', {
+                body: `Mesa ${mesa} - Listo para entregar`,
+                icon: document.getElementById('favicon')?.href || '',
+                tag: `pedido-listo-${pedido._id}`
+            });
+        }
+    }
+
+    mostrarNotificacionListo(mesa) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-pedido-listo';
+        toast.innerHTML = `
+            <div class="toast-listo-icon"><i class="fa-solid fa-bell"></i></div>
+            <div class="toast-listo-content">
+                <strong>¡Pedido Listo!</strong>
+                <span>Mesa ${mesa} - Listo para entregar</span>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        // Trigger animation
+        requestAnimationFrame(() => toast.classList.add('visible'));
+        setTimeout(() => {
+            toast.classList.remove('visible');
+            setTimeout(() => toast.remove(), 400);
+        }, 5000);
+    }
+
+    reproducirSonidoListo() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            // Tono doble agradable: ding-ding
+            [0, 0.2].forEach(delay => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = delay === 0 ? 880 : 1100;
+                gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.4);
+                osc.start(ctx.currentTime + delay);
+                osc.stop(ctx.currentTime + delay + 0.4);
+            });
+        } catch (e) {
+            // Audio no disponible
+        }
     }
 
     // Permisos por rol
@@ -1447,9 +1769,11 @@ class AdminApp {
     obtenerTextoEstado(estado) {
         const estados = {
             'pendiente': 'Pendiente',
-            'preparando': 'En Preparación',
+            'en-preparacion': 'En Preparación',
             'listo': 'Listo',
-            'entregado': 'Entregado'
+            'entregado': 'Entregado',
+            'cobrado': 'Cobrado',
+            'cancelado': 'Cancelado'
         };
         return estados[estado] || estado;
     }
@@ -1475,7 +1799,7 @@ class AdminApp {
         try {
             await this.apiRequest(`/pedidos/${pedidoId}`, 'PUT', pedido);
             
-            await this.agregarActividad(`Pedido entregado - Mesa ${pedido.mesaNumero || pedido.numeroMesa}`);
+            await this.agregarActividad(`Pedido entregado - Mesa ${pedido.mesaNumero}`);
             
             this.cargarPedidos();
             this.cargarMesas();
@@ -1498,7 +1822,7 @@ class AdminApp {
         // Agrupar por mesa
         const mesasConPedidos = {};
         pedidosEntregados.forEach(pedido => {
-            const mesaNum = pedido.mesaNumero || pedido.numeroMesa;
+            const mesaNum = pedido.mesaNumero;
             if (!mesasConPedidos[mesaNum]) {
                 mesasConPedidos[mesaNum] = {
                     mesaNumero: mesaNum,
@@ -1514,7 +1838,7 @@ class AdminApp {
         if (mesas.length === 0) {
             container.innerHTML = `
                 <div class="sin-mesas-cobrar" style="grid-column: 1/-1;">
-                    <div class="icono">✅</div>
+                    <div class="icono"><i class="fa-solid fa-circle-check fa-2x" style="color:#27ae60"></i></div>
                     <h2>No hay mesas pendientes de cobro</h2>
                     <p>Todas las mesas han sido cobradas</p>
                 </div>
@@ -1529,25 +1853,25 @@ class AdminApp {
             return `
                 <div class="mesa-cobrar-card">
                     <div class="mesa-header">
-                        <span class="mesa-numero">🪑 Mesa ${mesa.mesaNumero}</span>
+                        <span class="mesa-numero"><i class="fa-solid fa-chair"></i> Mesa ${mesa.mesaNumero}</span>
                         <span class="pedidos-count">${mesa.pedidos.length} pedido(s)</span>
                     </div>
                     <div class="items-preview">
                         ${todosItems.slice(0, 5).map(item => `
                             <div class="item-preview">
                                 <span>${item.cantidad}x ${item.nombre}</span>
-                                <span>$${(item.precio * item.cantidad).toFixed(2)}</span>
+                                <span>S/${(item.precio * item.cantidad).toFixed(2)}</span>
                             </div>
                         `).join('')}
                         ${todosItems.length > 5 ? `<div class="item-preview"><span>... y ${todosItems.length - 5} más</span></div>` : ''}
                     </div>
-                    <div class="total-mesa">Total: $${total.toFixed(2)}</div>
+                    <div class="total-mesa">Total: S/${total.toFixed(2)}</div>
                     <div class="mesa-cobrar-actions">
                         <button class="btn-cobrar-mesa" onclick="app.abrirModalCobrar(${mesa.mesaNumero})">
-                            💵 Cobrar
+                            <i class="fa-solid fa-money-bill"></i> Cobrar
                         </button>
                         <button class="btn-dividir-mesa" onclick="app.abrirDivisionCuentaPorNumero(${mesa.mesaNumero})">
-                            ➗ Dividir
+                            <i class="fa-solid fa-divide"></i> Dividir
                         </button>
                     </div>
                 </div>
@@ -1564,7 +1888,7 @@ class AdminApp {
 
     abrirModalCobrar(mesaNumero) {
         const pedidosMesa = this.pedidos.filter(p => 
-            (p.mesaNumero === mesaNumero || p.numeroMesa === mesaNumero) && 
+            p.mesaNumero === mesaNumero && 
             p.estado === 'entregado'
         );
         
@@ -1587,12 +1911,12 @@ class AdminApp {
             <div class="cuenta-item">
                 <span class="item-cantidad">${item.cantidad}x</span>
                 <span class="item-nombre">${item.nombre}</span>
-                <span class="item-precio">$${(item.precio * item.cantidad).toFixed(2)}</span>
+                <span class="item-precio">S/${(item.precio * item.cantidad).toFixed(2)}</span>
             </div>
-            ${item.comentario ? `<div class="cuenta-item-comentario">📝 ${item.comentario}</div>` : ''}
+            ${item.comentario ? `<div class="cuenta-item-comentario"><i class="fa-solid fa-comment"></i> ${item.comentario}</div>` : ''}
         `).join('');
         
-        document.getElementById('cuenta-total').textContent = `$${total.toFixed(2)}`
+        document.getElementById('cuenta-total').textContent = `S/${total.toFixed(2)}`
         
         document.getElementById('modal-cobrar').classList.add('active');
     }
@@ -1606,7 +1930,7 @@ class AdminApp {
         }
         
         // Buscar número de mesa de varias formas
-        let mesaNumero = pedido.mesaNumero || pedido.numeroMesa;
+        let mesaNumero = pedido.mesaNumero;
         if (!mesaNumero && pedido.mesaId) {
             const mesa = this.mesas.find(m => m._id === pedido.mesaId);
             if (mesa) mesaNumero = mesa.numero;
@@ -1626,12 +1950,12 @@ class AdminApp {
             <div class="cuenta-item">
                 <span class="item-cantidad">${item.cantidad}x</span>
                 <span class="item-nombre">${item.nombre}</span>
-                <span class="item-precio">$${(item.precio * item.cantidad).toFixed(2)}</span>
+                <span class="item-precio">S/${(item.precio * item.cantidad).toFixed(2)}</span>
             </div>
-            ${item.comentario ? `<div class="cuenta-item-comentario">📝 ${item.comentario}</div>` : ''}
+            ${item.comentario ? `<div class="cuenta-item-comentario"><i class="fa-solid fa-comment"></i> ${item.comentario}</div>` : ''}
         `).join('');
         
-        document.getElementById('cuenta-total').textContent = `$${total.toFixed(2)}`
+        document.getElementById('cuenta-total').textContent = `S/${total.toFixed(2)}`
         
         document.getElementById('modal-cobrar').classList.add('active');
     }
@@ -1647,10 +1971,11 @@ class AdminApp {
         // Crear factura
         const subtotal = total;
         const impuesto = 0;
+        const pedidoIdsList = pedidos.map(p => p._id);
         const factura = {
             numeroFactura: `F-${Date.now()}`,
-            numeroMesa: this.mesaACobrar.mesaNumero,
             mesaNumero: this.mesaACobrar.mesaNumero,
+            pedidoIds: pedidoIdsList,
             items: todosItems,
             subtotal,
             impuesto,
@@ -1664,10 +1989,10 @@ class AdminApp {
             const nuevaFactura = await this.apiRequest('/facturas', 'POST', factura);
             this.facturas.push(nuevaFactura);
             
-            // Eliminar pedidos cobrados
+            // Marcar pedidos como cobrados (no eliminar)
             for (const pedido of pedidos) {
-                await this.apiRequest(`/pedidos/${pedido._id}`, 'DELETE');
-                this.pedidos = this.pedidos.filter(p => p._id !== pedido._id);
+                await this.apiRequest(`/pedidos/${pedido._id}`, 'PUT', { estado: 'cobrado' });
+                pedido.estado = 'cobrado';
             }
             
             // Liberar mesa
@@ -1680,12 +2005,12 @@ class AdminApp {
                 await this.apiRequest(`/mesas/${mesa._id}`, 'PUT', mesa);
             }
             
-            await this.agregarActividad(`Cobro Mesa ${this.mesaACobrar.mesaNumero} - $${total.toFixed(2)} (${metodoPago})`);
+            await this.agregarActividad(`Cobro Mesa ${this.mesaACobrar.mesaNumero} - S/${total.toFixed(2)} (${metodoPago})`);
             
             document.getElementById('modal-cobrar').classList.remove('active');
             
             // Preguntar si desea imprimir ticket
-            if (confirm(`✅ Pago procesado exitosamente\n\nTotal: $${total.toFixed(2)}\nMétodo: ${metodoPago}\n\n¿Desea imprimir el ticket?`)) {
+            if (confirm(`Pago procesado exitosamente\n\nTotal: S/${total.toFixed(2)}\nMétodo: ${metodoPago}\n\n¿Desea imprimir el ticket?`)) {
                 this.imprimirTicket(nuevaFactura);
             }
             
@@ -1752,14 +2077,14 @@ class AdminApp {
             </head>
             <body>
                 <div class="ticket-header">
-                    <h1>🍽️ RESTAURANTE</h1>
+                    <h1>RESTAURANTE</h1>
                     <p>Sistema de Gestión</p>
                 </div>
                 <div class="ticket-divider"></div>
                 <div class="ticket-info">
                     <p><span>Ticket:</span> <span>${factura.numeroFactura}</span></p>
                     <p><span>Fecha:</span> <span>${fecha}</span></p>
-                    <p><span>Mesa:</span> <span>${factura.mesaNumero || factura.numeroMesa || 'N/A'}</span></p>
+                    <p><span>Mesa:</span> <span>${factura.mesaNumero || 'N/A'}</span></p>
                     <p><span>Método:</span> <span>${factura.metodoPago}</span></p>
                 </div>
                 <div class="ticket-divider"></div>
@@ -1767,13 +2092,13 @@ class AdminApp {
                     ${items.map(item => `
                         <div class="ticket-item">
                             <span class="ticket-item-name">${item.cantidad}x ${item.nombre}</span>
-                            <span>$${(item.precio * item.cantidad).toFixed(2)}</span>
+                            <span>S/${(item.precio * item.cantidad).toFixed(2)}</span>
                         </div>
                     `).join('')}
                 </div>
                 <div class="ticket-divider"></div>
                 <div class="ticket-total">
-                    TOTAL: $${(factura.total || 0).toFixed(2)}
+                    TOTAL: S/${(factura.total || 0).toFixed(2)}
                 </div>
                 <div class="ticket-divider"></div>
                 <div class="ticket-footer">
@@ -1806,7 +2131,7 @@ class AdminApp {
         const mesa = this.mesas.find(m => m._id === mesaId);
         // Buscar pedidos entregados de esta mesa (igual que en cobrar)
         const pedidosMesa = this.pedidos.filter(p => 
-            (p.mesaId === mesaId || p.mesaNumero === mesa?.numero || p.numeroMesa === mesa?.numero) && 
+            (p.mesaId === mesaId || p.mesaNumero === mesa?.numero) && 
             p.estado === 'entregado'
         );
         
@@ -1856,15 +2181,15 @@ class AdminApp {
         itemsContainer.innerHTML = items.map(item => `
             <div class="division-item">
                 <span>${item.cantidad}x ${item.nombre}</span>
-                <span>$${(item.precio * item.cantidad).toFixed(2)}</span>
+                <span>S/${(item.precio * item.cantidad).toFixed(2)}</span>
             </div>
         `).join('');
         
         // Calcular totales
         const porPersona = total / numPersonas;
         
-        document.getElementById('division-total').textContent = `$${total.toFixed(2)}`;
-        document.getElementById('division-por-persona').textContent = `$${porPersona.toFixed(2)}`;
+        document.getElementById('division-total').textContent = `S/${total.toFixed(2)}`;
+        document.getElementById('division-por-persona').textContent = `S/${porPersona.toFixed(2)}`;
         
         // Mostrar desglose por persona
         const desgloseContainer = document.getElementById('division-desglose');
@@ -1874,11 +2199,11 @@ class AdminApp {
             const pagado = this.divisionData.pagosProcesados.includes(i);
             desgloseHTML += `
                 <div class="persona-card ${pagado ? 'pagado' : ''}">
-                    <h4>👤 Persona ${i}</h4>
-                    <div class="monto">$${porPersona.toFixed(2)}</div>
+                    <h4><i class="fa-solid fa-user"></i> Persona ${i}</h4>
+                    <div class="monto">S/${porPersona.toFixed(2)}</div>
                     ${pagado 
-                        ? '<p style="color: green; margin-top: 10px;">✅ Pagado</p>' 
-                        : `<button class="btn-primary" onclick="app.pagarPersona(${i}, ${porPersona.toFixed(2)})">💳 Pagar</button>`
+                        ? '<p style="color: green; margin-top: 10px;"><i class="fa-solid fa-circle-check"></i> Pagado</p>' 
+                        : `<button class="btn-primary" onclick="app.pagarPersona(${i}, ${porPersona.toFixed(2)})"><i class="fa-solid fa-credit-card"></i> Pagar</button>`
                     }
                 </div>
             `;
@@ -1931,12 +2256,12 @@ class AdminApp {
             const factura = {
                 numeroFactura: `DIV-${Date.now()}`,
                 mesaNumero: mesa.numero,
-                numeroMesa: mesa.numero,
+                pedidoIds: pedidos.map(p => p._id),
                 items: items,
                 subtotal: total,
                 impuesto: 0,
                 total: total,
-                metodoPago: `Dividido entre ${numPersonas} personas ($${porPersona.toFixed(2)} c/u)`,
+                metodoPago: `Dividido entre ${numPersonas} personas (S/${porPersona.toFixed(2)} c/u)`,
                 fecha: new Date().toISOString()
             };
             
@@ -1946,17 +2271,17 @@ class AdminApp {
             mesa.estado = 'disponible';
             await this.apiRequest(`/mesas/${mesa._id}`, 'PUT', mesa);
             
-            // Eliminar todos los pedidos de la mesa
+            // Marcar pedidos como cobrados (no eliminar)
             for (const pedido of pedidos) {
-                await this.apiRequest(`/pedidos/${pedido._id}`, 'DELETE');
+                await this.apiRequest(`/pedidos/${pedido._id}`, 'PUT', { estado: 'cobrado' });
             }
             
             // Registrar actividad
-            await this.agregarActividad(`Cuenta dividida - Mesa ${mesa.numero} - ${numPersonas} personas - $${total.toFixed(2)}`);
+            await this.agregarActividad(`Cuenta dividida - Mesa ${mesa.numero} - ${numPersonas} personas - S/${total.toFixed(2)}`);
             
             this.cerrarModalDivision();
             
-            alert(`✅ Cuenta dividida exitosamente!\nTotal: $${total.toFixed(2)}\nPor persona: $${porPersona.toFixed(2)}`);
+            alert(`Cuenta dividida exitosamente!\nTotal: S/${total.toFixed(2)}\nPor persona: S/${porPersona.toFixed(2)}`);
             
             // Preguntar si imprimir
             if (confirm('¿Desea imprimir el ticket?')) {
@@ -1979,13 +2304,19 @@ class AdminApp {
                 const pedido = this.pedidos.find(p => p._id === pedidoId);
                 const mesa = this.mesas.find(m => m._id === pedido.mesaId);
                 
-                if (mesa) {
-                    mesa.estado = 'disponible';
-                    await this.apiRequest(`/mesas/${mesa._id}`, 'PUT', mesa);
-                }
+                await this.apiRequest(`/pedidos/${pedidoId}`, 'PUT', { estado: 'cancelado' });
+                pedido.estado = 'cancelado';
                 
-                await this.apiRequest(`/pedidos/${pedidoId}`, 'DELETE');
-                this.pedidos = this.pedidos.filter(p => p._id !== pedidoId);
+                // Solo liberar mesa si no tiene otros pedidos activos
+                if (mesa) {
+                    const otrosPedidosMesa = this.pedidos.filter(p => 
+                        p.mesaId === mesa._id && p.estado !== 'cancelado' && p.estado !== 'cobrado'
+                    );
+                    if (otrosPedidosMesa.length === 0) {
+                        mesa.estado = 'disponible';
+                        await this.apiRequest(`/mesas/${mesa._id}`, 'PUT', mesa);
+                    }
+                }
                 
                 await this.agregarActividad(`Pedido cancelado - Mesa ${pedido.mesaNumero}`);
                 
@@ -2003,19 +2334,124 @@ class AdminApp {
     cargarReportes() {
         if (this.usuario.rol !== 'administrador') return;
         
-        // Configurar evento del botón (solo una vez)
         if (!this._reportesInit) {
-            document.getElementById('btn-generar-reporte')?.addEventListener('click', () => this.generarReporte());
+            // Botones de período rápido
+            document.querySelectorAll('.periodo-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.periodo-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const periodo = btn.dataset.periodo;
+                    const rangoContainer = document.getElementById('rango-fechas-container');
+                    
+                    if (periodo === 'personalizado') {
+                        rangoContainer.style.display = 'block';
+                        // Establecer fechas por defecto: inicio del mes → hoy
+                        const hoy = new Date();
+                        const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+                        document.getElementById('reporte-fecha-inicio').value = inicioMes.toISOString().slice(0, 10);
+                        document.getElementById('reporte-fecha-fin').value = hoy.toISOString().slice(0, 10);
+                        // Establecer max en fecha fin = hoy
+                        document.getElementById('reporte-fecha-fin').max = hoy.toISOString().slice(0, 10);
+                    } else {
+                        rangoContainer.style.display = 'none';
+                        this.generarReporte(periodo);
+                    }
+                });
+            });
+            
+            // Botón generar reporte personalizado
+            document.getElementById('btn-generar-reporte')?.addEventListener('click', () => {
+                this.generarReportePersonalizado();
+            });
+            
+            // Validación en tiempo real: fecha inicio no puede ser mayor a fecha fin
+            const fechaInicio = document.getElementById('reporte-fecha-inicio');
+            const fechaFin = document.getElementById('reporte-fecha-fin');
+            
+            fechaInicio?.addEventListener('change', () => {
+                // Actualizar mínimo de fecha fin
+                if (fechaInicio.value) {
+                    fechaFin.min = fechaInicio.value;
+                    // Si fecha fin es menor que fecha inicio, corregir
+                    if (fechaFin.value && fechaFin.value < fechaInicio.value) {
+                        fechaFin.value = fechaInicio.value;
+                    }
+                }
+                this.validarRangoFechas();
+            });
+            
+            fechaFin?.addEventListener('change', () => {
+                // Actualizar máximo de fecha inicio
+                if (fechaFin.value) {
+                    fechaInicio.max = fechaFin.value;
+                }
+                this.validarRangoFechas();
+            });
+            
             this._reportesInit = true;
         }
         
-        // Cargar reporte inicial
-        this.generarReporte();
+        // Cargar reporte inicial (mes actual)
+        this.generarReporte('mes');
     }
     
-    generarReporte() {
-        const periodo = document.getElementById('reporte-periodo').value;
-        const { inicio, fin } = this.obtenerRangoFechas(periodo);
+    validarRangoFechas() {
+        const fechaInicio = document.getElementById('reporte-fecha-inicio').value;
+        const fechaFin = document.getElementById('reporte-fecha-fin').value;
+        const errorDiv = document.getElementById('fecha-error');
+        const errorTexto = document.getElementById('fecha-error-texto');
+        const inputInicio = document.getElementById('reporte-fecha-inicio');
+        const inputFin = document.getElementById('reporte-fecha-fin');
+        
+        inputInicio.classList.remove('error');
+        inputFin.classList.remove('error');
+        errorDiv.style.display = 'none';
+        
+        if (!fechaInicio || !fechaFin) return true;
+        
+        if (fechaInicio > fechaFin) {
+            errorTexto.textContent = 'La fecha de inicio no puede ser posterior a la fecha final.';
+            errorDiv.style.display = 'flex';
+            inputInicio.classList.add('error');
+            inputFin.classList.add('error');
+            return false;
+        }
+        
+        // Advertencia si el rango es mayor a 1 año
+        const diff = new Date(fechaFin) - new Date(fechaInicio);
+        const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
+        if (dias > 365) {
+            errorTexto.textContent = `El rango seleccionado abarca ${dias} días. Rangos muy amplios pueden ser lentos.`;
+            errorDiv.style.display = 'flex';
+            // No es error, solo advertencia — permitir continuar
+        }
+        
+        return true;
+    }
+    
+    generarReportePersonalizado() {
+        const fechaInicio = document.getElementById('reporte-fecha-inicio').value;
+        const fechaFin = document.getElementById('reporte-fecha-fin').value;
+        
+        if (!fechaInicio || !fechaFin) {
+            const errorDiv = document.getElementById('fecha-error');
+            const errorTexto = document.getElementById('fecha-error-texto');
+            errorTexto.textContent = 'Selecciona ambas fechas para generar el reporte.';
+            errorDiv.style.display = 'flex';
+            return;
+        }
+        
+        if (!this.validarRangoFechas()) return;
+        
+        this.generarReporte('personalizado');
+    }
+    
+    generarReporte(periodo) {
+        const { inicio, fin, textoInfo } = this.obtenerRangoFechas(periodo);
+        
+        // Mostrar info del período
+        document.getElementById('reporte-periodo-texto').textContent = `Mostrando datos de: ${textoInfo}`;
         
         // Filtrar facturas por período
         const facturasDelPeriodo = this.facturas.filter(f => {
@@ -2029,9 +2465,9 @@ class AdminApp {
         const ticketPromedio = pedidosCompletados > 0 ? totalVentas / pedidosCompletados : 0;
         
         // Mostrar resumen
-        document.getElementById('reporte-total-ventas').textContent = `$${totalVentas.toFixed(2)}`;
+        document.getElementById('reporte-total-ventas').textContent = `S/${totalVentas.toFixed(2)}`;
         document.getElementById('reporte-pedidos-completados').textContent = pedidosCompletados;
-        document.getElementById('reporte-ticket-promedio').textContent = `$${ticketPromedio.toFixed(2)}`;
+        document.getElementById('reporte-ticket-promedio').textContent = `S/${ticketPromedio.toFixed(2)}`;
         
         // Platillos más vendidos
         this.mostrarPlatillosTop(facturasDelPeriodo);
@@ -2051,35 +2487,48 @@ class AdminApp {
     
     obtenerRangoFechas(periodo) {
         const ahora = new Date();
-        let inicio, fin;
+        let inicio, fin, textoInfo;
+        
+        const formatFecha = (d) => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
         
         switch(periodo) {
             case 'hoy':
                 inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
                 fin = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59);
+                textoInfo = `Hoy — ${formatFecha(ahora)}`;
                 break;
             case 'semana':
-                // Semana empieza el lunes (estándar en Perú)
                 const diaSemana = ahora.getDay();
                 const diasDesdelunes = diaSemana === 0 ? 6 : diaSemana - 1;
                 inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - diasDesdelunes);
                 inicio.setHours(0, 0, 0, 0);
                 fin = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59);
+                textoInfo = `Esta Semana — ${formatFecha(inicio)} al ${formatFecha(fin)}`;
                 break;
             case 'mes':
                 inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
                 fin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59);
+                textoInfo = `Este Mes — ${ahora.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`;
                 break;
             case 'anio':
                 inicio = new Date(ahora.getFullYear(), 0, 1);
                 fin = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59);
+                textoInfo = `Este Año — ${ahora.getFullYear()}`;
+                break;
+            case 'personalizado':
+                const fi = document.getElementById('reporte-fecha-inicio').value;
+                const ff = document.getElementById('reporte-fecha-fin').value;
+                inicio = new Date(fi + 'T00:00:00');
+                fin = new Date(ff + 'T23:59:59');
+                textoInfo = `Personalizado — ${formatFecha(inicio)} al ${formatFecha(fin)}`;
                 break;
             default:
                 inicio = new Date(0);
                 fin = ahora;
+                textoInfo = 'Todo el historial';
         }
         
-        return { inicio, fin };
+        return { inicio, fin, textoInfo };
     }
     
     mostrarPlatillosTop(facturas) {
@@ -2114,7 +2563,7 @@ class AdminApp {
                     </div>
                     <div style="text-align: right;">
                         <div class="reporte-item-value">${data.cantidad} uds</div>
-                        <small style="color: #666;">$${data.total.toFixed(2)}</small>
+                        <small style="color: #666;">S/${data.total.toFixed(2)}</small>
                     </div>
                 </div>
             `).join('')
@@ -2125,7 +2574,7 @@ class AdminApp {
         const conteo = {};
         
         facturas.forEach(f => {
-            const mesa = f.mesaNumero || f.numeroMesa || 'N/A';
+            const mesa = f.mesaNumero || 'N/A';
             if (!conteo[mesa]) {
                 conteo[mesa] = { pedidos: 0, total: 0 };
             }
@@ -2145,7 +2594,7 @@ class AdminApp {
                         <span class="reporte-item-name">Mesa ${mesa}</span>
                     </div>
                     <div style="text-align: right;">
-                        <div class="reporte-item-value">$${data.total.toFixed(2)}</div>
+                        <div class="reporte-item-value">S/${data.total.toFixed(2)}</div>
                         <small style="color: #666;">${data.pedidos} pedidos</small>
                     </div>
                 </div>
@@ -2178,7 +2627,7 @@ class AdminApp {
                     <div style="flex: 1; margin: 0 15px;">
                         <div class="reporte-item-bar" style="width: ${(data.total / maxVenta * 100)}%"></div>
                     </div>
-                    <span class="reporte-item-value">$${data.total.toFixed(2)}</span>
+                    <span class="reporte-item-value">S/${data.total.toFixed(2)}</span>
                 </div>
             `).join('')
             : '<p style="text-align: center; color: #7f8c8d;">Sin datos</p>';
@@ -2210,13 +2659,13 @@ class AdminApp {
                     <div style="display: flex; align-items: center; flex: 1;">
                         <span class="reporte-item-rank ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : ''}">${i + 1}</span>
                         <div style="flex: 1;">
-                            <div class="reporte-item-name">🕐 ${hora}</div>
+                            <div class="reporte-item-name"><i class="fa-solid fa-clock"></i> ${hora}</div>
                             <div class="reporte-item-bar" style="width: ${(data.pedidos / maxPedidos * 100)}%"></div>
                         </div>
                     </div>
                     <div style="text-align: right;">
                         <div class="reporte-item-value">${data.pedidos} pedidos</div>
-                        <small style="color: #666;">$${data.total.toFixed(2)}</small>
+                        <small style="color: #666;">S/${data.total.toFixed(2)}</small>
                     </div>
                 </div>
             `).join('')
@@ -2242,22 +2691,22 @@ class AdminApp {
         const total = ordenado.reduce((sum, [_, v]) => sum + v, 0) || 1;
         
         const iconos = {
-            'Entradas': '🥗',
-            'Platos Fuertes': '🍖',
-            'Postres': '🍰',
-            'Bebidas': '🥤',
-            'Otros': '📦'
+            'Entradas': '<i class="fa-solid fa-leaf"></i>',
+            'Platos Fuertes': '<i class="fa-solid fa-drumstick-bite"></i>',
+            'Postres': '<i class="fa-solid fa-cake-candles"></i>',
+            'Bebidas': '<i class="fa-solid fa-glass-water"></i>',
+            'Otros': '<i class="fa-solid fa-boxes-stacked"></i>'
         };
         
         document.getElementById('reporte-categorias').innerHTML = ordenado.length > 0
             ? ordenado.map(([categoria, valor]) => `
                 <div class="reporte-item">
-                    <span class="reporte-item-name">${iconos[categoria] || '📦'} ${categoria}</span>
+                    <span class="reporte-item-name">${iconos[categoria] || '<i class="fa-solid fa-boxes-stacked"></i>'} ${categoria}</span>
                     <div style="flex: 1; margin: 0 15px;">
                         <div class="reporte-item-bar" style="width: ${(valor / total * 100)}%"></div>
                     </div>
                     <div style="text-align: right;">
-                        <div class="reporte-item-value">$${valor.toFixed(2)}</div>
+                        <div class="reporte-item-value">S/${valor.toFixed(2)}</div>
                         <small style="color: #666;">${(valor / total * 100).toFixed(1)}%</small>
                     </div>
                 </div>
@@ -2270,12 +2719,20 @@ class AdminApp {
     cargarInventario() {
         if (this.usuario.rol !== 'administrador') return;
         
-        // Mostrar alertas de stock bajo
+        // Mostrar resumen y alertas
+        this.mostrarResumenInventario();
         this.mostrarAlertasInventario();
         
         // Configurar filtros (solo una vez)
         if (!this._inventarioInit) {
-            document.getElementById('filtro-inventario-categoria')?.addEventListener('change', () => this.renderizarInventario());
+            // Categoría pills
+            document.getElementById('inventario-categorias')?.addEventListener('click', (e) => {
+                const btn = e.target.closest('.inv-cat-btn');
+                if (!btn) return;
+                document.querySelectorAll('.inv-cat-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.renderizarInventario();
+            });
             document.getElementById('buscar-inventario')?.addEventListener('input', () => this.renderizarInventario());
             this._inventarioInit = true;
         }
@@ -2283,37 +2740,112 @@ class AdminApp {
         this.renderizarInventario();
     }
     
+    mostrarResumenInventario() {
+        const container = document.getElementById('inventario-resumen');
+        if (!container) return;
+        
+        const total = this.inventario.length;
+        const stockBajo = this.inventario.filter(i => i.cantidad <= i.stockMinimo && i.cantidad > 0).length;
+        const agotados = this.inventario.filter(i => i.cantidad <= 0).length;
+        const valorTotal = this.inventario.reduce((sum, i) => sum + (i.cantidad * (i.costo || 0)), 0);
+        
+        container.innerHTML = `
+            <div class="inv-stat">
+                <i class="fa-solid fa-boxes-stacked"></i>
+                <div>
+                    <span class="inv-stat-num">${total}</span>
+                    <span class="inv-stat-label">Total Items</span>
+                </div>
+            </div>
+            <div class="inv-stat warning">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div>
+                    <span class="inv-stat-num">${stockBajo}</span>
+                    <span class="inv-stat-label">Stock Bajo</span>
+                </div>
+            </div>
+            <div class="inv-stat danger">
+                <i class="fa-solid fa-xmark-circle"></i>
+                <div>
+                    <span class="inv-stat-num">${agotados}</span>
+                    <span class="inv-stat-label">Agotados</span>
+                </div>
+            </div>
+            <div class="inv-stat success">
+                <i class="fa-solid fa-sack-dollar"></i>
+                <div>
+                    <span class="inv-stat-num">S/${valorTotal.toFixed(2)}</span>
+                    <span class="inv-stat-label">Valor Inventario</span>
+                </div>
+            </div>
+        `;
+    }
+    
     mostrarAlertasInventario() {
-        const alertas = this.inventario.filter(item => item.cantidad <= item.stockMinimo);
+        const criticos = this.inventario.filter(item => item.cantidad <= 0);
+        const bajos = this.inventario.filter(item => item.cantidad > 0 && item.cantidad <= item.stockMinimo);
         const container = document.getElementById('inventario-alertas');
         
-        if (alertas.length > 0) {
-            container.innerHTML = `
-                <div class="alerta-stock">
-                    <strong>⚠️ Alerta de Stock Bajo (${alertas.length} items)</strong>
+        if (criticos.length === 0 && bajos.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        let html = '';
+        
+        if (criticos.length > 0) {
+            html += `
+                <div class="alerta-stock alerta-critica">
+                    <strong><i class="fa-solid fa-circle-xmark"></i> ¡Agotados! (${criticos.length})</strong>
                     <div class="alertas-items">
-                        ${alertas.map(item => `
-                            <span class="alerta-item">
-                                ${item.nombre}: ${item.cantidad} ${item.unidad} (mín: ${item.stockMinimo})
+                        ${criticos.map(item => `
+                            <span class="alerta-item critica">
+                                <i class="fa-solid fa-ban"></i> ${item.nombre}
                             </span>
                         `).join('')}
                     </div>
                 </div>
             `;
-        } else {
-            container.innerHTML = '';
         }
+        
+        if (bajos.length > 0) {
+            html += `
+                <div class="alerta-stock alerta-baja">
+                    <strong><i class="fa-solid fa-triangle-exclamation"></i> Stock Bajo (${bajos.length})</strong>
+                    <div class="alertas-items">
+                        ${bajos.map(item => {
+                            const pct = Math.round((item.cantidad / item.stockMinimo) * 100);
+                            return `
+                                <span class="alerta-item baja">
+                                    ${item.nombre}: ${item.cantidad} ${item.unidad} <small>(${pct}%)</small>
+                                </span>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html;
+    }
+    
+    _getEstadoStock(item) {
+        if (item.cantidad <= 0) return { texto: 'Agotado', clase: 'agotado', color: '#c0392b' };
+        if (item.cantidad <= item.stockMinimo * 0.5) return { texto: 'Crítico', clase: 'critico', color: '#e74c3c' };
+        if (item.cantidad <= item.stockMinimo) return { texto: 'Bajo', clase: 'bajo', color: '#f39c12' };
+        if (item.cantidad >= item.stockMinimo * 2) return { texto: 'Óptimo', clase: 'optimo', color: '#27ae60' };
+        return { texto: 'Normal', clase: 'normal', color: '#3498db' };
     }
     
     renderizarInventario() {
         const container = document.getElementById('lista-inventario');
-        const filtroCategoria = document.getElementById('filtro-inventario-categoria')?.value || '';
+        const catActiva = document.querySelector('.inv-cat-btn.active')?.dataset.cat || '';
         const busqueda = document.getElementById('buscar-inventario')?.value.toLowerCase() || '';
         
         let items = this.inventario;
         
-        if (filtroCategoria) {
-            items = items.filter(i => i.categoria === filtroCategoria);
+        if (catActiva) {
+            items = items.filter(i => i.categoria === catActiva);
         }
         
         if (busqueda) {
@@ -2321,57 +2853,130 @@ class AdminApp {
         }
         
         if (items.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #7f8c8d; grid-column: 1/-1;">No hay items en el inventario</p>';
+            const mensaje = this.inventario.length === 0 
+                ? { icon: 'fa-boxes-stacked', text: 'No hay items en el inventario', sub: 'Agrega tu primer item con el botón de arriba' }
+                : { icon: 'fa-filter-circle-xmark', text: 'Sin resultados', sub: 'Prueba cambiando los filtros de búsqueda' };
+            container.innerHTML = `
+                <div class="inventario-empty">
+                    <i class="fa-solid ${mensaje.icon}"></i>
+                    <h3>${mensaje.text}</h3>
+                    <p>${mensaje.sub}</p>
+                </div>
+            `;
             return;
         }
         
         const iconosCategoria = {
-            'Carnes': '🥩',
-            'Verduras': '🥬',
-            'Frutas': '🍎',
-            'Granos': '🌾',
-            'Lácteos': '🧀',
-            'Bebidas': '🥤',
-            'Condimentos': '🧂',
-            'Otros': '📦'
+            'Carnes': '<i class="fa-solid fa-drumstick-bite"></i>',
+            'Verduras': '<i class="fa-solid fa-leaf"></i>',
+            'Frutas': '<i class="fa-solid fa-apple-whole"></i>',
+            'Granos': '<i class="fa-solid fa-wheat-awn"></i>',
+            'Lácteos': '<i class="fa-solid fa-cheese"></i>',
+            'Bebidas': '<i class="fa-solid fa-glass-water"></i>',
+            'Condimentos': '<i class="fa-solid fa-jar"></i>',
+            'Otros': '<i class="fa-solid fa-boxes-stacked"></i>'
         };
         
         container.innerHTML = items.map(item => {
-            const stockBajo = item.cantidad <= item.stockMinimo;
-            // Barra proporcional: 100% = 2x el mínimo (nivel óptimo)
+            const estado = this._getEstadoStock(item);
             const nivelOptimo = item.stockMinimo * 2;
             const porcentajeStock = Math.min(100, (item.cantidad / nivelOptimo) * 100);
-            const colorBarra = stockBajo ? 'bajo' : (item.cantidad >= nivelOptimo ? 'optimo' : '');
+            const valorItem = item.cantidad * (item.costo || 0);
+            const updatedAt = item.updatedAt ? new Date(item.updatedAt) : null;
+            const tiempoStr = updatedAt ? this._tiempoRelativo(updatedAt) : '';
+            
+            // Calcular variación de costo
+            let costoChangeHtml = '';
+            if (item.costoAnterior && item.costoAnterior > 0 && item.costo !== item.costoAnterior) {
+                const variacion = ((item.costo - item.costoAnterior) / item.costoAnterior) * 100;
+                const subio = variacion > 0;
+                costoChangeHtml = `
+                    <span class="inv-costo-change ${subio ? 'subio' : 'bajo'}" title="Antes: S/${item.costoAnterior.toFixed(2)}">
+                        <i class="fa-solid fa-arrow-${subio ? 'up' : 'down'}"></i> ${Math.abs(variacion).toFixed(1)}%
+                    </span>
+                `;
+            }
             
             return `
-                <div class="inventario-card ${stockBajo ? 'stock-bajo' : ''}">
+                <div class="inventario-card ${estado.clase}">
                     <div class="inventario-header">
-                        <span class="inventario-icono">${iconosCategoria[item.categoria] || '📦'}</span>
+                        <span class="inventario-icono">${iconosCategoria[item.categoria] || '<i class="fa-solid fa-boxes-stacked"></i>'}</span>
                         <div class="inventario-info">
                             <h4>${item.nombre}</h4>
                             <small>${item.categoria}</small>
                         </div>
+                        <span class="inv-estado-badge ${estado.clase}">${estado.texto}</span>
                     </div>
+                    
                     <div class="inventario-stock">
                         <div class="stock-cantidad">
-                            <strong>${item.cantidad}</strong> ${item.unidad}
+                            <strong>${item.cantidad}</strong> <span>${item.unidad}</span>
+                            <small class="stock-minimo">mín: ${item.stockMinimo}</small>
                         </div>
                         <div class="stock-barra-container">
-                            <div class="stock-barra ${colorBarra}" style="width: ${porcentajeStock}%"></div>
+                            <div class="stock-barra ${estado.clase}" style="width: ${porcentajeStock}%"></div>
                         </div>
-                        <small>Mínimo: ${item.stockMinimo} ${item.unidad}</small>
                     </div>
-                    ${item.costo > 0 ? `<div class="inventario-costo">Costo: $${item.costo.toFixed(2)}/${item.unidad}</div>` : ''}
+                    
+                    <div class="inventario-detalles">
+                        ${item.costo > 0 ? `
+                            <div class="inv-detalle">
+                                <span class="inv-detalle-label"><i class="fa-solid fa-tag"></i> Costo</span>
+                                <span class="inv-detalle-valor">
+                                    S/${item.costo.toFixed(2)}/${item.unidad} ${costoChangeHtml}
+                                </span>
+                            </div>
+                            <div class="inv-detalle">
+                                <span class="inv-detalle-label"><i class="fa-solid fa-coins"></i> Valor</span>
+                                <span class="inv-detalle-valor">S/${valorItem.toFixed(2)}</span>
+                            </div>
+                        ` : ''}
+                        ${tiempoStr ? `
+                            <div class="inv-detalle">
+                                <span class="inv-detalle-label"><i class="fa-solid fa-clock"></i> Actualizado</span>
+                                <span class="inv-detalle-valor">${tiempoStr}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
                     <div class="inventario-actions">
-                        <button class="btn-info" onclick="app.ajustarStock('${item._id}', 1)" title="+1">➕</button>
-                        <button class="btn-secondary" onclick="app.ajustarStock('${item._id}', -1)" title="-1">➖</button>
-                        <button class="btn-primary" onclick="app.ajustarStockPersonalizado('${item._id}')" title="Ajustar cantidad">🔢</button>
-                        <button class="btn-primary" onclick="app.editarInventario('${item._id}')" title="Editar">✏️</button>
-                        <button class="btn-danger" onclick="app.eliminarInventario('${item._id}')" title="Eliminar">🗑️</button>
+                        <div class="inv-stock-controls">
+                            <button class="inv-btn-ajuste" onclick="app.ajustarStock('${item._id}', -1)" title="Restar 1">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                            <button class="inv-btn-cantidad" onclick="app.ajustarStockPersonalizado('${item._id}')" title="Ajuste personalizado">
+                                ${item.cantidad} ${item.unidad}
+                            </button>
+                            <button class="inv-btn-ajuste" onclick="app.ajustarStock('${item._id}', 1)" title="Sumar 1">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="inv-item-actions">
+                            <button class="inv-btn-edit" onclick="app.editarInventario('${item._id}')" title="Editar item">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button class="inv-btn-delete" onclick="app.eliminarInventario('${item._id}')" title="Eliminar item">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
         }).join('');
+    }
+    
+    _tiempoRelativo(fecha) {
+        const ahora = new Date();
+        const diff = ahora - fecha;
+        const mins = Math.floor(diff / 60000);
+        const horas = Math.floor(diff / 3600000);
+        const dias = Math.floor(diff / 86400000);
+        
+        if (mins < 1) return 'Justo ahora';
+        if (mins < 60) return `Hace ${mins} min`;
+        if (horas < 24) return `Hace ${horas}h`;
+        if (dias < 7) return `Hace ${dias}d`;
+        return fecha.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
     }
     
     async ajustarStock(id, cantidad) {
@@ -2379,12 +2984,16 @@ class AdminApp {
         if (!item) return;
         
         const nuevaCantidad = Math.max(0, item.cantidad + cantidad);
+        if (nuevaCantidad === item.cantidad) return;
         
         try {
             await this.apiRequest(`/inventario/${id}`, 'PUT', { cantidad: nuevaCantidad });
+            const accion = cantidad > 0 ? `+${cantidad}` : `${cantidad}`;
+            await this.agregarActividad(`Stock ajustado: ${item.nombre} ${accion} ${item.unidad} (${item.cantidad} → ${nuevaCantidad})`);
             item.cantidad = nuevaCantidad;
             this.renderizarInventario();
             this.mostrarAlertasInventario();
+            this.mostrarResumenInventario();
         } catch (error) {
             alert('Error al ajustar stock');
         }
@@ -2393,28 +3002,177 @@ class AdminApp {
     async ajustarStockPersonalizado(id) {
         const item = this.inventario.find(i => i._id === id);
         if (!item) return;
-
-        const input = prompt(`Ajustar stock de "${item.nombre}"\nActual: ${item.cantidad} ${item.unidad}\n\nIngresa la cantidad a agregar (o negativo para restar):`, '10');
-        if (input === null) return;
-
-        const cantidad = parseFloat(input);
-        if (isNaN(cantidad)) {
-            alert('Cantidad inválida');
-            return;
-        }
-
-        const nuevaCantidad = Math.max(0, item.cantidad + cantidad);
-
-        try {
-            await this.apiRequest(`/inventario/${id}`, 'PUT', { cantidad: nuevaCantidad });
-            const accion = cantidad >= 0 ? `+${cantidad}` : `${cantidad}`;
-            await this.agregarActividad(`Stock ajustado: ${item.nombre} ${accion} ${item.unidad} (${item.cantidad} → ${nuevaCantidad})`);
-            item.cantidad = nuevaCantidad;
-            this.renderizarInventario();
-            this.mostrarAlertasInventario();
-        } catch (error) {
-            alert('Error al ajustar stock');
-        }
+        
+        // Crear modal inline en vez de prompt()
+        const existente = document.getElementById('modal-ajuste-stock');
+        if (existente) existente.remove();
+        
+        const modal = document.createElement('div');
+        modal.id = 'modal-ajuste-stock';
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 420px;">
+                <h2><i class="fa-solid fa-sliders"></i> Ajustar Stock</h2>
+                <div style="text-align: center; margin: 15px 0;">
+                    <div style="font-size: 1.1em; color: var(--dark-color); font-weight: 600;">${item.nombre}</div>
+                    <div style="color: #7f8c8d; margin-top: 4px;">Stock actual: <strong>${item.cantidad}</strong> ${item.unidad}</div>
+                    ${item.costo > 0 ? `<div style="color: #95a5a6; font-size: 0.85em; margin-top: 2px;">Costo actual: S/${item.costo.toFixed(2)}/${item.unidad}</div>` : ''}
+                </div>
+                <div class="form-group">
+                    <label>Tipo de ajuste:</label>
+                    <div class="ajuste-tipo-btns">
+                        <button type="button" class="ajuste-tipo-btn active" data-tipo="agregar">
+                            <i class="fa-solid fa-plus"></i> Agregar
+                        </button>
+                        <button type="button" class="ajuste-tipo-btn" data-tipo="restar">
+                            <i class="fa-solid fa-minus"></i> Restar
+                        </button>
+                        <button type="button" class="ajuste-tipo-btn" data-tipo="establecer">
+                            <i class="fa-solid fa-pen"></i> Establecer
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Cantidad (${item.unidad}):</label>
+                    <input type="number" id="ajuste-stock-cantidad" min="0" step="0.01" value="1" style="font-size: 1.2em; text-align: center;">
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="ajuste-actualizar-costo" style="width: auto;">
+                        <i class="fa-solid fa-money-bill-trend-up"></i> Actualizar costo unitario
+                    </label>
+                    <div id="ajuste-costo-container" style="display: none; margin-top: 8px;">
+                        <div class="form-row">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.85em;">Nuevo costo (S/):</label>
+                                <input type="number" id="ajuste-nuevo-costo" min="0" step="0.01" value="${item.costo || 0}" style="text-align: center;">
+                            </div>
+                            <div id="ajuste-costo-diff" style="display: flex; align-items: center; justify-content: center; font-size: 0.85em; color: #7f8c8d;">
+                                Sin cambio
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="ajuste-stock-preview" style="text-align: center; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 15px;">
+                    Resultado: <strong>${item.cantidad + 1}</strong> ${item.unidad}
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-primary" id="btn-confirmar-ajuste">
+                        <i class="fa-solid fa-check"></i> Confirmar
+                    </button>
+                    <button type="button" class="btn-secondary" id="btn-cancelar-ajuste">Cancelar</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        let tipoAjuste = 'agregar';
+        const inputCantidad = document.getElementById('ajuste-stock-cantidad');
+        const preview = document.getElementById('ajuste-stock-preview');
+        const checkCosto = document.getElementById('ajuste-actualizar-costo');
+        const costoContainer = document.getElementById('ajuste-costo-container');
+        const inputCosto = document.getElementById('ajuste-nuevo-costo');
+        const costoDiff = document.getElementById('ajuste-costo-diff');
+        
+        const actualizarPreview = () => {
+            const val = parseFloat(inputCantidad.value) || 0;
+            let resultado;
+            switch (tipoAjuste) {
+                case 'agregar': resultado = item.cantidad + val; break;
+                case 'restar': resultado = Math.max(0, item.cantidad - val); break;
+                case 'establecer': resultado = Math.max(0, val); break;
+            }
+            preview.innerHTML = `Resultado: <strong>${resultado.toFixed(2)}</strong> ${item.unidad}`;
+        };
+        
+        const actualizarDiffCosto = () => {
+            const nuevoCosto = parseFloat(inputCosto.value) || 0;
+            const costoActual = item.costo || 0;
+            if (costoActual === 0 || nuevoCosto === costoActual) {
+                costoDiff.innerHTML = '<span style="color: #7f8c8d;">Sin cambio</span>';
+                return;
+            }
+            const variacion = ((nuevoCosto - costoActual) / costoActual) * 100;
+            const subio = variacion > 0;
+            costoDiff.innerHTML = `
+                <span style="color: ${subio ? '#e74c3c' : '#27ae60'}; font-weight: 600;">
+                    <i class="fa-solid fa-arrow-${subio ? 'up' : 'down'}"></i> ${Math.abs(variacion).toFixed(1)}%
+                    <br><small style="font-weight: 400;">S/${costoActual.toFixed(2)} → S/${nuevoCosto.toFixed(2)}</small>
+                </span>
+            `;
+        };
+        
+        checkCosto.addEventListener('change', () => {
+            costoContainer.style.display = checkCosto.checked ? 'block' : 'none';
+            if (checkCosto.checked) inputCosto.focus();
+        });
+        
+        inputCosto.addEventListener('input', actualizarDiffCosto);
+        
+        inputCantidad.addEventListener('input', actualizarPreview);
+        inputCantidad.focus();
+        inputCantidad.select();
+        
+        modal.querySelectorAll('.ajuste-tipo-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                modal.querySelectorAll('.ajuste-tipo-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                tipoAjuste = btn.dataset.tipo;
+                actualizarPreview();
+            });
+        });
+        
+        const cerrarModal = () => modal.remove();
+        
+        document.getElementById('btn-cancelar-ajuste').addEventListener('click', cerrarModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) cerrarModal(); });
+        
+        document.getElementById('btn-confirmar-ajuste').addEventListener('click', async () => {
+            const val = parseFloat(inputCantidad.value) || 0;
+            let nuevaCantidad;
+            let descripcion;
+            
+            switch (tipoAjuste) {
+                case 'agregar':
+                    nuevaCantidad = item.cantidad + val;
+                    descripcion = `+${val}`;
+                    break;
+                case 'restar':
+                    nuevaCantidad = Math.max(0, item.cantidad - val);
+                    descripcion = `-${val}`;
+                    break;
+                case 'establecer':
+                    nuevaCantidad = Math.max(0, val);
+                    descripcion = `→ ${val}`;
+                    break;
+            }
+            
+            const payload = { cantidad: nuevaCantidad };
+            let costoMsg = '';
+            
+            if (checkCosto.checked) {
+                const nuevoCosto = parseFloat(inputCosto.value) || 0;
+                if (nuevoCosto !== item.costo) {
+                    payload.costo = nuevoCosto;
+                    costoMsg = ` | Costo: S/${(item.costo || 0).toFixed(2)} → S/${nuevoCosto.toFixed(2)}`;
+                }
+            }
+            
+            try {
+                const actualizado = await this.apiRequest(`/inventario/${id}`, 'PUT', payload);
+                await this.agregarActividad(`Stock ajustado: ${item.nombre} ${descripcion} ${item.unidad} (${item.cantidad} → ${nuevaCantidad})${costoMsg}`);
+                // Actualizar objeto local con respuesta del server
+                const index = this.inventario.findIndex(i => i._id === id);
+                if (index >= 0) this.inventario[index] = actualizado;
+                this.renderizarInventario();
+                this.mostrarAlertasInventario();
+                this.mostrarResumenInventario();
+                cerrarModal();
+            } catch (error) {
+                alert('Error al ajustar stock');
+            }
+        });
     }
     
     editarInventario(id) {
@@ -2422,7 +3180,7 @@ class AdminApp {
         if (!item) return;
         
         this.editandoInventarioId = id;
-        document.getElementById('modal-inventario-titulo').textContent = 'Editar Item';
+        document.getElementById('modal-inventario-titulo').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar Item';
         document.getElementById('inventario-nombre').value = item.nombre;
         document.getElementById('inventario-categoria').value = item.categoria;
         document.getElementById('inventario-unidad').value = item.unidad;
@@ -2444,10 +3202,17 @@ class AdminApp {
         
         try {
             if (this.editandoInventarioId) {
+                const anterior = this.inventario.find(i => i._id === this.editandoInventarioId);
                 const actualizado = await this.apiRequest(`/inventario/${this.editandoInventarioId}`, 'PUT', item);
                 const index = this.inventario.findIndex(i => i._id === this.editandoInventarioId);
                 this.inventario[index] = actualizado;
-                await this.agregarActividad(`Inventario actualizado: ${item.nombre}`);
+                
+                let actMsg = `Inventario actualizado: ${item.nombre}`;
+                if (anterior && anterior.costo !== item.costo && anterior.costo > 0) {
+                    const variacion = ((item.costo - anterior.costo) / anterior.costo * 100).toFixed(1);
+                    actMsg += ` | Costo: S/${anterior.costo.toFixed(2)} → S/${item.costo.toFixed(2)} (${variacion > 0 ? '+' : ''}${variacion}%)`;
+                }
+                await this.agregarActividad(actMsg);
             } else {
                 const nuevo = await this.apiRequest('/inventario', 'POST', item);
                 this.inventario.push(nuevo);
@@ -2457,6 +3222,7 @@ class AdminApp {
             document.getElementById('modal-inventario').classList.remove('active');
             this.renderizarInventario();
             this.mostrarAlertasInventario();
+            this.mostrarResumenInventario();
             this.cargarDashboard();
         } catch (error) {
             alert('Error al guardar el item');
@@ -2472,6 +3238,7 @@ class AdminApp {
                 await this.agregarActividad(`Item eliminado del inventario: ${item.nombre}`);
                 this.renderizarInventario();
                 this.mostrarAlertasInventario();
+                this.mostrarResumenInventario();
             } catch (error) {
                 alert('Error al eliminar el item');
             }
@@ -2500,9 +3267,9 @@ class AdminApp {
             .filter(f => new Date(f.fecha) >= inicioMes)
             .reduce((sum, f) => sum + f.total, 0);
 
-        document.getElementById('total-dia').textContent = `$${totalDia.toFixed(2)}`;
-        document.getElementById('total-semana').textContent = `$${totalSemana.toFixed(2)}`;
-        document.getElementById('total-mes').textContent = `$${totalMes.toFixed(2)}`;
+        document.getElementById('total-dia').textContent = `S/${totalDia.toFixed(2)}`;
+        document.getElementById('total-semana').textContent = `S/${totalSemana.toFixed(2)}`;
+        document.getElementById('total-mes').textContent = `S/${totalMes.toFixed(2)}`;
 
         const container = document.getElementById('lista-facturas');
         
@@ -2516,13 +3283,13 @@ class AdminApp {
         container.innerHTML = facturasRecientes.map(factura => `
             <div class="factura-item">
                 <div>
-                    <strong>Mesa ${factura.mesaNumero || factura.numeroMesa}</strong> - 
+                    <strong>Mesa ${factura.mesaNumero}</strong> - 
                     ${new Date(factura.fecha).toLocaleString('es-ES')}
                     <small style="color: #666; margin-left: 10px;">${factura.metodoPago || ''}</small>
                 </div>
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-weight: bold; color: var(--success-color);">$${factura.total.toFixed(2)}</span>
-                    <button class="btn-info" onclick="app.imprimirTicket(${JSON.stringify(factura).replace(/"/g, '&quot;')})" style="padding: 5px 10px; font-size: 0.8em;">🖨️</button>
+                    <span style="font-weight: bold; color: var(--success-color);">S/${factura.total.toFixed(2)}</span>
+                    <button class="btn-info" onclick="app.imprimirTicket(${JSON.stringify(factura).replace(/"/g, '&quot;')})" style="padding: 5px 10px; font-size: 0.8em;"><i class="fa-solid fa-print"></i></button>
                 </div>
             </div>
         `).join('');
@@ -2541,9 +3308,9 @@ class AdminApp {
         }
 
         const rolIcono = {
-            'administrador': '👑',
-            'mesero': '👤',
-            'cocinero': '👨‍🍳'
+            'administrador': '<i class="fa-solid fa-crown"></i>',
+            'mesero': '<i class="fa-solid fa-user"></i>',
+            'cocinero': '<i class="fa-solid fa-kitchen-set"></i>'
         };
 
         const rolNombre = {
@@ -2555,7 +3322,7 @@ class AdminApp {
         container.innerHTML = this.usuarios.map(usuario => `
             <div class="usuario-card ${!usuario.activo ? 'inactivo' : ''}">
                 <div class="usuario-header">
-                    <span class="usuario-icono">${rolIcono[usuario.rol] || '👤'}</span>
+                    <span class="usuario-icono">${rolIcono[usuario.rol] || '<i class="fa-solid fa-user"></i>'}</span>
                     <div class="usuario-info">
                         <h3>${usuario.nombre}</h3>
                         <span class="usuario-username">@${usuario.username}</span>
@@ -2564,16 +3331,16 @@ class AdminApp {
                 <div class="usuario-detalles">
                     <span class="usuario-rol ${usuario.rol}">${rolNombre[usuario.rol]}</span>
                     <span class="usuario-estado ${usuario.activo ? 'activo' : 'inactivo'}">
-                        ${usuario.activo ? '✅ Activo' : '❌ Inactivo'}
+                        ${usuario.activo ? '<i class="fa-solid fa-circle-check"></i> Activo' : '<i class="fa-solid fa-circle-xmark"></i> Inactivo'}
                     </span>
                 </div>
                 <div class="usuario-acciones">
                     <button class="btn-secondary" onclick="app.editarUsuario('${usuario._id}')">
-                        ✏️ Editar
+                        <i class="fa-solid fa-pen-to-square"></i> Editar
                     </button>
                     <button class="btn-danger" onclick="app.eliminarUsuario('${usuario._id}')" 
                         ${usuario._id === this.usuario.id ? 'disabled title="No puedes eliminarte a ti mismo"' : ''}>
-                        🗑️ Eliminar
+                        <i class="fa-solid fa-trash"></i> Eliminar
                     </button>
                 </div>
             </div>
@@ -2675,6 +3442,170 @@ class AdminApp {
         } catch (error) {
             alert('Error al eliminar el usuario');
             console.error(error);
+        }
+    }
+
+    // ============= LOGO DEL RESTAURANTE =============
+
+    initLogo() {
+        const inputLogo = document.getElementById('input-logo');
+        const btnEliminar = document.getElementById('btn-eliminar-logo');
+        
+        if (inputLogo) {
+            inputLogo.addEventListener('change', (e) => this.subirLogo(e));
+        }
+        if (btnEliminar) {
+            btnEliminar.addEventListener('click', () => this.eliminarLogo());
+        }
+        
+        this.cargarLogo();
+    }
+
+    async cargarLogo() {
+        try {
+            const baseUrl = this.API_URL.replace('/api', '');
+            const res = await fetch(`${this.API_URL}/config/logo`);
+            const data = await res.json();
+            
+            const preview = document.getElementById('logo-preview-actual');
+            const placeholder = document.getElementById('logo-placeholder');
+            const btnEliminar = document.getElementById('btn-eliminar-logo');
+            
+            if (data.logo) {
+                const logoUrl = `${baseUrl}${data.logo}?t=${Date.now()}`;
+                if (preview) {
+                    preview.src = logoUrl;
+                    preview.style.display = 'block';
+                }
+                if (placeholder) placeholder.style.display = 'none';
+                if (btnEliminar) btnEliminar.style.display = 'inline-block';
+
+                // Mostrar logo en login y header
+                const loginLogo = document.getElementById('login-logo');
+                if (loginLogo) {
+                    loginLogo.src = logoUrl;
+                    loginLogo.style.display = 'block';
+                }
+                const headerLogo = document.getElementById('admin-header-logo');
+                if (headerLogo) {
+                    headerLogo.src = logoUrl;
+                    headerLogo.style.display = 'inline';
+                }
+                // Favicon dinámico
+                const favicon = document.getElementById('favicon');
+                if (favicon) favicon.href = logoUrl;
+            } else {
+                if (preview) preview.style.display = 'none';
+                if (placeholder) placeholder.style.display = 'flex';
+                if (btnEliminar) btnEliminar.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error al cargar logo:', error);
+        }
+    }
+
+    async subirLogo(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const mensaje = document.getElementById('logo-mensaje');
+        
+        // Validar tamaño
+        if (file.size > 5 * 1024 * 1024) {
+            this.mostrarMensajeLogo('La imagen no debe superar 5MB', 'error');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('logo', file);
+        
+        try {
+            this.mostrarMensajeLogo('Subiendo logo...', 'info');
+            
+            const baseUrl = this.API_URL.replace('/api', '');
+            const res = await fetch(`${this.API_URL}/config/logo`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: formData
+            });
+            
+            const data = await res.json();
+            
+            if (res.ok) {
+                this.mostrarMensajeLogo('Logo actualizado correctamente', 'success');
+                this.cargarLogo();
+                // Actualizar logo en el header
+                this.actualizarLogoHeader(data.logo);
+            } else {
+                this.mostrarMensajeLogo(`${data.error}`, 'error');
+            }
+        } catch (error) {
+            this.mostrarMensajeLogo('Error al subir el logo', 'error');
+            console.error(error);
+        }
+        
+        // Limpiar input
+        e.target.value = '';
+    }
+
+    async eliminarLogo() {
+        if (!confirm('¿Estás seguro de eliminar el logo?')) return;
+        
+        try {
+            const res = await fetch(`${this.API_URL}/config/logo`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                }
+            });
+            
+            if (res.ok) {
+                this.mostrarMensajeLogo('Logo eliminado', 'success');
+                this.cargarLogo();
+                this.actualizarLogoHeader(null);
+            } else {
+                this.mostrarMensajeLogo('Error al eliminar el logo', 'error');
+            }
+        } catch (error) {
+            this.mostrarMensajeLogo('Error al eliminar el logo', 'error');
+            console.error(error);
+        }
+    }
+
+    mostrarMensajeLogo(texto, tipo) {
+        const el = document.getElementById('logo-mensaje');
+        if (!el) return;
+        el.textContent = texto;
+        el.className = `logo-mensaje logo-mensaje-${tipo}`;
+        el.style.display = 'block';
+        if (tipo !== 'info') {
+            setTimeout(() => { el.style.display = 'none'; }, 4000);
+        }
+    }
+
+    actualizarLogoHeader(logoUrl) {
+        const headerH1 = document.querySelector('#app-screen header h1');
+        if (!headerH1) return;
+        const baseUrl = this.API_URL.replace('/api', '');
+        
+        // Remover logo anterior si existe
+        const oldLogo = headerH1.querySelector('.header-logo');
+        if (oldLogo) oldLogo.remove();
+        
+        if (logoUrl) {
+            const img = document.createElement('img');
+            img.src = `${baseUrl}${logoUrl}?t=${Date.now()}`;
+            img.alt = 'Logo';
+            img.className = 'header-logo';
+            headerH1.prepend(img);
+            // Quitar emoji si hay logo
+            headerH1.childNodes.forEach(n => {
+                if (n.nodeType === 3 && n.textContent.includes('Restaurante')) {
+                    n.textContent = n.textContent.trim();
+                }
+            });
         }
     }
 }
