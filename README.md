@@ -17,8 +17,10 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 │   ├── package.json
 │   └── restaurante.db # Base de datos SQLite (se crea automáticamente)
 ├── docs/              # Documentación
-├── iniciar.ps1        # Script para iniciar todo
-├── detener.ps1        # Script para detener todo
+├── INICIAR.bat        # ▶️ Doble clic para iniciar (recomendado)
+├── DETENER.bat        # ⏹️ Doble clic para detener
+├── iniciar.ps1        # Script PowerShell para iniciar
+├── detener.ps1        # Script PowerShell para detener
 └── README.md
 ```
 
@@ -51,15 +53,39 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 | mesero | mesero123 | Mesero |
 | cocinero | cocinero123 | Cocinero |
 
-## 🛠️ Inicio Rápido
+## 🛠️ Requisitos previos
 
-### Opción 1: Script automático (Recomendado)
+| Programa | Descarga | Versión mínima |
+|----------|----------|----------------|
+| **Node.js** | [nodejs.org](https://nodejs.org) (versión LTS) | 18+ |
+| **Python** | [python.org](https://python.org/downloads) | 3.8+ |
+
+> ⚠️ Al instalar Python, marca ✅ **"Add Python to PATH"**
+
+## 🚀 Inicio Rápido
+
+### Opción 1: Doble clic ⭐ (Recomendado)
+
+1. Instala Node.js y Python (solo la primera vez)
+2. Instala dependencias (solo la primera vez):
 ```powershell
-cd "f:\sistema de restaurante"
+cd backend
+npm install
+```
+3. **Doble clic en `INICIAR.bat`** — y listo
+
+```
+📁 sistema de restaurante\
+ ├── 📄 INICIAR.bat   ← doble clic para iniciar
+ └── 📄 DETENER.bat   ← doble clic para detener
+```
+
+### Opción 2: PowerShell
+```powershell
 powershell -ExecutionPolicy Bypass -File iniciar.ps1
 ```
 
-### Opción 2: Manual
+### Opción 3: Manual
 ```powershell
 # Terminal 1 - Backend
 cd backend
@@ -75,15 +101,18 @@ python -m http.server 5500 --bind 0.0.0.0
 
 Una vez iniciado, accede desde cualquier dispositivo en tu red:
 
-| Página | URL |
-|--------|-----|
-| Inicio | `http://TU_IP:5500/` |
-| Admin | `http://TU_IP:5500/admin.html` |
-| Cliente | `http://TU_IP:5500/cliente.html` |
-| Cocina | `http://TU_IP:5500/cocina.html` |
+| Página | URL Local | Red Local |
+|--------|-----------|----------|
+| 🏠 Inicio | `http://localhost:5500/` | `http://TU_IP:5500/` |
+| ⚙️ Admin | `http://localhost:5500/admin.html` | `http://TU_IP:5500/admin.html` |
+| 🍽️ Cliente | `http://localhost:5500/cliente.html` | `http://TU_IP:5500/cliente.html` |
+| 👨‍🍳 Cocina | `http://localhost:5500/cocina.html` | `http://TU_IP:5500/cocina.html` |
 
-## 🛑 Detener
+> 💡 Para saber tu IP: abre CMD y escribe `ipconfig`, busca **Dirección IPv4**
 
+## 🛑 Detener el sistema
+
+**Doble clic en `DETENER.bat`** o:
 ```powershell
 powershell -ExecutionPolicy Bypass -File detener.ps1
 ```
