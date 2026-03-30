@@ -1,5 +1,6 @@
 # Script para iniciar el Sistema de Restaurante en Red Local
 # Ejecutar con: powershell -ExecutionPolicy Bypass -File iniciar.ps1
+param([switch]$Silencioso)
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -125,5 +126,7 @@ Write-Host "IMPORTANTE: Cambia las contrasenas desde el panel Admin antes de usa
 Write-Host ""
 Write-Host "Para detener: ejecutar .\detener.ps1" -ForegroundColor Magenta
 Write-Host ""
-Write-Host "Presiona cualquier tecla para cerrar esta ventana..." -ForegroundColor Gray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+if (-not $Silencioso) {
+    Write-Host "Presiona cualquier tecla para cerrar esta ventana..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
