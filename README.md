@@ -17,10 +17,14 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 │   ├── package.json
 │   └── restaurante.db # Base de datos SQLite (se crea automáticamente)
 ├── docs/              # Documentación
+├── INSTALAR.bat       # 📦 Doble clic para instalar requisitos (primera vez)
 ├── INICIAR.bat        # ▶️ Doble clic para iniciar (recomendado)
 ├── DETENER.bat        # ⏹️ Doble clic para detener
+├── AUTOARRANQUE.bat   # 🔁 Activar/desactivar inicio automático con Windows
+├── instalar.ps1       # Script PowerShell del instalador
 ├── iniciar.ps1        # Script PowerShell para iniciar
 ├── detener.ps1        # Script PowerShell para detener
+├── autoarranque.ps1   # Script PowerShell de autoarranque
 └── README.md
 ```
 
@@ -55,30 +59,31 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 
 ## 🛠️ Requisitos previos
 
-| Programa | Descarga | Versión mínima |
-|----------|----------|----------------|
-| **Node.js** | [nodejs.org](https://nodejs.org) (versión LTS) | 18+ |
-| **Python** | [python.org](https://python.org/downloads) | 3.8+ |
+| Programa | Versión mínima |
+|----------|----------------|
+| **Node.js** | 18+ |
+| **Python** | 3.8+ |
 
-> ⚠️ Al instalar Python, marca ✅ **"Add Python to PATH"**
+> 💡 Si no tienes Node.js o Python instalados, usa **`INSTALAR.bat`** — los instala automáticamente.
 
 ## 🚀 Inicio Rápido
 
-### Opción 1: Doble clic ⭐ (Recomendado)
+### Primera vez en una PC nueva
 
-1. Instala Node.js y Python (solo la primera vez)
-2. Instala dependencias (solo la primera vez):
-```powershell
-cd backend
-npm install
-```
+1. **Doble clic en `INSTALAR.bat`** — instala Node.js, Python y las dependencias automáticamente
+2. Al final el instalador te pregunta si quieres que el sistema arranque solo al iniciar Windows
 3. **Doble clic en `INICIAR.bat`** — y listo
 
 ```
 📁 sistema de restaurante\
+ ├── 📦 INSTALAR.bat  ← primera vez: instala todo
  ├── 📄 INICIAR.bat   ← doble clic para iniciar
  └── 📄 DETENER.bat   ← doble clic para detener
 ```
+
+### Uso normal (ya instalado)
+
+**Doble clic en `INICIAR.bat`**
 
 ### Opción 2: PowerShell
 ```powershell
