@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const Database = require('better-sqlite3');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -58,11 +60,24 @@ const logError = (context, error) => {
 };
 
 // Middleware
+app.use(helmet({
+    crossOriginResourcePolicy: false, // permite cargar /uploads desde el frontend (puerto diferente)
+    contentSecurityPolicy: false       // el frontend corre en puerto separado
+}));
 app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
     credentials: true
 }));
 app.use(bodyParser.json({ limit: '10mb' }));
+
+// Rate limiting general: 300 req/min por IP
+app.use('/api/', rateLimit({
+    windowMs: 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiadas solicitudes. Intenta más tarde.' }
+}));
 
 // ============= UPLOADS (Logo) =============
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -756,6 +771,18 @@ app.post('/api/pedidos', verificarToken, soloMeseroOAdmin, (req, res) => {
         const _id = generarId();
         const pedidoData = { ...req.body };
 
+        // Validación de entrada
+        const estadosValidos = ['pendiente', 'en-preparacion', 'listo', 'entregado'];
+        if (!pedidoData.estado || !estadosValidos.includes(pedidoData.estado)) {
+            return res.status(400).json({ error: 'Estado de pedido inválido' });
+        }
+        if (!Array.isArray(pedidoData.items) || pedidoData.items.length === 0) {
+            return res.status(400).json({ error: 'El pedido debe tener al menos un item' });
+        }
+        if (typeof pedidoData.total !== 'number' || pedidoData.total < 0) {
+            return res.status(400).json({ error: 'Total inválido' });
+        }
+
         const items = JSON.stringify(pedidoData.items || []);
         db.prepare('INSERT INTO pedidos (_id, mesaId, mesaNumero, items, estado, total) VALUES (?, ?, ?, ?, ?, ?)')
             .run(_id, pedidoData.mesaId || null, pedidoData.mesaNumero || null, items, pedidoData.estado, pedidoData.total);
@@ -827,7 +854,7 @@ app.get('/api/facturas', verificarToken, (req, res) => {
     }
 });
 
-app.post('/api/facturas', verificarToken, (req, res) => {
+app.post('/api/facturas', verificarToken, soloMeseroOAdmin, (req, res) => {
     try {
         const _id = generarId();
         const { numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago } = req.body;
@@ -838,8 +865,8 @@ app.post('/api/facturas', verificarToken, (req, res) => {
         emitirEvento('nueva-factura', factura);
         res.status(201).json(factura);
     } catch (error) {
-        console.error('Error al crear factura:', error);
-        res.status(500).json({ error: 'Error al crear factura', details: error.message });
+        logError('Error al crear factura', error);
+        res.status(500).json({ error: 'Error al crear factura' });
     }
 });
 
@@ -938,7 +965,12 @@ app.get('/api/inventario/:id/historial-costos', verificarToken, (req, res) => {
 
 app.get('/api/actividad', verificarToken, (req, res) => {
     try {
-        const actividad = db.prepare('SELECT * FROM actividad ORDER BY fecha DESC').all();
+        // Por defecto devuelve los últimos 100 registros; ?todas=1 para el historial completo (solo admin)
+        const todasQuery = req.query.todas === '1' && req.usuario.rol === 'administrador';
+        const query = todasQuery
+            ? 'SELECT * FROM actividad ORDER BY fecha DESC'
+            : 'SELECT * FROM actividad ORDER BY fecha DESC LIMIT 100';
+        const actividad = db.prepare(query).all();
         res.json(actividad);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener actividad' });
@@ -948,9 +980,13 @@ app.get('/api/actividad', verificarToken, (req, res) => {
 app.post('/api/actividad', verificarToken, (req, res) => {
     try {
         const _id = generarId();
-        const { tipo, descripcion, usuario } = req.body;
+        const { tipo, usuario } = req.body;
+        // Sanitizar descripcion: truncar a 500 chars
+        const descripcion = String(req.body.descripcion || '').substring(0, 500);
         db.prepare('INSERT INTO actividad (_id, tipo, descripcion, usuario) VALUES (?, ?, ?, ?)')
-            .run(_id, tipo, descripcion, usuario);
+            .run(_id, tipo, descripcion, String(usuario || '').substring(0, 100));
+        // Auto-limpiar: mantener solo los últimos 500 registros
+        db.prepare('DELETE FROM actividad WHERE _id NOT IN (SELECT _id FROM actividad ORDER BY fecha DESC LIMIT 500)').run();
         const act = db.prepare('SELECT * FROM actividad WHERE _id = ?').get(_id);
         emitirEvento('nueva-actividad', act);
         res.status(201).json(act);
@@ -961,7 +997,15 @@ app.post('/api/actividad', verificarToken, (req, res) => {
 
 // ============= AUTENTICACIÓN =============
 
-app.post('/api/login', async (req, res) => {
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Demasiados intentos fallidos. Espera 15 minutos antes de intentar de nuevo.' }
+});
+
+app.post('/api/login', loginLimiter, async (req, res) => {
     try {
         const { username, password } = req.body;
         const usuario = db.prepare('SELECT * FROM usuarios WHERE username = ? AND activo = 1').get(username);
@@ -1023,6 +1067,12 @@ app.post('/api/usuarios', verificarToken, soloAdmin, async (req, res) => {
     try {
         const { username, password, nombre, rol } = req.body;
 
+        if (!username || username.trim().length < 3) return res.status(400).json({ error: 'El usuario debe tener mínimo 3 caracteres' });
+        if (!password || password.length < 6) return res.status(400).json({ error: 'La contraseña debe tener mínimo 6 caracteres' });
+        if (!nombre || nombre.trim().length < 2) return res.status(400).json({ error: 'El nombre debe tener mínimo 2 caracteres' });
+        const rolesValidos = ['administrador', 'mesero', 'cocinero'];
+        if (!rol || !rolesValidos.includes(rol)) return res.status(400).json({ error: 'Rol inválido' });
+
         const existente = db.prepare('SELECT _id FROM usuarios WHERE username = ?').get(username);
         if (existente) {
             return res.status(400).json({ error: 'El nombre de usuario ya existe' });
@@ -1044,6 +1094,10 @@ app.post('/api/usuarios', verificarToken, soloAdmin, async (req, res) => {
 app.put('/api/usuarios/:id', verificarToken, soloAdmin, async (req, res) => {
     try {
         const { username, nombre, rol, activo, password } = req.body;
+
+        if (password !== undefined && password !== null && password !== '' && password.length < 6) {
+            return res.status(400).json({ error: 'La contraseña debe tener mínimo 6 caracteres' });
+        }
 
         const existente = db.prepare('SELECT _id FROM usuarios WHERE username = ? AND _id != ?').get(username, req.params.id);
         if (existente) {

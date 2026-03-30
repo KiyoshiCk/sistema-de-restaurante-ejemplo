@@ -25,6 +25,10 @@ class AdminApp {
         this.verificarSesion();
     }
 
+    escapeHTML(str) {
+        return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
     inicializarSocket() {
         if (typeof io === 'undefined') {
             console.warn('Socket.IO no disponible');
@@ -211,7 +215,7 @@ class AdminApp {
         // Crear notificación visual temporal (toast)
         const notif = document.createElement('div');
         notif.className = 'notificacion-toast';
-        notif.innerHTML = `<strong>${titulo}</strong><p>${mensaje}</p>`;
+        notif.innerHTML = `<strong>${this.escapeHTML(titulo)}</strong><p>${this.escapeHTML(mensaje)}</p>`;
         notif.style.cssText = `
             position: fixed;
             top: 20px;
@@ -842,10 +846,10 @@ class AdminApp {
                 <div class="activity-item">
                     <div class="activity-content">
                         <div class="activity-user">
-                            <span class="activity-rol-badge" style="background: ${color}">${icono} ${rolTexto}</span>
-                            <span class="activity-nombre">${usuario}</span>
+                            <span class="activity-rol-badge" style="background: ${color}">${icono} ${this.escapeHTML(rolTexto)}</span>
+                            <span class="activity-nombre">${this.escapeHTML(usuario)}</span>
                         </div>
-                        <div class="activity-desc">${act.descripcion || 'Sin descripción'}</div>
+                        <div class="activity-desc">${this.escapeHTML(act.descripcion || 'Sin descripción')}</div>
                     </div>
                     <div class="time">${new Date(act.fecha).toLocaleString('es-ES')}</div>
                 </div>
@@ -1079,11 +1083,11 @@ class AdminApp {
 
         container.innerHTML = menuFiltrado.map(platillo => `
             <div class="menu-item ${!platillo.disponible ? 'no-disponible' : ''}">
-                ${platillo.imagen ? `<div class="menu-item-imagen"><img src="${platillo.imagen}" alt="${platillo.nombre}"></div>` : ''}
-                <h3>${platillo.nombre}</h3>
-                <span class="categoria">${platillo.categoria}</span>
+                ${platillo.imagen ? `<div class="menu-item-imagen"><img src="${platillo.imagen}" alt="${this.escapeHTML(platillo.nombre)}"></div>` : ''}
+                <h3>${this.escapeHTML(platillo.nombre)}</h3>
+                <span class="categoria">${this.escapeHTML(platillo.categoria)}</span>
                 <div class="precio">S/${platillo.precio.toFixed(2)}</div>
-                <p class="descripcion">${platillo.descripcion || 'Sin descripción'}</p>
+                <p class="descripcion">${this.escapeHTML(platillo.descripcion || 'Sin descripción')}</p>
                 <div class="disponibilidad-status">
                     ${platillo.disponible ? '<i class="fa-solid fa-circle-check" style="color:#27ae60"></i> Disponible' : '<i class="fa-solid fa-circle-xmark" style="color:#e74c3c"></i> No disponible'}
                 </div>
