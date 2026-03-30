@@ -48,6 +48,22 @@ foreach ($port in $portsToFree) {
 }
 Start-Sleep -Seconds 2
 
+# Verificar dependencias npm (primer uso o tras clonar el proyecto)
+$nodeModulesPath = Join-Path $PSScriptRoot "backend\node_modules"
+if (-not (Test-Path $nodeModulesPath)) {
+    Write-Host "[+] Primera ejecucion detectada: instalando dependencias npm..." -ForegroundColor Yellow
+    try {
+        Push-Location (Join-Path $PSScriptRoot "backend")
+        npm install --loglevel=warn 2>&1
+        Pop-Location
+        Write-Host "    [OK] Dependencias instaladas." -ForegroundColor Green
+    } catch {
+        Pop-Location -ErrorAction SilentlyContinue
+        Write-Host "    [ERROR] No se pudo ejecutar npm install: $_" -ForegroundColor Red
+        Write-Host "    Ejecuta INSTALAR.bat primero para configurar los requisitos." -ForegroundColor Yellow
+    }
+}
+
 # Iniciar Backend
 Write-Host "[+] Iniciando Backend (Node.js)..." -ForegroundColor Green
 $backendProcess = Start-Process -NoNewWindow -PassThru -FilePath "node" -ArgumentList "server.js" -WorkingDirectory "$PSScriptRoot\backend"

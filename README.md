@@ -1,153 +1,134 @@
-﻿# 🍽️ Sistema de Gestión de Restaurante
+# 🍽️ Sistema de Gestión de Restaurante
 
-Sistema completo de gestión para restaurantes con pedidos en tiempo real, administración de mesas, menú, inventario y facturación.
+Sistema completo para gestionar restaurantes con menú, mesas, pedidos y facturación. Funciona 100% local con **SQLite** (sin necesidad de servicios externos).
 
----
+## 📁 Estructura del Proyecto
 
-## ✨ Características
-
-- **Tiempo real** — pedidos y cambios de estado sincronizados al instante (Socket.IO)
-- **3 roles** — Administrador, Mesero y Cocinero con vistas independientes
-- **Gestión de mesas** — alta, baja, modificación y estado visual
-- **Menú configurable** — categorías, precios, disponibilidad desde el panel admin
-- **Inventario** — control de stock con alertas de nivel bajo
-- **Facturación** — cálculo automático, método de pago, historial completo
-- **Historial de pedidos** — todos los pedidos cobrados/cancelados se conservan
-- **Acceso en red local** — múltiples dispositivos en la misma red (celulares, tablets, PC)
-
----
-
-## 🖥️ Requisitos
-
-- [Node.js](https://nodejs.org/) v18 o superior
-- [Python](https://www.python.org/) 3.x (para el servidor del frontend)
-- Windows 10/11 (los scripts `.ps1` son para PowerShell)
-
----
-
-## 🚀 Instalación
-
-### 1. Instalar dependencias del backend
-
-```bash
-cd backend
-npm install
+```
+├── frontend/           # Interfaz de usuario
+│   ├── css/           # Estilos
+│   ├── js/            # JavaScript del cliente
+│   ├── index.html     # Página principal
+│   ├── admin.html     # Panel de administración
+│   ├── cliente.html   # Vista del cliente
+│   └── cocina.html    # Vista de cocina
+├── backend/           # Servidor Node.js + Express
+│   ├── server.js      # API REST + WebSocket
+│   ├── package.json
+│   └── restaurante.db # Base de datos SQLite (se crea automáticamente)
+├── docs/              # Documentación
+├── INSTALAR.bat       # 📦 Doble clic para instalar requisitos (primera vez)
+├── INICIAR.bat        # ▶️ Doble clic para iniciar (recomendado)
+├── DETENER.bat        # ⏹️ Doble clic para detener
+├── AUTOARRANQUE.bat   # 🔁 Activar/desactivar inicio automático con Windows
+├── instalar.ps1       # Script PowerShell del instalador
+├── iniciar.ps1        # Script PowerShell para iniciar
+├── detener.ps1        # Script PowerShell para detener
+├── autoarranque.ps1   # Script PowerShell de autoarranque
+└── README.md
 ```
 
-### 2. Iniciar el sistema
+## 🚀 Características
 
-**Opción A — Script automático (recomendado):**
+- **Dashboard**: Estadísticas en tiempo real con actividad por usuario y rol
+- **Gestión de Menú**: CRUD de platillos con fotos, categorías, iconos y disponibilidad
+- **Gestión de Mesas**: Control de disponibilidad, ocupación, resumen visual y consumo activo
+- **Sistema de Pedidos**: Flujo completo pendiente → preparación → listo → entregado, con filtros por estado
+- **Cobro y División de Cuenta**: Cobrar mesas con método de pago, dividir cuenta entre personas
+- **Facturación**: Historial de facturas con estadísticas por día, semana y mes
+- **Reportes**: Ventas por período, platillos top, mesas activas, horas pico, ventas por categoría
+- **Inventario**: Control de stock con 5 niveles de estado, alertas por severidad, historial de costos, ajuste personalizado con actualización de precios
+- **Gestión de Usuarios**: CRUD de usuarios con roles (admin, mesero, cocinero) y contraseñas hasheadas
+- **Ubicación**: Mapa interactivo con Leaflet para configurar dirección del restaurante
+- **Logo Personalizable**: Subida de logo que se refleja en favicon, header y vista del cliente
+- **Backup/Restore**: Exportar e importar todos los datos del sistema (menú, mesas, pedidos, facturas, inventario, usuarios)
+- **Vista Cocina**: Panel dedicado con pedidos en tiempo real y notificaciones
+- **Vista Cliente**: Menú digital público con hero parallax, SEO completo (Schema.org, Open Graph, sitemap)
+- **WebSocket**: Actualizaciones en tiempo real entre admin, cocina y meseros
+- **Acceso en Red Local**: Usa desde celular, tablet u otra PC en tu WiFi
 
-Doble clic en `iniciar.ps1`
-*(o clic derecho → Ejecutar con PowerShell)*
+## 👥 Roles de Usuario
 
-**Opción B — Manual:**
-
-```bash
-# Terminal 1 — Backend
-cd backend
-node server.js
-
-# Terminal 2 — Frontend
-cd frontend
-python -m http.server 5500
-```
-
-### 3. Abrir en el navegador
-
-| Panel | URL |
-|-------|-----|
-| Acceso principal | http://localhost:5500 |
-| Administrador | http://localhost:5500/admin.html |
-| Mesero / Cliente | http://localhost:5500/cliente.html |
-| Cocina | http://localhost:5500/cocina.html |
-
----
-
-## 🔑 Credenciales iniciales
-
-> ⚠️ **Importante:** Cambia estas contraseñas desde el panel de administración antes de poner el sistema en producción.
+> ⚠️ **Cambia estas contraseñas desde el panel Admin antes de usar el sistema en producción.**
 
 | Usuario | Contraseña | Rol |
-|---------|-----------|-----|
-| `admin` | `admin123` | Administrador |
-| `mesero` | `mesero123` | Mesero |
-| `cocinero` | `cocinero123` | Cocinero |
+|---------|------------|-----|
+| admin | admin123 | Administrador |
+| mesero | mesero123 | Mesero |
+| cocinero | cocinero123 | Cocinero |
 
----
+## 🛠️ Requisitos previos
 
-## ⚙️ Configuración inicial (primera vez)
+| Programa | Versión mínima |
+|----------|----------------|
+| **Node.js** | 18+ |
+| **Python** | 3.8+ |
 
-Al iniciar por primera vez el sistema estará **vacío** — sin menú, sin mesas ni inventario. El administrador debe configurar el restaurante desde el panel admin:
+> 💡 Si no tienes Node.js o Python instalados, usa **`INSTALAR.bat`** — los instala automáticamente.
 
-1. **Iniciar sesión** como `admin`
-2. Ir a la sección **Mesas** → agregar las mesas del local
-3. Ir a la sección **Menú** → crear categorías y platos con sus precios
-4. *(Opcional)* Ir a **Inventario** → registrar los insumos del restaurante
+## 🚀 Inicio Rápido
 
----
+### Primera vez en una PC nueva
 
-## 🌐 Acceso desde otros dispositivos (red local)
+1. **Doble clic en `INSTALAR.bat`** — instala Node.js, Python y las dependencias automáticamente
+2. Al final el instalador te pregunta si quieres que el sistema arranque solo al iniciar Windows
+3. **Doble clic en `INICIAR.bat`** — y listo
 
-Para usar el sistema desde celulares, tablets u otras computadoras en la misma red:
+```
+📁 sistema de restaurante\
+ ├── 📦 INSTALAR.bat  ← primera vez: instala todo
+ ├── 📄 INICIAR.bat   ← doble clic para iniciar
+ └── 📄 DETENER.bat   ← doble clic para detener
+```
 
-1. Conocer la IP local de la PC servidor (ej. `192.168.1.100`)
-2. En `frontend/js/config.js`, actualizar la IP:
-   ```js
-   const SERVER_IP = '192.168.1.100';
-   ```
-3. Desde cualquier dispositivo en la misma red, abrir:
-   ```
-   http://192.168.1.100:5500
-   ```
+### Uso normal (ya instalado)
 
-Ver guía completa en [docs/EJECUTAR_RED_LOCAL.md](docs/EJECUTAR_RED_LOCAL.md)
+**Doble clic en `INICIAR.bat`**
 
----
+### Opción 2: PowerShell
+```powershell
+powershell -ExecutionPolicy Bypass -File iniciar.ps1
+```
+
+### Opción 3: Manual
+```powershell
+# Terminal 1 - Backend
+cd backend
+npm install
+node server.js
+
+# Terminal 2 - Frontend
+cd frontend
+python -m http.server 5500 --bind 0.0.0.0
+```
+
+## 📱 Acceso
+
+Una vez iniciado, accede desde cualquier dispositivo en tu red:
+
+| Página | URL Local | Red Local |
+|--------|-----------|----------|
+| 🏠 Inicio | `http://localhost:5500/` | `http://TU_IP:5500/` |
+| ⚙️ Admin | `http://localhost:5500/admin.html` | `http://TU_IP:5500/admin.html` |
+| 🍽️ Cliente | `http://localhost:5500/cliente.html` | `http://TU_IP:5500/cliente.html` |
+| 👨‍🍳 Cocina | `http://localhost:5500/cocina.html` | `http://TU_IP:5500/cocina.html` |
+
+> 💡 Para saber tu IP: abre CMD y escribe `ipconfig`, busca **Dirección IPv4**
 
 ## 🛑 Detener el sistema
 
-Doble clic en `detener.ps1`
-*(o clic derecho → Ejecutar con PowerShell)*
-
----
-
-## 📁 Estructura del proyecto
-
+**Doble clic en `DETENER.bat`** o:
+```powershell
+powershell -ExecutionPolicy Bypass -File detener.ps1
 ```
-├── backend/
-│   ├── server.js          # Servidor principal (API REST + Socket.IO)
-│   └── package.json
-├── frontend/
-│   ├── index.html         # Página de inicio / login
-│   ├── admin.html         # Panel de administración
-│   ├── cliente.html       # Vista del mesero
-│   ├── cocina.html        # Vista de cocina
-│   ├── css/
-│   └── js/
-├── docs/
-│   └── EJECUTAR_RED_LOCAL.md
-├── iniciar.ps1            # Script para iniciar el sistema
-└── detener.ps1            # Script para detener el sistema
-```
-
----
-
-## 🗄️ Base de datos
-
-Se usa **SQLite** — no requiere instalación adicional. La base de datos se crea automáticamente en `backend/restaurante.db` al iniciar el sistema por primera vez.
-
-Para hacer una copia de seguridad, simplemente copia el archivo `restaurante.db`.
-
----
 
 ## 🛠️ Tecnologías
 
-| Componente | Tecnología |
-|-----------|-----------|
-| Backend | Node.js + Express |
-| Base de datos | SQLite (better-sqlite3) |
-| Tiempo real | Socket.IO |
-| Autenticación | JWT + bcrypt |
-| Frontend | HTML + CSS + JavaScript (Vanilla) |
-| Mapas (delivery) | Leaflet.js |
+- **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
+- **Backend**: Node.js, Express, Socket.IO
+- **Base de datos**: SQLite (better-sqlite3) - local, gratis, sin servidor
+- **Autenticación**: JWT + bcrypt
+
+## 📱 Responsive
+
+El sistema es completamente responsive y funciona en dispositivos móviles, tablets y desktop.
