@@ -120,10 +120,8 @@ if ($ethernetIp -and $wifiIp -and $ethernetIp -ne $wifiIp) {
     Write-Host "   Wi-Fi:    ${wifiIp}" -ForegroundColor White
 }
 Write-Host ""
-Write-Host "Credenciales:" -ForegroundColor Cyan
-Write-Host "   Usuario: admin    Password: admin123" -ForegroundColor White
-Write-Host "   Usuario: mesero   Password: mesero123" -ForegroundColor White
-Write-Host "   Usuario: cocinero Password: cocinero123" -ForegroundColor White
+Write-Host "Credenciales iniciales: ver README.md" -ForegroundColor Yellow
+Write-Host "IMPORTANTE: Cambia las contrasenas desde el panel Admin antes de usar en produccion" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Para detener: ejecutar .\detener.ps1" -ForegroundColor Magenta
 Write-Host ""

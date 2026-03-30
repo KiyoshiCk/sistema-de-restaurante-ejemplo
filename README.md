@@ -43,6 +43,8 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 
 ## 👥 Roles de Usuario
 
+> ⚠️ **Cambia estas contraseñas desde el panel Admin antes de usar el sistema en producción.**
+
 | Usuario | Contraseña | Rol |
 |---------|------------|-----|
 | admin | admin123 | Administrador |
