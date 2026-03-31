@@ -123,11 +123,14 @@ class CocinaApp {
     mostrarLogin() {
         document.getElementById('login-screen').style.display = 'flex';
         document.getElementById('cocina-screen').style.display = 'none';
-        
-        document.getElementById('login-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.login();
-        });
+
+        if (!this._loginListenerAdded) {
+            document.getElementById('login-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.login();
+            });
+            this._loginListenerAdded = true;
+        }
     }
 
     async login() {
