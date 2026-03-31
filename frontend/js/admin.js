@@ -248,9 +248,23 @@ class AdminApp {
         const usuarioGuardado = localStorage.getItem('usuario');
         const tokenGuardado = localStorage.getItem('token');
         if (usuarioGuardado && tokenGuardado) {
-            this.usuario = JSON.parse(usuarioGuardado);
-            this.token = tokenGuardado;
-            this.mostrarPanel();
+            try {
+                this.usuario = JSON.parse(usuarioGuardado);
+                this.token = tokenGuardado;
+                // Verificar si el token está expirado antes de cargar la app
+                const payload = JSON.parse(atob(tokenGuardado.split('.')[1]));
+                if (payload.exp * 1000 < Date.now()) {
+                    localStorage.removeItem('usuario');
+                    localStorage.removeItem('token');
+                    this.mostrarLogin();
+                    return;
+                }
+                this.mostrarPanel();
+            } catch {
+                localStorage.removeItem('usuario');
+                localStorage.removeItem('token');
+                this.mostrarLogin();
+            }
         } else {
             this.mostrarLogin();
         }
@@ -623,10 +637,10 @@ class AdminApp {
                 <div class="pedido-items">
                     ${pedido.items.map(item => `
                         <div class="pedido-item">
-                            <span><strong>${item.cantidad}x</strong> ${item.nombre}</span>
+                            <span><strong>${item.cantidad}x</strong> ${this.escapeHTML(item.nombre)}</span>
                             <span>S/${(item.precio * item.cantidad).toFixed(2)}</span>
                         </div>
-                        ${item.comentario ? `<div class="pedido-item-comentario"><i class="fa-solid fa-comment"></i> ${item.comentario}</div>` : ''}
+                        ${item.comentario ? `<div class="pedido-item-comentario"><i class="fa-solid fa-comment"></i> ${this.escapeHTML(item.comentario)}</div>` : ''}
                     `).join('')}
                 </div>
                 <div class="pedido-total"><i class="fa-solid fa-receipt"></i> Total: S/${pedido.total.toFixed(2)}</div>
@@ -1103,6 +1117,10 @@ class AdminApp {
     }
 
     async guardarPlatillo() {
+        const btn = document.querySelector('#modal-platillo [type="submit"]');
+        if (btn?.disabled) return;
+        if (btn) btn.disabled = true;
+
         const platillo = {
             nombre: document.getElementById('platillo-nombre').value,
             categoria: document.getElementById('platillo-categoria').value,
@@ -1134,6 +1152,8 @@ class AdminApp {
             this.cargarDashboard();
         } catch (error) {
             alert('Error al guardar el platillo');
+        } finally {
+            if (btn) btn.disabled = false;
         }
     }
 
@@ -1331,7 +1351,7 @@ class AdminApp {
                         <span class="pedido-estado ${p.estado}" style="font-size: 0.85em;">${this.obtenerTextoEstado(p.estado)}</span>
                     </div>
                     <div style="font-size: 0.9em;">
-                        ${p.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}
+                        ${p.items.map(i => `${i.cantidad}x ${this.escapeHTML(i.nombre)}`).join(', ')}
                     </div>
                     <div style="text-align: right; font-weight: bold; color: var(--primary-color);">S/${p.total.toFixed(2)}</div>
                 </div>
@@ -1355,10 +1375,10 @@ class AdminApp {
                         <span style="color: #27ae60;"><i class="fa-solid fa-circle-check"></i> Pagado</span>
                     </div>
                     <div style="font-size: 0.9em; color: #666;">
-                        ${(f.items || []).map(i => `${i.cantidad}x ${i.nombre}`).join(', ') || 'Sin detalles'}
+                        ${(f.items || []).map(i => `${i.cantidad}x ${this.escapeHTML(i.nombre)}`).join(', ') || 'Sin detalles'}
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-top: 8px;">
-                        <small style="color: #666;">Método: ${f.metodoPago || 'N/A'}</small>
+                        <small style="color: #666;">Método: ${this.escapeHTML(f.metodoPago || 'N/A')}</small>
                         <strong style="color: var(--primary-color);">S/${(f.total || 0).toFixed(2)}</strong>
                     </div>
                 </div>
@@ -1398,6 +1418,10 @@ class AdminApp {
     }
 
     async guardarMesa() {
+        const btn = document.querySelector('#modal-mesa [type="submit"]');
+        if (btn?.disabled) return;
+        if (btn) btn.disabled = true;
+
         const mesa = {
             numero: parseInt(document.getElementById('mesa-numero').value),
             capacidad: parseInt(document.getElementById('mesa-capacidad').value),
@@ -1413,11 +1437,14 @@ class AdminApp {
             this.cargarDashboard();
         } catch (error) {
             alert('Error al guardar la mesa');
+        } finally {
+            if (btn) btn.disabled = false;
         }
     }
 
     async toggleMesa(id) {
         const mesa = this.mesas.find(m => m._id === id);
+        const estadoAnterior = mesa.estado;
         mesa.estado = mesa.estado === 'disponible' ? 'ocupada' : 'disponible';
         
         try {
@@ -1426,6 +1453,8 @@ class AdminApp {
             this.cargarMesas();
             this.cargarDashboard();
         } catch (error) {
+            mesa.estado = estadoAnterior;
+            this.cargarMesas();
             alert('Error al cambiar estado de la mesa');
         }
     }
@@ -1506,8 +1535,8 @@ class AdminApp {
 
         menuContainer.innerHTML = platillosFiltrados.map(platillo => `
             <div class="menu-pedido-item" onclick="app.agregarItemPedido('${platillo._id}')">
-                ${platillo.imagen ? `<img src="${platillo.imagen}" alt="${platillo.nombre}" class="menu-pedido-thumb">` : ''}
-                <h4>${platillo.nombre}</h4>
+                ${platillo.imagen ? `<img src="${platillo.imagen}" alt="${this.escapeHTML(platillo.nombre)}" class="menu-pedido-thumb">` : ''}
+                <h4>${this.escapeHTML(platillo.nombre)}</h4>
                 <div class="precio">S/${platillo.precio.toFixed(2)}</div>
             </div>
         `).join('');
@@ -1544,7 +1573,7 @@ class AdminApp {
         container.innerHTML = this.pedidoActual.map((item, index) => `
             <div class="item-seleccionado">
                 <div class="item-info">
-                    <span>${item.nombre}</span>
+                    <span>${this.escapeHTML(item.nombre)}</span>
                     <div class="item-cantidad">
                         <button onclick="app.cambiarCantidad(${index}, -1)">-</button>
                         <span>${item.cantidad}</span>
@@ -1555,8 +1584,8 @@ class AdminApp {
                 <div class="item-comentario">
                     <input type="text" 
                            placeholder="Ej: sin cebolla, extra picante..." 
-                           value="${item.comentario || ''}"
-                           onchange="app.actualizarComentario(${index}, this.value)"
+                           value="${this.escapeHTML(item.comentario || '')}"
+                           oninput="app.actualizarComentario(${index}, this.value)"
                            class="input-comentario">
                 </div>
             </div>
@@ -1581,10 +1610,15 @@ class AdminApp {
     }
 
     async guardarPedido() {
+        const btn = document.querySelector('#modal-pedido [type="submit"]');
+        if (btn?.disabled) return;
+        if (btn) btn.disabled = true;
+
         const mesaId = document.getElementById('pedido-mesa').value;
         
         if (!mesaId || this.pedidoActual.length === 0) {
             alert('Debes seleccionar una mesa y al menos un platillo');
+            if (btn) btn.disabled = false;
             return;
         }
 
@@ -1619,6 +1653,8 @@ class AdminApp {
             this.cargarDashboard();
         } catch (error) {
             alert('Error al guardar el pedido');
+        } finally {
+            if (btn) btn.disabled = false;
         }
     }
 
@@ -1785,6 +1821,7 @@ class AdminApp {
 
     async cambiarEstadoPedido(pedidoId, nuevoEstado) {
         const pedido = this.pedidos.find(p => p._id === pedidoId);
+        const estadoAnterior = pedido.estado;
         pedido.estado = nuevoEstado;
         
         try {
@@ -1793,12 +1830,15 @@ class AdminApp {
             this.cargarPedidos();
             this.cargarDashboard();
         } catch (error) {
+            pedido.estado = estadoAnterior;
+            this.cargarPedidos();
             alert('Error al cambiar estado del pedido');
         }
     }
 
     async entregarPedido(pedidoId) {
         const pedido = this.pedidos.find(p => p._id === pedidoId);
+        const estadoAnterior = pedido.estado;
         pedido.estado = 'entregado';
         
         try {
@@ -1811,6 +1851,8 @@ class AdminApp {
             this.cargarDashboard();
             this.cargarMesasParaCobrar();
         } catch (error) {
+            pedido.estado = estadoAnterior;
+            this.cargarPedidos();
             alert('Error al entregar el pedido');
         }
     }
@@ -1864,7 +1906,7 @@ class AdminApp {
                     <div class="items-preview">
                         ${todosItems.slice(0, 5).map(item => `
                             <div class="item-preview">
-                                <span>${item.cantidad}x ${item.nombre}</span>
+                                <span>${item.cantidad}x ${this.escapeHTML(item.nombre)}</span>
                                 <span>S/${(item.precio * item.cantidad).toFixed(2)}</span>
                             </div>
                         `).join('')}
@@ -1915,10 +1957,10 @@ class AdminApp {
         document.getElementById('cuenta-items').innerHTML = todosItems.map(item => `
             <div class="cuenta-item">
                 <span class="item-cantidad">${item.cantidad}x</span>
-                <span class="item-nombre">${item.nombre}</span>
+                <span class="item-nombre">${this.escapeHTML(item.nombre)}</span>
                 <span class="item-precio">S/${(item.precio * item.cantidad).toFixed(2)}</span>
             </div>
-            ${item.comentario ? `<div class="cuenta-item-comentario"><i class="fa-solid fa-comment"></i> ${item.comentario}</div>` : ''}
+            ${item.comentario ? `<div class="cuenta-item-comentario"><i class="fa-solid fa-comment"></i> ${this.escapeHTML(item.comentario)}</div>` : ''}
         `).join('');
         
         document.getElementById('cuenta-total').textContent = `S/${total.toFixed(2)}`
@@ -1954,10 +1996,10 @@ class AdminApp {
         document.getElementById('cuenta-items').innerHTML = pedido.items.map(item => `
             <div class="cuenta-item">
                 <span class="item-cantidad">${item.cantidad}x</span>
-                <span class="item-nombre">${item.nombre}</span>
+                <span class="item-nombre">${this.escapeHTML(item.nombre)}</span>
                 <span class="item-precio">S/${(item.precio * item.cantidad).toFixed(2)}</span>
             </div>
-            ${item.comentario ? `<div class="cuenta-item-comentario"><i class="fa-solid fa-comment"></i> ${item.comentario}</div>` : ''}
+            ${item.comentario ? `<div class="cuenta-item-comentario"><i class="fa-solid fa-comment"></i> ${this.escapeHTML(item.comentario)}</div>` : ''}
         `).join('');
         
         document.getElementById('cuenta-total').textContent = `S/${total.toFixed(2)}`
@@ -1967,58 +2009,37 @@ class AdminApp {
 
     async procesarPago() {
         if (!this.mesaACobrar) return;
-        
+        const btn = document.getElementById('btn-procesar-pago');
+        if (btn?.disabled) return;
+        if (btn) btn.disabled = true;
+
         const metodoPago = document.getElementById('metodo-pago').value;
         const pedidos = this.mesaACobrar.pedidos;
-        const todosItems = pedidos.flatMap(p => p.items);
         const total = pedidos.reduce((sum, p) => sum + p.total, 0);
-        
-        // Crear factura
-        const subtotal = total;
-        const impuesto = 0;
-        const pedidoIdsList = pedidos.map(p => p._id);
-        const factura = {
-            numeroFactura: `F-${Date.now()}`,
-            mesaNumero: this.mesaACobrar.mesaNumero,
-            pedidoIds: pedidoIdsList,
-            items: todosItems,
-            subtotal,
-            impuesto,
-            total,
-            metodoPago,
-            fecha: new Date().toISOString()
-        };
-        
+        const mesa = this.mesas.find(m =>
+            m.numero === this.mesaACobrar.mesaNumero ||
+            m._id === pedidos[0]?.mesaId
+        );
+
         try {
-            // Guardar factura
-            const nuevaFactura = await this.apiRequest('/facturas', 'POST', factura);
-            this.facturas.push(nuevaFactura);
-            
-            // Marcar pedidos como cobrados (no eliminar)
-            for (const pedido of pedidos) {
-                await this.apiRequest(`/pedidos/${pedido._id}`, 'PUT', { estado: 'cobrado' });
-                pedido.estado = 'cobrado';
-            }
-            
-            // Liberar mesa
-            const mesa = this.mesas.find(m => 
-                m.numero === this.mesaACobrar.mesaNumero || 
-                m._id === pedidos[0]?.mesaId
-            );
-            if (mesa) {
-                mesa.estado = 'disponible';
-                await this.apiRequest(`/mesas/${mesa._id}`, 'PUT', mesa);
-            }
-            
+            const resultado = await this.apiRequest('/cobrar', 'POST', {
+                mesaNumero: this.mesaACobrar.mesaNumero,
+                mesaId: mesa?._id,
+                metodoPago
+            });
+
+            this.facturas.push(resultado.factura);
+            for (const pedido of pedidos) pedido.estado = 'cobrado';
+            if (mesa) mesa.estado = 'disponible';
+
             await this.agregarActividad(`Cobro Mesa ${this.mesaACobrar.mesaNumero} - S/${total.toFixed(2)} (${metodoPago})`);
-            
+
             document.getElementById('modal-cobrar').classList.remove('active');
-            
-            // Preguntar si desea imprimir ticket
+
             if (confirm(`Pago procesado exitosamente\n\nTotal: S/${total.toFixed(2)}\nMétodo: ${metodoPago}\n\n¿Desea imprimir el ticket?`)) {
-                this.imprimirTicket(nuevaFactura);
+                this.imprimirTicket(resultado.factura);
             }
-            
+
             this.mesaACobrar = null;
             this.cargarPedidos();
             this.cargarMesas();
@@ -2028,6 +2049,8 @@ class AdminApp {
         } catch (error) {
             alert('Error al procesar el pago');
             console.error(error);
+        } finally {
+            if (btn) btn.disabled = false;
         }
     }
     
@@ -2096,7 +2119,7 @@ class AdminApp {
                 <div class="ticket-items">
                     ${items.map(item => `
                         <div class="ticket-item">
-                            <span class="ticket-item-name">${item.cantidad}x ${item.nombre}</span>
+                            <span class="ticket-item-name">${item.cantidad}x ${this.escapeHTML(item.nombre)}</span>
                             <span>S/${(item.precio * item.cantidad).toFixed(2)}</span>
                         </div>
                     `).join('')}
@@ -2115,6 +2138,10 @@ class AdminApp {
         `;
         
         const ventana = window.open('', '_blank', 'width=350,height=500');
+        if (!ventana) {
+            alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio e intenta de nuevo.');
+            return;
+        }
         ventana.document.write(ticketHTML);
         ventana.document.close();
         
@@ -2169,7 +2196,7 @@ class AdminApp {
 
     cambiarPersonas(delta) {
         const nuevaCantidad = this.divisionData.numPersonas + delta;
-        if (nuevaCantidad >= 2 && nuevaCantidad <= 10) {
+        if (nuevaCantidad >= 2 && nuevaCantidad <= 20) {
             this.divisionData.numPersonas = nuevaCantidad;
             document.getElementById('division-num-personas').textContent = nuevaCantidad;
             this.actualizarDivision();
@@ -2185,7 +2212,7 @@ class AdminApp {
         const itemsContainer = document.getElementById('division-items');
         itemsContainer.innerHTML = items.map(item => `
             <div class="division-item">
-                <span>${item.cantidad}x ${item.nombre}</span>
+                <span>${item.cantidad}x ${this.escapeHTML(item.nombre)}</span>
                 <span>S/${(item.precio * item.cantidad).toFixed(2)}</span>
             </div>
         `).join('');
@@ -2252,51 +2279,36 @@ class AdminApp {
         try {
             const mesa = this.divisionData.mesa;
             const pedidos = this.divisionData.pedidos;
-            const items = this.divisionData.items;
             const total = this.divisionData.total;
             const numPersonas = this.divisionData.numPersonas;
             const porPersona = total / numPersonas;
-            
-            // Crear factura con nota de división
-            const factura = {
-                numeroFactura: `DIV-${Date.now()}`,
+
+            const resultado = await this.apiRequest('/cobrar', 'POST', {
                 mesaNumero: mesa.numero,
-                pedidoIds: pedidos.map(p => p._id),
-                items: items,
-                subtotal: total,
-                impuesto: 0,
-                total: total,
-                metodoPago: `Dividido entre ${numPersonas} personas (S/${porPersona.toFixed(2)} c/u)`,
-                fecha: new Date().toISOString()
-            };
-            
-            await this.apiRequest('/facturas', 'POST', factura);
-            
-            // Actualizar mesa
+                mesaId: mesa._id,
+                metodoPago: 'efectivo',
+                esDiv: true,
+                numPersonas,
+                porPersona: porPersona.toFixed(2)
+            });
+
+            for (const pedido of pedidos) pedido.estado = 'cobrado';
             mesa.estado = 'disponible';
-            await this.apiRequest(`/mesas/${mesa._id}`, 'PUT', mesa);
-            
-            // Marcar pedidos como cobrados (no eliminar)
-            for (const pedido of pedidos) {
-                await this.apiRequest(`/pedidos/${pedido._id}`, 'PUT', { estado: 'cobrado' });
-            }
-            
-            // Registrar actividad
+            this.facturas.push(resultado.factura);
+
             await this.agregarActividad(`Cuenta dividida - Mesa ${mesa.numero} - ${numPersonas} personas - S/${total.toFixed(2)}`);
-            
+
             this.cerrarModalDivision();
-            
+
             alert(`Cuenta dividida exitosamente!\nTotal: S/${total.toFixed(2)}\nPor persona: S/${porPersona.toFixed(2)}`);
-            
-            // Preguntar si imprimir
+
             if (confirm('¿Desea imprimir el ticket?')) {
-                this.imprimirTicket(factura);
+                this.imprimirTicket(resultado.factura);
             }
-            
-            // Recargar datos
+
             await this.cargarDatos();
             this.cargarDashboard();
-            
+
         } catch (error) {
             alert('Error al procesar la división');
             console.error(error);
@@ -3196,6 +3208,10 @@ class AdminApp {
     }
     
     async guardarInventario() {
+        const btn = document.querySelector('#modal-inventario [type="submit"]');
+        if (btn?.disabled) return;
+        if (btn) btn.disabled = true;
+
         const item = {
             nombre: document.getElementById('inventario-nombre').value,
             categoria: document.getElementById('inventario-categoria').value,
@@ -3231,6 +3247,8 @@ class AdminApp {
             this.cargarDashboard();
         } catch (error) {
             alert('Error al guardar el item');
+        } finally {
+            if (btn) btn.disabled = false;
         }
     }
     
@@ -3372,6 +3390,10 @@ class AdminApp {
     }
 
     async guardarUsuario() {
+        const btn = document.querySelector('#modal-usuario [type="submit"]');
+        if (btn?.disabled) return;
+        if (btn) btn.disabled = true;
+
         const nombre = document.getElementById('usuario-nombre').value.trim();
         const username = document.getElementById('usuario-username').value.trim();
         const password = document.getElementById('usuario-password').value;
@@ -3419,6 +3441,8 @@ class AdminApp {
         } catch (error) {
             alert('Error al guardar el usuario');
             console.error(error);
+        } finally {
+            if (btn) btn.disabled = false;
         }
     }
 

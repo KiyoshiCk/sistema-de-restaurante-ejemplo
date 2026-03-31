@@ -100,11 +100,11 @@ const uploadLogo = multer({
     storage: logoStorage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB máximo
     fileFilter: (req, file, cb) => {
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         if (allowedTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Solo se permiten imágenes (JPG, PNG, GIF, WEBP, SVG)'));
+            cb(new Error('Solo se permiten imágenes (JPG, PNG, GIF, WEBP)'));
         }
     }
 });
@@ -631,7 +631,7 @@ app.post('/api/menu', verificarToken, soloAdmin, (req, res) => {
         // Validación de datos
         if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es requerido' });
         if (!categoria) return res.status(400).json({ error: 'La categoría es requerida' });
-        if (precio === undefined || precio === null || precio < 0) return res.status(400).json({ error: 'El precio debe ser un número positivo' });
+        if (typeof precio !== 'number' || isNaN(precio) || precio < 0) return res.status(400).json({ error: 'El precio debe ser un número positivo' });
 
         const _id = generarId();
         db.prepare('INSERT INTO menu (_id, nombre, categoria, precio, descripcion, disponible, icono, imagen) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
@@ -651,7 +651,7 @@ app.put('/api/menu/:id', verificarToken, soloAdmin, (req, res) => {
         if (!existing) return res.status(404).json({ error: 'Platillo no encontrado' });
 
         // Validación
-        if (precio !== undefined && precio < 0) return res.status(400).json({ error: 'El precio debe ser positivo' });
+        if (precio !== undefined && (typeof precio !== 'number' || isNaN(precio) || precio < 0)) return res.status(400).json({ error: 'El precio debe ser un número positivo' });
 
         db.prepare('UPDATE menu SET nombre=?, categoria=?, precio=?, descripcion=?, disponible=?, icono=?, imagen=?, updatedAt=? WHERE _id=?')
             .run(
@@ -740,6 +740,12 @@ app.put('/api/mesas/:id', verificarToken, soloAdmin, (req, res) => {
 
 app.delete('/api/mesas/:id', verificarToken, soloAdmin, (req, res) => {
     try {
+        const pedidosActivos = db.prepare(
+            "SELECT COUNT(*) as c FROM pedidos WHERE mesaId = ? AND estado NOT IN ('cobrado', 'cancelado')"
+        ).get(req.params.id);
+        if (pedidosActivos.c > 0) {
+            return res.status(400).json({ error: 'No se puede eliminar una mesa con pedidos activos' });
+        }
         const result = db.prepare('DELETE FROM mesas WHERE _id = ?').run(req.params.id);
         if (result.changes > 0) {
             res.json({ message: 'Mesa eliminada' });
@@ -858,6 +864,9 @@ app.post('/api/facturas', verificarToken, soloMeseroOAdmin, (req, res) => {
     try {
         const _id = generarId();
         const { numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago } = req.body;
+        if (typeof total !== 'number' || isNaN(total) || total < 0) {
+            return res.status(400).json({ error: 'Total inválido' });
+        }
         db.prepare('INSERT INTO facturas (_id, numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
             .run(_id, numeroFactura, mesaNumero, JSON.stringify(pedidoIds || []), JSON.stringify(items || []), subtotal, impuesto, total, metodoPago);
 
@@ -867,6 +876,67 @@ app.post('/api/facturas', verificarToken, soloMeseroOAdmin, (req, res) => {
     } catch (error) {
         logError('Error al crear factura', error);
         res.status(500).json({ error: 'Error al crear factura' });
+    }
+});
+
+// ============= COBRO ATÓMICO =============
+
+app.post('/api/cobrar', verificarToken, soloMeseroOAdmin, (req, res) => {
+    try {
+        const { mesaNumero, mesaId, metodoPago, esDiv, numPersonas, porPersona } = req.body;
+        if (!mesaNumero) return res.status(400).json({ error: 'Número de mesa requerido' });
+        if (!metodoPago) return res.status(400).json({ error: 'Método de pago requerido' });
+
+        const pedidos = formatRows(
+            db.prepare("SELECT * FROM pedidos WHERE mesaNumero = ? AND estado = 'entregado'").all(mesaNumero),
+            ['items']
+        );
+        if (pedidos.length === 0) {
+            return res.status(400).json({ error: 'No hay pedidos entregados para cobrar en esta mesa' });
+        }
+
+        const todosItems = pedidos.flatMap(p => p.items);
+        const total = pedidos.reduce((sum, p) => sum + (p.total || 0), 0);
+        const pedidoIds = pedidos.map(p => p._id);
+        const numFac = esDiv ? `DIV-${Date.now()}` : `F-${Date.now()}`;
+        const metodoPagoFinal = esDiv
+            ? `Dividido entre ${numPersonas} personas (S/${porPersona || (total / numPersonas).toFixed(2)} c/u)`
+            : metodoPago;
+
+        let facturaId;
+        const cobrarTx = db.transaction(() => {
+            facturaId = generarId();
+            db.prepare('INSERT INTO facturas (_id, numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                .run(facturaId, numFac, mesaNumero, JSON.stringify(pedidoIds), JSON.stringify(todosItems), total, 0, total, metodoPagoFinal);
+
+            const stmtPedido = db.prepare("UPDATE pedidos SET estado = 'cobrado', updatedAt = ? WHERE _id = ?");
+            for (const pedido of pedidos) {
+                stmtPedido.run(now(), pedido._id);
+            }
+
+            if (mesaId) {
+                db.prepare("UPDATE mesas SET estado = 'disponible', updatedAt = ? WHERE _id = ?").run(now(), mesaId);
+            } else {
+                db.prepare("UPDATE mesas SET estado = 'disponible', updatedAt = ? WHERE numero = ?").run(now(), mesaNumero);
+            }
+        });
+
+        cobrarTx();
+
+        const factura = formatRow(db.prepare('SELECT * FROM facturas WHERE _id = ?').get(facturaId), ['items', 'pedidoIds']);
+        emitirEvento('nueva-factura', factura);
+        for (const pedido of pedidos) {
+            emitirEvento('pedido-actualizado', { ...pedido, estado: 'cobrado' });
+        }
+        const mesa = mesaId
+            ? db.prepare('SELECT * FROM mesas WHERE _id = ?').get(mesaId)
+            : db.prepare('SELECT * FROM mesas WHERE numero = ?').get(mesaNumero);
+        if (mesa) emitirEvento('mesa-actualizada', mesa);
+
+        res.status(201).json({ factura });
+    } catch (error) {
+        logError('Error al cobrar', error);
+        res.status(500).json({ error: 'Error al procesar el cobro' });
     }
 });
 
@@ -1157,6 +1227,7 @@ app.get('/api/backup', verificarToken, soloAdmin, (req, res) => {
             historial_costos: db.prepare('SELECT * FROM historial_costos').all(),
             usuarios: db.prepare('SELECT _id, username, password, nombre, rol, activo, createdAt, updatedAt FROM usuarios').all(),
             actividad: db.prepare('SELECT * FROM actividad').all(),
+            config: db.prepare('SELECT * FROM config LIMIT 1').get(),
             fecha: new Date().toISOString()
         };
         res.json(backup);
@@ -1224,6 +1295,22 @@ app.post('/api/restore', verificarToken, soloAdmin, (req, res) => {
                 const stmt = db.prepare('INSERT INTO actividad (_id, tipo, descripcion, usuario, fecha, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)');
                 for (const item of actividad) {
                     stmt.run(item._id || generarId(), item.tipo, item.descripcion, item.usuario, item.fecha || now(), item.createdAt || now(), item.updatedAt || now());
+                }
+            }
+            if (req.body.config && typeof req.body.config === 'object') {
+                const cfg = req.body.config;
+                const existeCfg = db.prepare('SELECT _id FROM config LIMIT 1').get();
+                if (existeCfg) {
+                    db.prepare(`UPDATE config SET nombre=?, slogan=?, descripcion=?, telefono=?, email=?, whatsapp=?,
+                        horarioSemana=?, horarioDomingo=?, horaAbre=?, horaCierra=?, horaAbreDom=?, horaCierraDom=?,
+                        metodosPago=?, moneda=?, monedaCodigo=?, cocinas=?, ciudad=?, barrio=?, direccion=?,
+                        codigoPostal=?, region=?, lat=?, lng=?, updatedAt=? WHERE _id=?`)
+                        .run(cfg.nombre||'', cfg.slogan||'', cfg.descripcion||'', cfg.telefono||'',
+                            cfg.email||'', cfg.whatsapp||'', cfg.horarioSemana||'', cfg.horarioDomingo||'',
+                            cfg.horaAbre||'', cfg.horaCierra||'', cfg.horaAbreDom||'', cfg.horaCierraDom||'',
+                            cfg.metodosPago||'', cfg.moneda||'S/', cfg.monedaCodigo||'PEN', cfg.cocinas||'',
+                            cfg.ciudad||'', cfg.barrio||'', cfg.direccion||'', cfg.codigoPostal||'',
+                            cfg.region||'', cfg.lat??-8.1713, cfg.lng??-78.5143, now(), existeCfg._id);
                 }
             }
         });
