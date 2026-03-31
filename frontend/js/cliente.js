@@ -22,6 +22,10 @@ class ClienteApp {
         this.cargarLogo();
     }
 
+    escapeHTML(str) {
+        return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
     // ============= CONFIGURACIÓN DINÁMICA =============
     async cargarConfig() {
         try {
@@ -367,18 +371,18 @@ class ClienteApp {
             <div class="menu-cliente-item card-hidden" data-index="${index}">
                 <div class="menu-cliente-item-header" style="${!platillo.imagen ? 'background:' + (gradientes[platillo.categoria] || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)') : ''}">
                     ${platillo.imagen 
-                        ? `<div class="menu-cliente-item-foto"><img src="${platillo.imagen}" alt="${platillo.nombre}" loading="lazy"></div>` 
+                        ? `<div class="menu-cliente-item-foto"><img src="${platillo.imagen}" alt="${this.escapeHTML(platillo.nombre)}" loading="lazy"></div>` 
                         : `<div class="menu-cliente-item-icono">${iconos[platillo.categoria] || '<i class="fa-solid fa-utensils"></i>'}</div>`
                     }
                     <span class="menu-cliente-item-categoria">
                         ${iconos[platillo.categoria] || '<i class="fa-solid fa-utensils"></i>'}
-                        ${platillo.categoria}
+                        ${this.escapeHTML(platillo.categoria)}
                     </span>
                 </div>
                 <div class="menu-cliente-item-body">
-                    <div class="menu-cliente-item-nombre">${platillo.nombre}</div>
+                    <div class="menu-cliente-item-nombre">${this.escapeHTML(platillo.nombre)}</div>
                     <p class="menu-cliente-item-descripcion">
-                        ${platillo.descripcion || 'Delicioso platillo preparado con los mejores ingredientes.'}
+                        ${this.escapeHTML(platillo.descripcion || 'Delicioso platillo preparado con los mejores ingredientes.')}
                     </p>
                     <div class="menu-cliente-item-footer">
                         <div class="menu-cliente-item-precio">

@@ -21,6 +21,7 @@ class AdminApp {
         this.inventario = [];
         this.editandoInventarioId = null;
         this.filtroPedidoEstado = 'todos';
+        this.config = {};
         
         this.verificarSesion();
     }
@@ -273,11 +274,14 @@ class AdminApp {
     mostrarLogin() {
         document.getElementById('login-screen').style.display = 'flex';
         document.getElementById('app-screen').style.display = 'none';
-        
-        document.getElementById('login-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.login();
-        });
+
+        if (!this._loginListenerAdded) {
+            document.getElementById('login-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.login();
+            });
+            this._loginListenerAdded = true;
+        }
     }
 
     async login() {
@@ -438,7 +442,8 @@ class AdminApp {
         document.getElementById('btn-logout').addEventListener('click', () => this.logout());
         
         await this.cargarDatos();
-        
+        try { this.config = await fetch(`${this.API_URL}/config`).then(r => r.json()); } catch { this.config = {}; }
+
         this.cargarDashboard();
         if (this.usuario.rol === 'administrador') {
             this.cargarMenu();
@@ -754,7 +759,11 @@ class AdminApp {
                 this.logout();
                 throw new Error('Sesión expirada');
             }
-            return await response.json();
+            const json = await response.json();
+            if (!response.ok) {
+                throw new Error(json.error || `Error ${response.status}`);
+            }
+            return json;
         } catch (error) {
             console.error('Error en API:', error);
             throw error;
@@ -1443,10 +1452,14 @@ class AdminApp {
     }
 
     async toggleMesa(id) {
+        if (!this._mesasEnProceso) this._mesasEnProceso = new Set();
+        if (this._mesasEnProceso.has(id)) return;
+        this._mesasEnProceso.add(id);
+
         const mesa = this.mesas.find(m => m._id === id);
         const estadoAnterior = mesa.estado;
         mesa.estado = mesa.estado === 'disponible' ? 'ocupada' : 'disponible';
-        
+
         try {
             await this.apiRequest(`/mesas/${id}`, 'PUT', mesa);
             await this.agregarActividad(`Mesa ${mesa.numero} ahora está ${mesa.estado}`);
@@ -1456,6 +1469,8 @@ class AdminApp {
             mesa.estado = estadoAnterior;
             this.cargarMesas();
             alert('Error al cambiar estado de la mesa');
+        } finally {
+            this._mesasEnProceso.delete(id);
         }
     }
 
@@ -1552,6 +1567,7 @@ class AdminApp {
             this.pedidoActual.push({
                 platilloId,
                 nombre: platillo.nombre,
+                categoria: platillo.categoria,
                 precio: platillo.precio,
                 cantidad: 1,
                 comentario: ''
@@ -2105,8 +2121,8 @@ class AdminApp {
             </head>
             <body>
                 <div class="ticket-header">
-                    <h1>RESTAURANTE</h1>
-                    <p>Sistema de Gestión</p>
+                    <h1>${this.escapeHTML(this.config?.nombre || 'RESTAURANTE')}</h1>
+                    <p>${this.escapeHTML(this.config?.slogan || 'Sistema de Gestión')}</p>
                 </div>
                 <div class="ticket-divider"></div>
                 <div class="ticket-info">
@@ -2148,6 +2164,11 @@ class AdminApp {
         setTimeout(() => {
             ventana.print();
         }, 250);
+    }
+
+    imprimirFactura(id) {
+        const factura = this.facturas.find(f => f._id === id);
+        if (factura) this.imprimirTicket(factura);
     }
 
     // ===== DIVISIÓN DE CUENTA =====
@@ -2694,9 +2715,9 @@ class AdminApp {
         
         facturas.forEach(f => {
             (f.items || []).forEach(item => {
-                // Buscar categoría del platillo
+                // Buscar categoría: primero en el item guardado al crear el pedido, luego en menú actual
                 const platillo = this.menu.find(p => p.nombre === item.nombre);
-                const categoria = platillo?.categoria || 'Otros';
+                const categoria = item.categoria || platillo?.categoria || 'Otros';
                 if (!conteo[categoria]) {
                     conteo[categoria] = 0;
                 }
@@ -3272,11 +3293,12 @@ class AdminApp {
     
     cargarFacturacion() {
         if (this.usuario.rol !== 'administrador') return;
-        
-        const hoy = new Date();
-        const inicioDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-        const inicioSemana = new Date(hoy.setDate(hoy.getDate() - hoy.getDay()));
-        const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+
+        const ahora = new Date();
+        const inicioDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+        const diaRef = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+        const inicioSemana = new Date(diaRef.setDate(diaRef.getDate() - diaRef.getDay()));
+        const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
 
         const totalDia = this.facturas
             .filter(f => new Date(f.fecha) >= inicioDia)
@@ -3306,13 +3328,13 @@ class AdminApp {
         container.innerHTML = facturasRecientes.map(factura => `
             <div class="factura-item">
                 <div>
-                    <strong>Mesa ${factura.mesaNumero}</strong> - 
+                    <strong>Mesa ${factura.mesaNumero}</strong> -
                     ${new Date(factura.fecha).toLocaleString('es-ES')}
-                    <small style="color: #666; margin-left: 10px;">${factura.metodoPago || ''}</small>
+                    <small style="color: #666; margin-left: 10px;">${this.escapeHTML(factura.metodoPago || '')}</small>
                 </div>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <span style="font-weight: bold; color: var(--success-color);">S/${factura.total.toFixed(2)}</span>
-                    <button class="btn-info" onclick="app.imprimirTicket(${JSON.stringify(factura).replace(/"/g, '&quot;')})" style="padding: 5px 10px; font-size: 0.8em;"><i class="fa-solid fa-print"></i></button>
+                    <button class="btn-info" onclick="app.imprimirFactura('${factura._id}')" style="padding: 5px 10px; font-size: 0.8em;"><i class="fa-solid fa-print"></i></button>
                 </div>
             </div>
         `).join('');
@@ -3402,11 +3424,13 @@ class AdminApp {
 
         if (!nombre || !username || !rol) {
             alert('Por favor complete todos los campos requeridos');
+            if (btn) btn.disabled = false;
             return;
         }
 
         if (!this.editandoUsuarioId && password.length < 6) {
             alert('La contraseña debe tener al menos 6 caracteres');
+            if (btn) btn.disabled = false;
             return;
         }
 

@@ -720,14 +720,21 @@ app.post('/api/mesas', verificarToken, soloAdmin, (req, res) => {
     }
 });
 
-app.put('/api/mesas/:id', verificarToken, soloAdmin, (req, res) => {
+app.put('/api/mesas/:id', verificarToken, soloMeseroOAdmin, (req, res) => {
     try {
         const existing = db.prepare('SELECT * FROM mesas WHERE _id = ?').get(req.params.id);
         if (!existing) return res.status(404).json({ error: 'Mesa no encontrada' });
 
         const { numero, capacidad, estado } = req.body;
+        if (estado !== undefined && !['disponible', 'ocupada'].includes(estado)) {
+            return res.status(400).json({ error: 'Estado de mesa inválido. Debe ser “disponible” u “ocupada”' });
+        }
+        // Meseros solo pueden cambiar estado, no número ni capacidad
+        const esMesero = req.usuario.rol === 'mesero';
+        const numFinal = esMesero ? existing.numero : (numero ?? existing.numero);
+        const capFinal = esMesero ? existing.capacidad : (capacidad ?? existing.capacidad);
         db.prepare('UPDATE mesas SET numero=?, capacidad=?, estado=?, updatedAt=? WHERE _id=?')
-            .run(numero ?? existing.numero, capacidad ?? existing.capacidad, estado ?? existing.estado, now(), req.params.id);
+            .run(numFinal, capFinal, estado ?? existing.estado, now(), req.params.id);
 
         const mesa = db.prepare('SELECT * FROM mesas WHERE _id = ?').get(req.params.id);
         emitirEvento('mesa-actualizada', mesa);
@@ -785,7 +792,7 @@ app.post('/api/pedidos', verificarToken, soloMeseroOAdmin, (req, res) => {
         if (!Array.isArray(pedidoData.items) || pedidoData.items.length === 0) {
             return res.status(400).json({ error: 'El pedido debe tener al menos un item' });
         }
-        if (typeof pedidoData.total !== 'number' || pedidoData.total < 0) {
+        if (typeof pedidoData.total !== 'number' || isNaN(pedidoData.total) || pedidoData.total < 0) {
             return res.status(400).json({ error: 'Total inválido' });
         }
 
@@ -853,7 +860,11 @@ app.delete('/api/pedidos/:id', verificarToken, soloAdmin, (req, res) => {
 
 app.get('/api/facturas', verificarToken, (req, res) => {
     try {
-        const facturas = db.prepare('SELECT * FROM facturas ORDER BY fecha DESC').all();
+        const limitAll = req.query.limit === 'all' && req.usuario.rol === 'administrador';
+        const query = limitAll
+            ? 'SELECT * FROM facturas ORDER BY fecha DESC'
+            : 'SELECT * FROM facturas ORDER BY fecha DESC LIMIT 1000';
+        const facturas = db.prepare(query).all();
         res.json(formatRows(facturas, ['items', 'pedidoIds']));
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener facturas' });
