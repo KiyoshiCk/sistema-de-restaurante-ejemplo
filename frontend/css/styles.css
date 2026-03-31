@@ -345,15 +345,15 @@
     justify-content: flex-end;
 }
 
-.btn-guardar-ubicacion {
-    padding: 12px 28px !important;
-    border-radius: 10px !important;
-    font-size: 1em !important;
-    font-weight: 600 !important;
-    display: flex !important;
+.btn-primary.btn-guardar-ubicacion {
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-size: 1em;
+    font-weight: 600;
+    display: flex;
     align-items: center;
     gap: 8px;
-    transition: all 0.3s !important;
+    transition: all 0.3s;
 }
 
 .btn-guardar-ubicacion:hover {
@@ -585,6 +585,29 @@ body {
     padding: 20px;
 }
 
+/* ============= ACCESIBILIDAD: FOCUS VISIBLE ============= */
+:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.nav-btn:focus-visible,
+.btn-logout:focus-visible,
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-danger:focus-visible,
+.btn-success:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.9);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 5px rgba(255, 107, 53, 0.45);
+}
+
+.close:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 3px;
+    border-radius: 3px;
+}
+
 /* ============= VISTA CLIENTE ============= */
 body.cliente-view {
     padding: 0;
@@ -773,10 +796,10 @@ header .header-info {
 }
 
 .app-screen {
-    animation: fadeIn 0.5s;
+    animation: fadeInSimple 0.5s;
 }
 
-@keyframes fadeIn {
+@keyframes fadeInSimple {
     from { opacity: 0; }
     to { opacity: 1; }
 }
@@ -954,6 +977,20 @@ main {
 .btn-info {
     background: var(--info-color);
     color: white;
+}
+
+/* Estado deshabilitado global */
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled,
+.btn-success:disabled,
+.btn-info:disabled,
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 /* Filtros */
@@ -1880,6 +1917,14 @@ main {
     min-height: 80px;
 }
 
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.15);
+}
+
 .form-actions {
     display: flex;
     gap: 10px;
@@ -2027,6 +2072,10 @@ main {
     background: var(--info-color);
     color: white;
     transform: scale(1.05);
+}
+
+.menu-pedido-item:hover .precio {
+    color: rgba(255, 255, 255, 0.92);
 }
 
 .menu-pedido-item h4 {
@@ -3165,13 +3214,27 @@ main {
 /* Responsive */
 @media (max-width: 768px) {
     .main-nav {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
     }
-    
+
+    .main-nav::-webkit-scrollbar {
+        display: none;
+    }
+
     .nav-btn {
-        flex: 1 1 50%;
+        flex: 0 0 auto;
+        min-width: 80px;
+        padding: 14px 10px;
+        font-size: 0.78em;
     }
-    
+
+    .nav-btn .icon {
+        font-size: 1.3em;
+    }
+
     .stats-grid {
         grid-template-columns: 1fr;
     }
@@ -3213,7 +3276,7 @@ main {
 }
 
 .menu-digital-subtitle {
-    color: #95a5a6;
+    color: #636e72;
     font-size: 1.15em;
     font-weight: 400;
     margin-top: 0;
@@ -3551,7 +3614,7 @@ main {
 }
 
 .footer-col p {
-    color: rgba(255,255,255,0.55);
+    color: rgba(255,255,255,0.75);
     font-size: 0.9em;
     line-height: 1.9;
     margin: 0;
@@ -4233,4 +4296,56 @@ body.cliente-view .container-cliente {
     50% {
         transform: translateY(-30px) rotate(10deg);
     }
+}
+
+/* ============= SKELETON / LOADING STATES ============= */
+.skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.skeleton-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.skeleton-line {
+    background: linear-gradient(90deg, #ecf0f1 25%, #dfe6e9 50%, #ecf0f1 75%);
+    background-size: 400% 100%;
+    animation: skeletonShimmer 1.6s infinite ease-in-out;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.skeleton-line.h-tall  { height: 120px; border-radius: 10px; }
+.skeleton-line.h-med   { height: 18px; }
+.skeleton-line.h-short { height: 14px; width: 60%; }
+.skeleton-line.h-xs    { height: 12px; width: 40%; }
+
+@keyframes skeletonShimmer {
+    0%   { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+/* Estado vacío de facturación */
+.facturas-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #95a5a6;
+}
+
+.facturas-empty i {
+    font-size: 3em;
+    margin-bottom: 16px;
+    opacity: 0.35;
+    display: block;
+}
+
+.facturas-empty p {
+    font-size: 1em;
+    color: #7f8c8d;
 }
