@@ -504,7 +504,7 @@
         <!-- Modal Agregar/Editar Platillo -->
         <div id="modal-platillo" class="modal">
             <div class="modal-content">
-                <span class="close">&times;</span>
+                <span class="close" role="button" tabindex="0" aria-label="Cerrar">&times;</span>
                 <h2 id="modal-platillo-titulo">Agregar Platillo</h2>
                 <form id="form-platillo">
                     <div class="form-group">
@@ -554,7 +554,7 @@
         <!-- Modal Nuevo Pedido -->
         <div id="modal-pedido" class="modal">
             <div class="modal-content modal-large">
-                <span class="close">&times;</span>
+                <span class="close" role="button" tabindex="0" aria-label="Cerrar">&times;</span>
                 <h2>Nuevo Pedido</h2>
                 <form id="form-pedido">
                     <div class="form-group">
@@ -588,7 +588,7 @@
         <!-- Modal Agregar Mesa -->
         <div id="modal-mesa" class="modal">
             <div class="modal-content">
-                <span class="close">&times;</span>
+                <span class="close" role="button" tabindex="0" aria-label="Cerrar">&times;</span>
                 <h2>Agregar Mesa</h2>
                 <form id="form-mesa">
                     <div class="form-group">
@@ -610,7 +610,7 @@
         <!-- Modal Agregar/Editar Usuario -->
         <div id="modal-usuario" class="modal">
             <div class="modal-content">
-                <span class="close">&times;</span>
+                <span class="close" role="button" tabindex="0" aria-label="Cerrar">&times;</span>
                 <h2 id="modal-usuario-titulo">Nuevo Usuario</h2>
                 <form id="form-usuario">
                     <div class="form-group">
@@ -653,7 +653,7 @@
         <!-- Modal Cobrar Mesa -->
         <div id="modal-cobrar" class="modal">
             <div class="modal-content modal-cobrar-content">
-                <span class="close">&times;</span>
+                <span class="close" role="button" tabindex="0" aria-label="Cerrar">&times;</span>
                 <h2><i class="fa-solid fa-cash-register"></i> Cuenta de Mesa <span id="cobrar-mesa-numero"></span></h2>
                 <div class="cuenta-detalle">
                     <div class="cuenta-items" id="cuenta-items">
@@ -684,6 +684,7 @@
         <!-- Modal Inventario -->
         <div id="modal-inventario" class="modal">
             <div class="modal-content">
+                <span class="close" role="button" tabindex="0" aria-label="Cerrar">&times;</span>
                 <h2 id="modal-inventario-titulo"><i class="fa-solid fa-boxes-stacked"></i> Nuevo Item</h2>
                 <form id="form-inventario">
                     <div class="form-group">
@@ -741,7 +742,7 @@
     <!-- Modal División de Cuenta -->
     <div id="modal-division" class="modal">
         <div class="modal-content modal-large">
-            <span class="close" onclick="app.cerrarModalDivision()">&times;</span>
+            <span class="close" onclick="app.cerrarModalDivision()" role="button" tabindex="0" aria-label="Cerrar">&times;</span>
             <h2><i class="fa-solid fa-cash-register"></i> Dividir Cuenta - Mesa <span id="division-mesa-numero"></span></h2>
             
             <div class="division-container">
@@ -786,5 +787,18 @@
     <script src="js/leaflet-loader.js"></script>
     <script src="js/admin.js"></script>
     <script src="js/ubicacion-admin.js"></script>
+    <script>
+    // Accesibilidad: hacer los span.close navegables por teclado
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.close').forEach(function(el) {
+            el.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    el.click();
+                }
+            });
+        });
+    });
+    </script>
 </body>
 </html>
