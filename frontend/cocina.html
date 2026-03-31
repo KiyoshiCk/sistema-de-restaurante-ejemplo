@@ -467,6 +467,69 @@
             0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
             50% { box-shadow: 0 0 30px rgba(231, 76, 60, 0.6); }
         }
+
+        /* MUX-11 & MUX-12: Layout cocina en móvil */
+        @media (max-width: 768px) {
+            /* MUX-11: Reducir padding del contenedor */
+            .cocina-container {
+                padding: 12px;
+            }
+
+            /* MUX-12: Header — stack vertical en lugar de fila apretada */
+            .cocina-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+                padding: 16px;
+            }
+
+            .cocina-header h1 {
+                font-size: 1.3em;
+                justify-content: center;
+            }
+
+            .cocina-header .user-info {
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            /* Grid pedidos: 1 columna (minmax 350px desbordaba en ~280px disponibles) */
+            .pedidos-cocina-grid {
+                grid-template-columns: 1fr;
+            }
+
+            /* Estadísticas: mantener 3 columnas aunque sean pequeñas */
+            .estadisticas-cocina {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+
+            .stat-cocina {
+                padding: 12px 8px;
+            }
+
+            .stat-cocina .numero {
+                font-size: 1.8em;
+            }
+
+            .stat-cocina .label {
+                font-size: 0.73em;
+            }
+
+            /* Filtros cocina: scroll horizontal (igual que nav de admin) */
+            .filtros-cocina {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                padding-bottom: 4px;
+            }
+
+            .filtros-cocina::-webkit-scrollbar {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>

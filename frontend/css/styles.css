@@ -4349,3 +4349,114 @@ body.cliente-view .container-cliente {
     font-size: 1em;
     color: #7f8c8d;
 }
+
+/* ============= MOBILE UX — CORRECCIONES ============= */
+
+/* MUX-01: Reducir padding body en móvil (+11% ancho útil en admin/cocina) */
+@media (max-width: 768px) {
+    body:not(.cliente-view) {
+        padding: 8px;
+    }
+
+    header {
+        padding: 18px 16px;
+    }
+
+    header h1 {
+        font-size: 1.6em;
+        line-height: 1.3;
+    }
+
+    #fecha-hora {
+        font-size: 0.9em;
+    }
+
+    main {
+        padding: 16px;
+    }
+
+    /* MUX-02: Reportes — 1 columna para evitar overflow (minmax 350px) */
+    .reportes-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* MUX-03: Datos restaurante — colapsar a 1 columna */
+    .datos-restaurante-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* MUX-04: Parallax 100vh → 78vh — menú visible sin scroll total */
+    .parallax-hero {
+        height: 78vh;
+        height: 78svh; /* svh descarta barra de dirección de Safari iOS */
+        min-height: 480px;
+    }
+
+    /* MUX-05: Categorías menú cliente — icono + texto en columna (no solo icono) */
+    .categoria-btn {
+        padding: 10px 12px;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 64px;
+    }
+
+    .categoria-btn span {
+        display: block; /* override del display:none anterior */
+        font-size: 0.68em;
+        letter-spacing: 0;
+        white-space: nowrap;
+    }
+}
+
+/* MUX-06..12: Pantallas muy pequeñas (< 600px) */
+@media (max-width: 600px) {
+    /* MUX-06: Modal — reducir padding interno en teléfonos */
+    .modal-content {
+        padding: 20px 16px;
+        max-height: 93vh;
+    }
+
+    /* MUX-07: Touch targets — WCAG 2.5.5 recomienda mínimo 44×44px */
+    /* Botones +/- cantidad en pedido (eran 30×30px — fat-finger critical) */
+    .item-cantidad button {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        font-size: 1.1em;
+    }
+
+    /* Ajuste de stock en inventario (eran 38×38px) */
+    .inv-btn-ajuste {
+        width: 44px;
+        height: 44px;
+    }
+
+    /* Botones editar/eliminar inventario (eran 36×36px) */
+    .inv-btn-edit,
+    .inv-btn-delete {
+        width: 44px;
+        height: 44px;
+    }
+
+    /* Botones +/- de división de cuenta (eran 40×40px) */
+    .btn-division-persona {
+        width: 44px;
+        height: 44px;
+    }
+
+    /* MUX-08: form-row — colapsar de 2 columnas a 1 en formularios */
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    /* MUX-09: Subtítulo parallax más compacto */
+    .parallax-subtitle {
+        font-size: 1em;
+        margin-bottom: 28px;
+    }
+
+    /* MUX-10: Título de sección admin más compacto */
+    .section-header h2 {
+        font-size: 1.5em;
+    }
+}
