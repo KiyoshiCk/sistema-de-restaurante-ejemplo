@@ -95,11 +95,24 @@ class CocinaApp {
         const usuarioGuardado = localStorage.getItem('usuario_cocina');
         const tokenGuardado = localStorage.getItem('token_cocina');
         if (usuarioGuardado && tokenGuardado) {
-            this.usuario = JSON.parse(usuarioGuardado);
-            this.token = tokenGuardado;
-            if (this.usuario.rol === 'cocinero') {
-                this.mostrarPanel();
-            } else {
+            try {
+                this.usuario = JSON.parse(usuarioGuardado);
+                this.token = tokenGuardado;
+                const payload = JSON.parse(atob(tokenGuardado.split('.')[1]));
+                if (payload.exp * 1000 < Date.now()) {
+                    localStorage.removeItem('usuario_cocina');
+                    localStorage.removeItem('token_cocina');
+                    this.mostrarLogin();
+                    return;
+                }
+                if (this.usuario.rol === 'cocinero') {
+                    this.mostrarPanel();
+                } else {
+                    this.mostrarLogin();
+                }
+            } catch {
+                localStorage.removeItem('usuario_cocina');
+                localStorage.removeItem('token_cocina');
                 this.mostrarLogin();
             }
         } else {

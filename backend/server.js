@@ -100,11 +100,11 @@ const uploadLogo = multer({
     storage: logoStorage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB máximo
     fileFilter: (req, file, cb) => {
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         if (allowedTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Solo se permiten imágenes (JPG, PNG, GIF, WEBP, SVG)'));
+            cb(new Error('Solo se permiten imágenes (JPG, PNG, GIF, WEBP)'));
         }
     }
 });
@@ -530,22 +530,82 @@ try {
 
 const inicializarDatos = () => {
     try {
+        const menuCount = db.prepare('SELECT COUNT(*) as count FROM menu').get().count;
+        const mesasCount = db.prepare('SELECT COUNT(*) as count FROM mesas').get().count;
         const usuariosCount = db.prepare('SELECT COUNT(*) as count FROM usuarios').get().count;
 
-        // Solo crear usuarios por defecto si no hay ninguno
-        // El menú, mesas e inventario lo configura el administrador del restaurante
+        if (menuCount === 0) {
+            const menuPeruano = [
+                { nombre: "Ceviche de Pescado", categoria: "Entradas", precio: 35, descripcion: "Pescado fresco marinado en limón con ají limo, cebolla morada y camote", disponible: 1, icono: "🐟" },
+                { nombre: "Causa Limeña", categoria: "Entradas", precio: 22, descripcion: "Papa amarilla con limón, ají amarillo, rellena de atún o pollo", disponible: 1, icono: "🥔" },
+                { nombre: "Anticuchos de Corazón", categoria: "Entradas", precio: 28, descripcion: "Brochetas de corazón de res marinadas en especias peruanas", disponible: 1, icono: "🍢" },
+                { nombre: "Tequeños", categoria: "Entradas", precio: 18, descripcion: "Deditos de masa rellenos de queso fresco", disponible: 1, icono: "🧀" },
+                { nombre: "Lomo Saltado", categoria: "Platos Fuertes", precio: 42, descripcion: "Tiras de lomo fino salteado con cebolla, tomate, papas fritas y arroz", disponible: 1, icono: "🥩" },
+                { nombre: "Ají de Gallina", categoria: "Platos Fuertes", precio: 38, descripcion: "Pollo deshilachado en crema de ají amarillo con papas y aceitunas", disponible: 1, icono: "🍗" },
+                { nombre: "Arroz con Pollo", categoria: "Platos Fuertes", precio: 32, descripcion: "Arroz verde con cilantro acompañado de pollo y papa a la huancaína", disponible: 1, icono: "🍚" },
+                { nombre: "Tacu Tacu con Lomo", categoria: "Platos Fuertes", precio: 45, descripcion: "Mezcla de arroz y frijoles frita con lomo saltado encima", disponible: 1, icono: "🍛" },
+                { nombre: "Seco de Carne", categoria: "Platos Fuertes", precio: 40, descripcion: "Carne guisada con cilantro, frijoles y arroz", disponible: 1, icono: "🥘" },
+                { nombre: "Pescado a lo Macho", categoria: "Platos Fuertes", precio: 48, descripcion: "Pescado frito con salsa de mariscos cremosa", disponible: 1, icono: "🐠" },
+                { nombre: "Tallarín Saltado", categoria: "Platos Fuertes", precio: 35, descripcion: "Fideos salteados con carne o pollo al estilo chifa peruano", disponible: 1, icono: "🍝" },
+                { nombre: "Chicharrón de Pescado", categoria: "Platos Fuertes", precio: 38, descripcion: "Trozos de pescado frito crocante con yuca y salsa criolla", disponible: 1, icono: "🍤" },
+                { nombre: "Inca Kola", categoria: "Bebidas", precio: 8, descripcion: "La bebida nacional del Perú, sabor único", disponible: 1, icono: "🥤" },
+                { nombre: "Chicha Morada", categoria: "Bebidas", precio: 10, descripcion: "Refresco de maíz morado con especias y frutas", disponible: 1, icono: "🍹" },
+                { nombre: "Pisco Sour", categoria: "Bebidas", precio: 25, descripcion: "Cóctel de pisco, limón, jarabe y clara de huevo", disponible: 1, icono: "🍸" },
+                { nombre: "Emoliente", categoria: "Bebidas", precio: 7, descripcion: "Bebida caliente de hierbas medicinales", disponible: 1, icono: "☕" },
+                { nombre: "Limonada Frozen", categoria: "Bebidas", precio: 12, descripcion: "Limonada peruana bien helada", disponible: 1, icono: "🍋" },
+                { nombre: "Suspiro Limeño", categoria: "Postres", precio: 18, descripcion: "Manjar blanco con merengue de oporto", disponible: 1, icono: "🍮" },
+                { nombre: "Mazamorra Morada", categoria: "Postres", precio: 15, descripcion: "Postre de maíz morado con frutas", disponible: 1, icono: "🍇" },
+                { nombre: "Picarones", categoria: "Postres", precio: 16, descripcion: "Buñuelos de zapallo con miel de chancaca", disponible: 1, icono: "🍩" },
+                { nombre: "Alfajores", categoria: "Postres", precio: 12, descripcion: "Galletas rellenas de manjar blanco", disponible: 1, icono: "🍪" },
+                { nombre: "Arroz con Leche", categoria: "Postres", precio: 14, descripcion: "Arroz cremoso con leche, canela y pasas", disponible: 1, icono: "🍚" }
+            ];
+
+            const insertMenu = db.prepare('INSERT INTO menu (_id, nombre, categoria, precio, descripcion, disponible, icono) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            const insertManyMenu = db.transaction((items) => {
+                for (const item of items) {
+                    insertMenu.run(generarId(), item.nombre, item.categoria, item.precio, item.descripcion, item.disponible, item.icono);
+                }
+            });
+            insertManyMenu(menuPeruano);
+            console.log('✅ Menú peruano inicializado');
+        }
+
+        if (mesasCount === 0) {
+            const mesas = [
+                { numero: 1, capacidad: 4, estado: "disponible" },
+                { numero: 2, capacidad: 2, estado: "disponible" },
+                { numero: 3, capacidad: 6, estado: "disponible" },
+                { numero: 4, capacidad: 4, estado: "disponible" },
+                { numero: 5, capacidad: 8, estado: "disponible" },
+                { numero: 6, capacidad: 2, estado: "disponible" },
+                { numero: 7, capacidad: 4, estado: "disponible" },
+                { numero: 8, capacidad: 4, estado: "disponible" },
+                { numero: 9, capacidad: 6, estado: "disponible" },
+                { numero: 10, capacidad: 2, estado: "disponible" }
+            ];
+            const insertMesa = db.prepare('INSERT INTO mesas (_id, numero, capacidad, estado) VALUES (?, ?, ?, ?)');
+            const insertManyMesas = db.transaction((items) => {
+                for (const item of items) {
+                    insertMesa.run(generarId(), item.numero, item.capacidad, item.estado);
+                }
+            });
+            insertManyMesas(mesas);
+            console.log('✅ Mesas inicializadas');
+        }
+
         if (usuariosCount === 0) {
             const usuariosPorDefecto = [
-                { username: 'admin',    password: 'admin123',    nombre: 'Administrador', rol: 'administrador', activo: 1 },
-                { username: 'mesero',   password: 'mesero123',   nombre: 'Mesero',        rol: 'mesero',        activo: 1 },
-                { username: 'cocinero', password: 'cocinero123', nombre: 'Cocinero',      rol: 'cocinero',      activo: 1 }
+                { username: 'admin', password: 'admin123', nombre: 'Administrador', rol: 'administrador', activo: 1 },
+                { username: 'mesero', password: 'mesero123', nombre: 'Mesero', rol: 'mesero', activo: 1 },
+                { username: 'cocinero', password: 'cocinero123', nombre: 'Cocinero', rol: 'cocinero', activo: 1 }
             ];
             const insertUsuario = db.prepare('INSERT INTO usuarios (_id, username, password, nombre, rol, activo) VALUES (?, ?, ?, ?, ?, ?)');
+            // Hashear contraseñas antes de guardar
             for (const item of usuariosPorDefecto) {
                 const hashedPassword = bcrypt.hashSync(item.password, 10);
                 insertUsuario.run(generarId(), item.username, hashedPassword, item.nombre, item.rol, item.activo);
             }
-            console.log('✅ Usuarios inicializados - recuerda cambiar las contraseñas por defecto');
+            console.log('✅ Usuarios inicializados (contraseñas hasheadas)');
         }
     } catch (error) {
         console.error('Error inicializando datos:', error);
@@ -571,7 +631,7 @@ app.post('/api/menu', verificarToken, soloAdmin, (req, res) => {
         // Validación de datos
         if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es requerido' });
         if (!categoria) return res.status(400).json({ error: 'La categoría es requerida' });
-        if (precio === undefined || precio === null || precio < 0) return res.status(400).json({ error: 'El precio debe ser un número positivo' });
+        if (typeof precio !== 'number' || isNaN(precio) || precio < 0) return res.status(400).json({ error: 'El precio debe ser un número positivo' });
 
         const _id = generarId();
         db.prepare('INSERT INTO menu (_id, nombre, categoria, precio, descripcion, disponible, icono, imagen) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
@@ -591,7 +651,7 @@ app.put('/api/menu/:id', verificarToken, soloAdmin, (req, res) => {
         if (!existing) return res.status(404).json({ error: 'Platillo no encontrado' });
 
         // Validación
-        if (precio !== undefined && precio < 0) return res.status(400).json({ error: 'El precio debe ser positivo' });
+        if (precio !== undefined && (typeof precio !== 'number' || isNaN(precio) || precio < 0)) return res.status(400).json({ error: 'El precio debe ser un número positivo' });
 
         db.prepare('UPDATE menu SET nombre=?, categoria=?, precio=?, descripcion=?, disponible=?, icono=?, imagen=?, updatedAt=? WHERE _id=?')
             .run(
@@ -680,6 +740,12 @@ app.put('/api/mesas/:id', verificarToken, soloAdmin, (req, res) => {
 
 app.delete('/api/mesas/:id', verificarToken, soloAdmin, (req, res) => {
     try {
+        const pedidosActivos = db.prepare(
+            "SELECT COUNT(*) as c FROM pedidos WHERE mesaId = ? AND estado NOT IN ('cobrado', 'cancelado')"
+        ).get(req.params.id);
+        if (pedidosActivos.c > 0) {
+            return res.status(400).json({ error: 'No se puede eliminar una mesa con pedidos activos' });
+        }
         const result = db.prepare('DELETE FROM mesas WHERE _id = ?').run(req.params.id);
         if (result.changes > 0) {
             res.json({ message: 'Mesa eliminada' });
@@ -798,6 +864,9 @@ app.post('/api/facturas', verificarToken, soloMeseroOAdmin, (req, res) => {
     try {
         const _id = generarId();
         const { numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago } = req.body;
+        if (typeof total !== 'number' || isNaN(total) || total < 0) {
+            return res.status(400).json({ error: 'Total inválido' });
+        }
         db.prepare('INSERT INTO facturas (_id, numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
             .run(_id, numeroFactura, mesaNumero, JSON.stringify(pedidoIds || []), JSON.stringify(items || []), subtotal, impuesto, total, metodoPago);
 
@@ -807,6 +876,67 @@ app.post('/api/facturas', verificarToken, soloMeseroOAdmin, (req, res) => {
     } catch (error) {
         logError('Error al crear factura', error);
         res.status(500).json({ error: 'Error al crear factura' });
+    }
+});
+
+// ============= COBRO ATÓMICO =============
+
+app.post('/api/cobrar', verificarToken, soloMeseroOAdmin, (req, res) => {
+    try {
+        const { mesaNumero, mesaId, metodoPago, esDiv, numPersonas, porPersona } = req.body;
+        if (!mesaNumero) return res.status(400).json({ error: 'Número de mesa requerido' });
+        if (!metodoPago) return res.status(400).json({ error: 'Método de pago requerido' });
+
+        const pedidos = formatRows(
+            db.prepare("SELECT * FROM pedidos WHERE mesaNumero = ? AND estado = 'entregado'").all(mesaNumero),
+            ['items']
+        );
+        if (pedidos.length === 0) {
+            return res.status(400).json({ error: 'No hay pedidos entregados para cobrar en esta mesa' });
+        }
+
+        const todosItems = pedidos.flatMap(p => p.items);
+        const total = pedidos.reduce((sum, p) => sum + (p.total || 0), 0);
+        const pedidoIds = pedidos.map(p => p._id);
+        const numFac = esDiv ? `DIV-${Date.now()}` : `F-${Date.now()}`;
+        const metodoPagoFinal = esDiv
+            ? `Dividido entre ${numPersonas} personas (S/${porPersona || (total / numPersonas).toFixed(2)} c/u)`
+            : metodoPago;
+
+        let facturaId;
+        const cobrarTx = db.transaction(() => {
+            facturaId = generarId();
+            db.prepare('INSERT INTO facturas (_id, numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                .run(facturaId, numFac, mesaNumero, JSON.stringify(pedidoIds), JSON.stringify(todosItems), total, 0, total, metodoPagoFinal);
+
+            const stmtPedido = db.prepare("UPDATE pedidos SET estado = 'cobrado', updatedAt = ? WHERE _id = ?");
+            for (const pedido of pedidos) {
+                stmtPedido.run(now(), pedido._id);
+            }
+
+            if (mesaId) {
+                db.prepare("UPDATE mesas SET estado = 'disponible', updatedAt = ? WHERE _id = ?").run(now(), mesaId);
+            } else {
+                db.prepare("UPDATE mesas SET estado = 'disponible', updatedAt = ? WHERE numero = ?").run(now(), mesaNumero);
+            }
+        });
+
+        cobrarTx();
+
+        const factura = formatRow(db.prepare('SELECT * FROM facturas WHERE _id = ?').get(facturaId), ['items', 'pedidoIds']);
+        emitirEvento('nueva-factura', factura);
+        for (const pedido of pedidos) {
+            emitirEvento('pedido-actualizado', { ...pedido, estado: 'cobrado' });
+        }
+        const mesa = mesaId
+            ? db.prepare('SELECT * FROM mesas WHERE _id = ?').get(mesaId)
+            : db.prepare('SELECT * FROM mesas WHERE numero = ?').get(mesaNumero);
+        if (mesa) emitirEvento('mesa-actualizada', mesa);
+
+        res.status(201).json({ factura });
+    } catch (error) {
+        logError('Error al cobrar', error);
+        res.status(500).json({ error: 'Error al procesar el cobro' });
     }
 });
 
@@ -1097,6 +1227,7 @@ app.get('/api/backup', verificarToken, soloAdmin, (req, res) => {
             historial_costos: db.prepare('SELECT * FROM historial_costos').all(),
             usuarios: db.prepare('SELECT _id, username, password, nombre, rol, activo, createdAt, updatedAt FROM usuarios').all(),
             actividad: db.prepare('SELECT * FROM actividad').all(),
+            config: db.prepare('SELECT * FROM config LIMIT 1').get(),
             fecha: new Date().toISOString()
         };
         res.json(backup);
@@ -1164,6 +1295,22 @@ app.post('/api/restore', verificarToken, soloAdmin, (req, res) => {
                 const stmt = db.prepare('INSERT INTO actividad (_id, tipo, descripcion, usuario, fecha, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)');
                 for (const item of actividad) {
                     stmt.run(item._id || generarId(), item.tipo, item.descripcion, item.usuario, item.fecha || now(), item.createdAt || now(), item.updatedAt || now());
+                }
+            }
+            if (req.body.config && typeof req.body.config === 'object') {
+                const cfg = req.body.config;
+                const existeCfg = db.prepare('SELECT _id FROM config LIMIT 1').get();
+                if (existeCfg) {
+                    db.prepare(`UPDATE config SET nombre=?, slogan=?, descripcion=?, telefono=?, email=?, whatsapp=?,
+                        horarioSemana=?, horarioDomingo=?, horaAbre=?, horaCierra=?, horaAbreDom=?, horaCierraDom=?,
+                        metodosPago=?, moneda=?, monedaCodigo=?, cocinas=?, ciudad=?, barrio=?, direccion=?,
+                        codigoPostal=?, region=?, lat=?, lng=?, updatedAt=? WHERE _id=?`)
+                        .run(cfg.nombre||'', cfg.slogan||'', cfg.descripcion||'', cfg.telefono||'',
+                            cfg.email||'', cfg.whatsapp||'', cfg.horarioSemana||'', cfg.horarioDomingo||'',
+                            cfg.horaAbre||'', cfg.horaCierra||'', cfg.horaAbreDom||'', cfg.horaCierraDom||'',
+                            cfg.metodosPago||'', cfg.moneda||'S/', cfg.monedaCodigo||'PEN', cfg.cocinas||'',
+                            cfg.ciudad||'', cfg.barrio||'', cfg.direccion||'', cfg.codigoPostal||'',
+                            cfg.region||'', cfg.lat??-8.1713, cfg.lng??-78.5143, now(), existeCfg._id);
                 }
             }
         });
