@@ -4352,23 +4352,25 @@ body.cliente-view .container-cliente {
 
 /* ============= MOBILE UX — CORRECCIONES ============= */
 
-/* MUX-01: Reducir padding body en móvil (+11% ancho útil en admin/cocina) */
+/* MUX-01: Full-bleed layout en móvil */
 @media (max-width: 768px) {
     body:not(.cliente-view) {
-        padding: 8px;
+        padding: 0;
     }
 
     header {
-        padding: 18px 16px;
+        padding: 12px 16px;
     }
 
     header h1 {
-        font-size: 1.6em;
+        font-size: 1.3em;
+        margin-bottom: 4px;
         line-height: 1.3;
     }
 
+    /* El teléfono ya muestra la hora — libera altura del header */
     #fecha-hora {
-        font-size: 0.9em;
+        display: none;
     }
 
     main {
@@ -4458,5 +4460,191 @@ body.cliente-view .container-cliente {
     /* MUX-10: Título de sección admin más compacto */
     .section-header h2 {
         font-size: 1.5em;
+    }
+}
+
+/* ============= ADMIN — UX PROFESIONAL MÓVIL ============= */
+
+@media (max-width: 768px) {
+
+    /* AM-01: Full-bleed — sin borde redondeado ni sombra de contenedor */
+    .container {
+        border-radius: 0;
+        box-shadow: none;
+        min-height: 100dvh;
+    }
+
+    /* AM-02: BARRA DE NAVEGACIÓN INFERIOR
+       Patrón nativo iOS/Android — acciones al alcance del pulgar */
+    .main-nav {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        z-index: 500;
+        overflow-x: auto;
+        overflow-y: hidden;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        background: var(--dark-color);
+        box-shadow: 0 -3px 24px rgba(0,0,0,0.3);
+        border-top: 1px solid rgba(255,255,255,0.08);
+        /* Notch / Home indicator de iPhone */
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .main-nav::-webkit-scrollbar { display: none; }
+
+    .nav-btn {
+        flex: 0 0 auto;
+        min-width: 70px;
+        padding: 10px 6px 8px;
+        font-size: 0.6em;
+        gap: 4px;
+    }
+
+    .nav-btn .icon {
+        font-size: 1.5em;
+    }
+
+    /* AM-03: Contenido principal — margen inferior para no quedar
+       oculto detrás de la barra de navegación inferior */
+    main {
+        padding: 16px 16px calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* AM-04: MODALES — PANTALLA COMPLETA + DESLIZAMIENTO DESDE ABAJO
+       Bottom sheet nativo (patrón de Google Maps, Airbnb, Gmail) */
+    .modal.active {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .modal-content {
+        border-radius: 22px 22px 0 0;
+        max-width: 100%;
+        width: 100%;
+        max-height: 91vh;
+        padding: 0 16px calc(20px + env(safe-area-inset-bottom, 0px));
+        animation: adminMobileModal 0.33s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* Handle visual — indica que el modal se puede cerrar deslizando */
+    .modal-content::before {
+        content: '';
+        display: block;
+        width: 38px;
+        height: 4px;
+        background: #dde1e7;
+        border-radius: 2px;
+        margin: 14px auto 20px;
+    }
+
+    @keyframes adminMobileModal {
+        from { transform: translateY(40px); opacity: 0.7; }
+        to   { transform: translateY(0);    opacity: 1;   }
+    }
+
+    /* AM-05: CTAs de sección — ancho completo, más fácil de tocar */
+    .section-header .btn-primary {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 14px;
+    }
+
+    /* AM-06: Dashboard — 2 columnas compactas */
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .stat-card {
+        padding: 16px 12px;
+    }
+
+    .stat-number {
+        font-size: 1.8em;
+    }
+
+    /* AM-07: Filtros horizontales con scroll — no se cortan */
+    .filtros-pedido,
+    .reportes-periodo-rapido,
+    .inventario-categorias {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 4px;
+    }
+
+    .filtros-pedido::-webkit-scrollbar,
+    .reportes-periodo-rapido::-webkit-scrollbar,
+    .inventario-categorias::-webkit-scrollbar { display: none; }
+
+    /* AM-08: Rango de fechas — stack vertical */
+    .rango-fechas-inputs {
+        flex-direction: column;
+    }
+
+    .fecha-separador { display: none; }
+
+    /* AM-09: Secciones de configuración — ancho completo, sin borde */
+    .config-restaurante,
+    .config-ubicacion,
+    .config-logo {
+        max-width: 100%;
+        padding: 20px 14px;
+        border-radius: 0;
+        box-shadow: none;
+        margin: 0 0 1px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    /* AM-10: Grids — 1 columna en móvil */
+    .usuarios-grid,
+    .mesas-para-cobrar {
+        grid-template-columns: 1fr;
+    }
+
+    /* Facturación: 2 stats en fila */
+    .facturacion-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    /* AM-11: Acciones — botones apilados verticalmente */
+    .form-actions,
+    .cuenta-actions,
+    .division-actions {
+        flex-direction: column;
+    }
+
+    .form-actions button,
+    .cuenta-actions button,
+    .division-actions button {
+        width: 100%;
+    }
+
+    .mesa-cobrar-actions {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    /* AM-12: División de cuenta resultado — 1 columna */
+    .division-resultado {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    /* AM-13: Menú de platillos en modal de pedido —
+       tiles más pequeños, más por fila, más espacio para lista */
+    .menu-pedido-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        max-height: 210px;
     }
 }
