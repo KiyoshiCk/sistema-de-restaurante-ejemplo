@@ -2221,6 +2221,50 @@ button:disabled {
     min-width: fit-content;
 }
 
+/* Activity feed — móvil: la fecha baja a su propia línea */
+@media (max-width: 600px) {
+    .activity-item {
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        padding: 10px 12px;
+    }
+
+    .activity-content {
+        flex: 1 1 100%;   /* ocupa toda la fila → fecha queda abajo */
+        min-width: 0;
+    }
+
+    /* Nombre largo → ellipsis en vez de romper el layout */
+    .activity-nombre {
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .activity-rol-badge {
+        flex-shrink: 0;
+    }
+
+    /* Descripción larga → máximo 2 líneas */
+    .activity-desc {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    /* Fecha baja a su propia línea, alineada a la izquierda bajo el texto */
+    .activity-item .time {
+        flex: 0 0 100%;
+        text-align: left;
+        font-size: 0.73em;
+        padding-top: 4px;
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
+        margin-top: 2px;
+    }
+}
+
 /* ============= REPORTES ============= */
 .reportes-filtros {
     display: flex;
