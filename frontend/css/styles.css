@@ -578,6 +578,10 @@
     --shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -4106,6 +4110,7 @@ button:disabled {
 .parallax-hero {
     position: relative;
     height: 100vh;
+    height: 100dvh; /* dvh: descuenta la barra de navegación del browser en móvil */
     min-height: 600px;
     display: flex;
     align-items: center;
@@ -4217,36 +4222,42 @@ button:disabled {
 }
 
 .scroll-indicator {
+    position: absolute;         /* sacado del flujo del contenido centrado */
+    bottom: 36px;               /* anclado al fondo del hero */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
     display: inline-flex;
     flex-direction: column;
     align-items: center;
     color: rgba(255,255,255,0.7);
     text-decoration: none;
     font-size: 0.9rem;
-    animation: fadeInUp 1s ease-out 0.4s both;
-    transition: all 0.3s ease;
+    animation: fadeInUp 1s ease-out 0.6s both;
+    transition: color 0.3s ease, transform 0.3s ease;
     font-weight: 500;
     letter-spacing: 1px;
+    white-space: nowrap;
 }
 
 .scroll-indicator:hover {
-    transform: translateY(5px);
     color: white;
+    transform: translateX(-50%) translateY(4px);
 }
 
 .scroll-indicator span {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     font-weight: 500;
     text-transform: uppercase;
-    font-size: 0.8em;
+    font-size: 0.75em;
     letter-spacing: 2px;
 }
 
 .scroll-arrow {
-    width: 24px;
-    height: 24px;
-    border-right: 2px solid rgba(255,255,255,0.5);
-    border-bottom: 2px solid rgba(255,255,255,0.5);
+    width: 28px;
+    height: 28px;
+    border-right: 2.5px solid rgba(255,255,255,0.7);
+    border-bottom: 2.5px solid rgba(255,255,255,0.7);
     transform: rotate(45deg);
     animation: bounce 2s infinite;
 }
@@ -4460,11 +4471,10 @@ body.cliente-view .container-cliente {
         grid-template-columns: 1fr;
     }
 
-    /* MUX-04: Parallax 100vh → 78vh — menú visible sin scroll total */
-    .parallax-hero {
-        height: 78vh;
-        height: 78svh; /* svh descarta barra de dirección de Safari iOS */
-        min-height: 480px;
+    /* MUX-04: Hero ya usa 100dvh con la unidad correcta — sin override necesario */
+    /* Ajustar margen inferior de la flecha para el home indicator de iPhone */
+    .scroll-indicator {
+        bottom: calc(28px + env(safe-area-inset-bottom, 0px));
     }
 
     /* MUX-05: Categorías menú cliente — scroll horizontal, sólo icono en móvil */
