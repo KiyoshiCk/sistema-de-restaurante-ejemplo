@@ -630,6 +630,12 @@ body.cliente-view h4 {
     padding: 0 24px 60px;
 }
 
+@media (max-width: 768px) {
+    .container-cliente {
+        padding: 0 12px 60px;
+    }
+}
+
 .cliente-header {
     text-align: center;
     padding: 60px 20px;
@@ -3678,39 +3684,62 @@ button:disabled {
 
 /* Responsive menú cliente */
 @media (max-width: 768px) {
+    /* CL-02: Barra de categorías — scroll horizontal, sin wrap */
+    .menu-cliente-categorias {
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 0 12px 8px;
+        margin-bottom: 28px;
+        gap: 8px;
+    }
+    .menu-cliente-categorias::-webkit-scrollbar { display: none; }
+
+    /* CL-03/CL-04: Cards más compactas */
+    .menu-cliente-item-body {
+        padding: 18px 16px 18px;
+    }
+    .menu-cliente-item-header {
+        height: 160px;
+    }
+
+    /* CL-05: Menos gap entre tarjetas */
     .menu-cliente-grid {
         grid-template-columns: 1fr;
-        gap: 24px;
+        gap: 16px;
     }
 
     .menu-digital-title {
         font-size: 2em;
     }
-    
+
     .categoria-btn {
-        padding: 12px 20px;
-        font-size: 0.88em;
+        padding: 10px 14px;
+        font-size: 0.82em;
+        flex: 0 0 auto;
     }
 
     .categoria-btn span {
         display: none;
     }
-
     .categoria-btn i {
-        font-size: 1.2em;
+        font-size: 1.25em;
     }
 
+    /* CL-07: Menos espacio muerto encima del menú */
     .menu-section-header {
-        padding: 50px 16px 20px;
+        padding: 32px 16px 16px;
     }
 
+    /* CL-08: Footer 2×2 en lugar de 1 columna */
     .footer-content {
         grid-template-columns: 1fr;
-        gap: 30px;
+        gap: 28px;
     }
-
     .footer-info {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
         gap: 20px;
     }
 }
@@ -4438,19 +4467,13 @@ body.cliente-view .container-cliente {
         min-height: 480px;
     }
 
-    /* MUX-05: Categorías menú cliente — icono + texto en columna (no solo icono) */
+    /* MUX-05: Categorías menú cliente — scroll horizontal, sólo icono en móvil */
+    /* (La barra ya es nowrap desde CL-02 — aquí solo refinamos el botón) */
     .categoria-btn {
-        padding: 10px 12px;
-        flex-direction: column;
-        gap: 4px;
-        min-width: 64px;
-    }
-
-    .categoria-btn span {
-        display: block; /* override del display:none anterior */
-        font-size: 0.68em;
-        letter-spacing: 0;
-        white-space: nowrap;
+        padding: 10px 14px;
+        flex-direction: row;
+        gap: 0;
+        min-width: 44px;
     }
 }
 
