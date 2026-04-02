@@ -49,6 +49,10 @@ const db = new Database(DB_PATH);
 // Habilitar WAL mode para mejor rendimiento
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+db.pragma('busy_timeout = 5000');   // Reintentar 5 s en contención de escritura antes de SQLITE_BUSY
+db.pragma('synchronous = NORMAL');  // Seguro con WAL, ~30% más rápido que FULL
+db.pragma('cache_size = -16000');   // 16 MB de caché de páginas
+db.pragma('temp_store = MEMORY');   // Tablas temporales en RAM
 
 console.log(`📦 Base de datos SQLite: ${DB_PATH}`);
 
@@ -274,14 +278,21 @@ try {
     db.exec(`
         CREATE INDEX IF NOT EXISTS idx_pedidos_estado ON pedidos(estado);
         CREATE INDEX IF NOT EXISTS idx_pedidos_mesaId ON pedidos(mesaId);
+        CREATE INDEX IF NOT EXISTS idx_pedidos_mesaNumero ON pedidos(mesaNumero);
         CREATE INDEX IF NOT EXISTS idx_pedidos_fecha ON pedidos(fecha);
         CREATE INDEX IF NOT EXISTS idx_facturas_fecha ON facturas(fecha);
         CREATE INDEX IF NOT EXISTS idx_facturas_mesaNumero ON facturas(mesaNumero);
         CREATE INDEX IF NOT EXISTS idx_inventario_categoria ON inventario(categoria);
+        CREATE INDEX IF NOT EXISTS idx_inventario_stock ON inventario(cantidad, stockMinimo);
         CREATE INDEX IF NOT EXISTS idx_actividad_fecha ON actividad(fecha);
         CREATE INDEX IF NOT EXISTS idx_historial_costos_inventarioId ON historial_costos(inventarioId);
     `);
-} catch {}
+} catch (e) { console.warn('⚠️ Error creando índices:', e.message); }
+
+// Restricción única en número de mesa (previene duplicados a nivel de BD)
+try {
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_mesas_numero ON mesas(numero)');
+} catch (e) { console.warn('⚠️ No se pudo crear índice único en mesas.numero:', e.message); }
 
 // Migración: agregar costoAnterior si no existe
 try {
@@ -984,25 +995,28 @@ app.put('/api/inventario/:id', verificarToken, soloAdmin, (req, res) => {
         const costoFinal = costo ?? existing.costo;
         const costoAnteriorFinal = existing.costo;
 
-        // Registrar cambio de costo si el precio cambió
-        if (costo !== undefined && costo !== null && costo !== existing.costo && existing.costo > 0) {
-            const variacion = ((costo - existing.costo) / existing.costo) * 100;
-            db.prepare('INSERT INTO historial_costos (_id, inventarioId, costoAnterior, costoNuevo, variacion) VALUES (?, ?, ?, ?, ?)')
-                .run(generarId(), req.params.id, existing.costo, costo, Math.round(variacion * 100) / 100);
-        }
+        const actualizarTx = db.transaction(() => {
+            // Registrar cambio de costo si el precio cambió
+            if (costo !== undefined && costo !== null && costo !== existing.costo && existing.costo > 0) {
+                const variacion = ((costo - existing.costo) / existing.costo) * 100;
+                db.prepare('INSERT INTO historial_costos (_id, inventarioId, costoAnterior, costoNuevo, variacion) VALUES (?, ?, ?, ?, ?)')
+                    .run(generarId(), req.params.id, existing.costo, costo, Math.round(variacion * 100) / 100);
+            }
 
-        db.prepare('UPDATE inventario SET nombre=?, categoria=?, cantidad=?, unidad=?, stockMinimo=?, costo=?, costoAnterior=?, updatedAt=? WHERE _id=?')
-            .run(
-                nombre ?? existing.nombre,
-                categoria ?? existing.categoria,
-                cantidad ?? existing.cantidad,
-                unidad ?? existing.unidad,
-                stockMinimo ?? existing.stockMinimo,
-                costoFinal,
-                (costo !== undefined && costo !== null && costo !== existing.costo) ? costoAnteriorFinal : (existing.costoAnterior || 0),
-                now(),
-                req.params.id
-            );
+            db.prepare('UPDATE inventario SET nombre=?, categoria=?, cantidad=?, unidad=?, stockMinimo=?, costo=?, costoAnterior=?, updatedAt=? WHERE _id=?')
+                .run(
+                    nombre ?? existing.nombre,
+                    categoria ?? existing.categoria,
+                    cantidad ?? existing.cantidad,
+                    unidad ?? existing.unidad,
+                    stockMinimo ?? existing.stockMinimo,
+                    costoFinal,
+                    (costo !== undefined && costo !== null && costo !== existing.costo) ? costoAnteriorFinal : (existing.costoAnterior || 0),
+                    now(),
+                    req.params.id
+                );
+        });
+        actualizarTx();
         const item = db.prepare('SELECT * FROM inventario WHERE _id = ?').get(req.params.id);
         res.json(item);
     } catch (error) {
@@ -1012,9 +1026,13 @@ app.put('/api/inventario/:id', verificarToken, soloAdmin, (req, res) => {
 
 app.delete('/api/inventario/:id', verificarToken, soloAdmin, (req, res) => {
     try {
-        db.prepare('DELETE FROM historial_costos WHERE inventarioId = ?').run(req.params.id);
-        const result = db.prepare('DELETE FROM inventario WHERE _id = ?').run(req.params.id);
-        if (result.changes > 0) {
+        let changes = 0;
+        const eliminarTx = db.transaction(() => {
+            db.prepare('DELETE FROM historial_costos WHERE inventarioId = ?').run(req.params.id);
+            changes = db.prepare('DELETE FROM inventario WHERE _id = ?').run(req.params.id).changes;
+        });
+        eliminarTx();
+        if (changes > 0) {
             res.json({ message: 'Item eliminado' });
         } else {
             res.status(404).json({ error: 'Item no encontrado' });
@@ -1064,10 +1082,18 @@ app.post('/api/actividad', verificarToken, (req, res) => {
         const { tipo, usuario } = req.body;
         // Sanitizar descripcion: truncar a 500 chars
         const descripcion = String(req.body.descripcion || '').substring(0, 500);
-        db.prepare('INSERT INTO actividad (_id, tipo, descripcion, usuario) VALUES (?, ?, ?, ?)')
-            .run(_id, tipo, descripcion, String(usuario || '').substring(0, 100));
-        // Auto-limpiar: mantener solo los últimos 500 registros
-        db.prepare('DELETE FROM actividad WHERE _id NOT IN (SELECT _id FROM actividad ORDER BY fecha DESC LIMIT 500)').run();
+        const insertarActividadTx = db.transaction(() => {
+            db.prepare('INSERT INTO actividad (_id, tipo, descripcion, usuario) VALUES (?, ?, ?, ?)')
+                .run(_id, tipo, descripcion, String(usuario || '').substring(0, 100));
+            // Auto-limpiar: mantener solo los últimos 500 registros
+            // Usa la fecha del registro en la posición 500 como frontera (O(log n) con el índice)
+            db.prepare(`
+                DELETE FROM actividad WHERE fecha < (
+                    SELECT fecha FROM actividad ORDER BY fecha DESC LIMIT 1 OFFSET 499
+                )
+            `).run();
+        });
+        insertarActividadTx();
         const act = db.prepare('SELECT * FROM actividad WHERE _id = ?').get(_id);
         emitirEvento('nueva-actividad', act);
         res.status(201).json(act);
