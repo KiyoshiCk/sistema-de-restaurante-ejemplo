@@ -1,5 +1,5 @@
-// Botón flotante de ubicación — solo visible mientras el usuario está navegando el menú
-// Se oculta en la portada (hero) y en el footer para no estorbar ni duplicar info
+// Botón flotante de ubicación — visible siempre excepto cuando el footer está en pantalla
+// (el footer ya muestra la dirección; en el hero el botón está posicionado para no tapar "Explorar Menú")
 (function() {
     const API_URL = (typeof API_CONFIG !== 'undefined' && API_CONFIG.url)
         ? API_CONFIG.url : 'http://localhost:3000/api';
@@ -24,42 +24,18 @@
             btn.href = url;
             btn.target = '_blank';
             btn.rel = 'noopener';
-            // Empieza oculto — el observer decide cuando mostrarlo
-            btn.className = 'btn-ubicacion-maps-floating ubicacion-btn-oculto';
+            btn.className = 'btn-ubicacion-maps-floating';
             btn.setAttribute('aria-label', 'Ver ubicación en Google Maps');
             btn.innerHTML = '<i class="fa-solid fa-location-dot"></i><span class="ubicacion-label">Ubícanos</span>';
             document.body.appendChild(btn);
 
-            if (!('IntersectionObserver' in window)) {
-                // Sin soporte → mostrar siempre
-                btn.classList.remove('ubicacion-btn-oculto');
-                return;
-            }
-
-            // Ocultar cuando el hero O el footer están en pantalla
-            // Hero:   el usuario ve la portada — ahí está "Explorar Menú", el botón molestaría
-            // Footer: el usuario ya ve la dirección — el botón duplicaría info
-            // Visible solo en el tramo del menú, donde es realmente útil
-            let heroVisible   = true; // empieza en el hero
-            let footerVisible = false;
-
-            const update = () => {
-                btn.classList.toggle('ubicacion-btn-oculto', heroVisible || footerVisible);
-            };
-
-            const heroEl   = document.querySelector('.parallax-hero');
+            // Ocultar solo cuando el footer es visible — ya muestra la dirección ahí
             const footerEl = document.querySelector('.cliente-footer');
-
-            if (heroEl) {
+            if (footerEl && 'IntersectionObserver' in window) {
                 new IntersectionObserver(
-                    ([entry]) => { heroVisible = entry.isIntersecting; update(); },
-                    { threshold: 0.05 }
-                ).observe(heroEl);
-            }
-
-            if (footerEl) {
-                new IntersectionObserver(
-                    ([entry]) => { footerVisible = entry.isIntersecting; update(); },
+                    ([entry]) => {
+                        btn.classList.toggle('ubicacion-btn-oculto', entry.isIntersecting);
+                    },
                     { threshold: 0.05 }
                 ).observe(footerEl);
             }

@@ -113,7 +113,8 @@
     /* En táctil no existe :hover — mostrar el botón expandido siempre */
     .btn-ubicacion-maps-floating {
         right: 16px;
-        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        /* 96px sube el botón por encima del área de "Explorar Menú" (bottom: 36-90px) */
+        bottom: calc(96px + env(safe-area-inset-bottom, 0px));
         width: auto;
         height: 48px;
         border-radius: 30px;
