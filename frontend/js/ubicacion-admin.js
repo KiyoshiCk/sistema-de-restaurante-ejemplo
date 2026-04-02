@@ -4,7 +4,7 @@
         ? API_CONFIG.url : 'http://localhost:3000/api';
     let marker, map;
     let ubicacion = {
-        ciudad: '', barrio: '', direccion: '', region: '', codigoPostal: '', lat: -8.1713, lng: -78.5143
+        ciudad: '', barrio: '', direccion: '', region: '', codigoPostal: '', lat: null, lng: null
     };
 
     async function cargarUbicacion() {
@@ -115,27 +115,46 @@
             mapaEl.style.display = 'block';
             window.loadLeafletAssets(() => {
                 if (!map) {
-                    map = L.map('mapa-ubicacion').setView([
-                        parseFloat(document.getElementById('lat').value) || -8.1713,
-                        parseFloat(document.getElementById('lng').value) || -78.5143
-                    ], 15);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '© OpenStreetMap'
-                    }).addTo(map);
-                    marker = L.marker([
-                        parseFloat(document.getElementById('lat').value) || -8.1713,
-                        parseFloat(document.getElementById('lng').value) || -78.5143
-                    ], { draggable: true }).addTo(map);
-                    marker.on('dragend', function(e) {
-                        const pos = marker.getLatLng();
-                        document.getElementById('lat').value = pos.lat.toFixed(6);
-                        document.getElementById('lng').value = pos.lng.toFixed(6);
-                    });
-                    map.on('click', function(e) {
-                        marker.setLatLng(e.latlng);
-                        document.getElementById('lat').value = e.latlng.lat.toFixed(6);
-                        document.getElementById('lng').value = e.latlng.lng.toFixed(6);
-                    });
+                    const latGuardada = parseFloat(document.getElementById('lat').value);
+                    const lngGuardada = parseFloat(document.getElementById('lng').value);
+                    const tieneCoords = !isNaN(latGuardada) && !isNaN(lngGuardada);
+
+                    const iniciarMapa = (lat, lng, zoom) => {
+                        map = L.map('mapa-ubicacion').setView([lat, lng], zoom);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '\u00a9 OpenStreetMap'
+                        }).addTo(map);
+                        if (tieneCoords) {
+                            marker = L.marker([latGuardada, lngGuardada], { draggable: true }).addTo(map);
+                        } else {
+                            marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                            document.getElementById('lat').value = lat.toFixed(6);
+                            document.getElementById('lng').value = lng.toFixed(6);
+                        }
+                        marker.on('dragend', function() {
+                            const pos = marker.getLatLng();
+                            document.getElementById('lat').value = pos.lat.toFixed(6);
+                            document.getElementById('lng').value = pos.lng.toFixed(6);
+                        });
+                        map.on('click', function(e) {
+                            marker.setLatLng(e.latlng);
+                            document.getElementById('lat').value = e.latlng.lat.toFixed(6);
+                            document.getElementById('lng').value = e.latlng.lng.toFixed(6);
+                        });
+                    };
+
+                    if (tieneCoords) {
+                        // Coords ya guardadas — centrar en ellas
+                        iniciarMapa(latGuardada, lngGuardada, 15);
+                    } else if (navigator.geolocation) {
+                        // Sin coords — usar ubicación real del navegador
+                        navigator.geolocation.getCurrentPosition(
+                            pos => iniciarMapa(pos.coords.latitude, pos.coords.longitude, 15),
+                            ()  => iniciarMapa(20, 0, 2)  // permiso denegado — vista mundial
+                        );
+                    } else {
+                        iniciarMapa(20, 0, 2); // sin geolocation API — vista mundial
+                    }
                 } else {
                     map.invalidateSize();
                 }

@@ -172,8 +172,8 @@ db.exec(`
         direccion TEXT DEFAULT '',
         codigoPostal TEXT DEFAULT '',
         region TEXT DEFAULT '',
-        lat REAL DEFAULT -8.1713,
-        lng REAL DEFAULT -78.5143,
+        lat REAL DEFAULT NULL,
+        lng REAL DEFAULT NULL,
         createdAt TEXT DEFAULT (datetime('now')),
         updatedAt TEXT DEFAULT (datetime('now'))
     );
@@ -1290,7 +1290,7 @@ app.post('/api/restore', verificarToken, soloAdmin, (req, res) => {
                             cfg.horaAbre||'', cfg.horaCierra||'', cfg.horaAbreDom||'', cfg.horaCierraDom||'',
                             cfg.metodosPago||'', cfg.moneda||'S/', cfg.monedaCodigo||'PEN', cfg.cocinas||'',
                             cfg.ciudad||'', cfg.barrio||'', cfg.direccion||'', cfg.codigoPostal||'',
-                            cfg.region||'', cfg.lat??-8.1713, cfg.lng??-78.5143, now(), existeCfg._id);
+                            cfg.region||'', cfg.lat??null, cfg.lng??null, now(), existeCfg._id);
                 }
             }
         });
