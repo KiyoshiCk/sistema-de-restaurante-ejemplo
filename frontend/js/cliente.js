@@ -15,7 +15,7 @@ class ClienteApp {
             this.cargarMenu()
         ]);
         this.aplicarConfig();
-        this.setupFiltros();
+        this.buildCategoriaBtns();
         this.mostrarMenu();
         this.setupParallax();
         this.setupSmoothScroll();
@@ -138,16 +138,15 @@ class ClienteApp {
             }
         ];
 
-        schema.hasMenu = {
-            "@type": "Menu",
-            "name": "Menú Digital",
-            "hasMenuSection": [
-                { "@type": "MenuSection", "name": "Entradas" },
-                { "@type": "MenuSection", "name": "Platos Fuertes" },
-                { "@type": "MenuSection", "name": "Postres" },
-                { "@type": "MenuSection", "name": "Bebidas" }
-            ]
-        };
+        // Secciones del menú generadas dinámicamente desde los datos reales
+        const categoriasSchema = [...new Set((this.menu || []).map(p => p.categoria).filter(Boolean))];
+        if (categoriasSchema.length > 0) {
+            schema.hasMenu = {
+                "@type": "Menu",
+                "name": "Menú Digital",
+                "hasMenuSection": categoriasSchema.map(c => ({ "@type": "MenuSection", "name": c }))
+            };
+        }
 
         const schemaEl = document.getElementById('schema-jsonld');
         if (schemaEl) schemaEl.textContent = JSON.stringify(schema, null, 2);
@@ -295,25 +294,49 @@ class ClienteApp {
         }
     }
 
-    setupFiltros() {
-        document.querySelectorAll('.categoria-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Obtener siempre el botón, aunque el clic caiga en el ícono o span hijo
-                const boton = e.target.closest('.categoria-btn');
-                if (!boton) return;
+    buildCategoriaBtns() {
+        const nav = document.querySelector('.menu-cliente-categorias');
+        if (!nav) return;
 
-                // Evitar clics repetidos en el mismo botón
-                if (boton.classList.contains('active')) return;
-                
-                document.querySelectorAll('.categoria-btn').forEach(b => b.classList.remove('active'));
+        // Extraer categorías únicas del menú real, en orden de aparición
+        const categorias = [...new Set((this.menu || []).map(p => p.categoria).filter(Boolean))];
+
+        // Iconos para categorías conocidas; fa-tag como fallback para cualquier otra
+        const iconoMap = {
+            'Entradas':       'fa-leaf',
+            'Platos Fuertes': 'fa-utensils',
+            'Postres':        'fa-cake-candles',
+            'Bebidas':        'fa-glass-water'
+        };
+
+        // Limpiar botones dinámicos previos (re-renderizado seguro)
+        nav.querySelectorAll('.categoria-btn[data-dinamico]').forEach(b => b.remove());
+
+        // Crear un botón por cada categoría encontrada en el menú
+        for (const cat of categorias) {
+            const icono = iconoMap[cat] || 'fa-tag';
+            const btn = document.createElement('button');
+            btn.className = 'categoria-btn';
+            btn.dataset.categoria = cat;
+            btn.dataset.dinamico = '1';
+            btn.innerHTML = `<i class="fa-solid ${icono}"></i><span>${cat}</span>`;
+            nav.appendChild(btn);
+        }
+
+        // Configurar listeners en todos los botones (incluido "Todos")
+        nav.querySelectorAll('.categoria-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const boton = e.target.closest('.categoria-btn');
+                if (!boton || boton.classList.contains('active')) return;
+
+                nav.querySelectorAll('.categoria-btn').forEach(b => b.classList.remove('active'));
                 boton.classList.add('active');
-                
-                // Fade-out suave antes de cambiar contenido
+
                 const grid = document.getElementById('menu-cliente-grid');
                 grid.style.opacity = '0';
                 grid.style.transform = 'translateY(10px)';
                 grid.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
-                
+
                 setTimeout(() => {
                     this.mostrarMenu(boton.dataset.categoria);
                     grid.style.opacity = '1';

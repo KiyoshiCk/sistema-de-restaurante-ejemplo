@@ -545,64 +545,7 @@ const inicializarDatos = () => {
         const mesasCount = db.prepare('SELECT COUNT(*) as count FROM mesas').get().count;
         const usuariosCount = db.prepare('SELECT COUNT(*) as count FROM usuarios').get().count;
 
-        if (menuCount === 0) {
-            const menuPeruano = [
-                { nombre: "Ceviche de Pescado", categoria: "Entradas", precio: 35, descripcion: "Pescado fresco marinado en limón con ají limo, cebolla morada y camote", disponible: 1, icono: "🐟" },
-                { nombre: "Causa Limeña", categoria: "Entradas", precio: 22, descripcion: "Papa amarilla con limón, ají amarillo, rellena de atún o pollo", disponible: 1, icono: "🥔" },
-                { nombre: "Anticuchos de Corazón", categoria: "Entradas", precio: 28, descripcion: "Brochetas de corazón de res marinadas en especias peruanas", disponible: 1, icono: "🍢" },
-                { nombre: "Tequeños", categoria: "Entradas", precio: 18, descripcion: "Deditos de masa rellenos de queso fresco", disponible: 1, icono: "🧀" },
-                { nombre: "Lomo Saltado", categoria: "Platos Fuertes", precio: 42, descripcion: "Tiras de lomo fino salteado con cebolla, tomate, papas fritas y arroz", disponible: 1, icono: "🥩" },
-                { nombre: "Ají de Gallina", categoria: "Platos Fuertes", precio: 38, descripcion: "Pollo deshilachado en crema de ají amarillo con papas y aceitunas", disponible: 1, icono: "🍗" },
-                { nombre: "Arroz con Pollo", categoria: "Platos Fuertes", precio: 32, descripcion: "Arroz verde con cilantro acompañado de pollo y papa a la huancaína", disponible: 1, icono: "🍚" },
-                { nombre: "Tacu Tacu con Lomo", categoria: "Platos Fuertes", precio: 45, descripcion: "Mezcla de arroz y frijoles frita con lomo saltado encima", disponible: 1, icono: "🍛" },
-                { nombre: "Seco de Carne", categoria: "Platos Fuertes", precio: 40, descripcion: "Carne guisada con cilantro, frijoles y arroz", disponible: 1, icono: "🥘" },
-                { nombre: "Pescado a lo Macho", categoria: "Platos Fuertes", precio: 48, descripcion: "Pescado frito con salsa de mariscos cremosa", disponible: 1, icono: "🐠" },
-                { nombre: "Tallarín Saltado", categoria: "Platos Fuertes", precio: 35, descripcion: "Fideos salteados con carne o pollo al estilo chifa peruano", disponible: 1, icono: "🍝" },
-                { nombre: "Chicharrón de Pescado", categoria: "Platos Fuertes", precio: 38, descripcion: "Trozos de pescado frito crocante con yuca y salsa criolla", disponible: 1, icono: "🍤" },
-                { nombre: "Inca Kola", categoria: "Bebidas", precio: 8, descripcion: "La bebida nacional del Perú, sabor único", disponible: 1, icono: "🥤" },
-                { nombre: "Chicha Morada", categoria: "Bebidas", precio: 10, descripcion: "Refresco de maíz morado con especias y frutas", disponible: 1, icono: "🍹" },
-                { nombre: "Pisco Sour", categoria: "Bebidas", precio: 25, descripcion: "Cóctel de pisco, limón, jarabe y clara de huevo", disponible: 1, icono: "🍸" },
-                { nombre: "Emoliente", categoria: "Bebidas", precio: 7, descripcion: "Bebida caliente de hierbas medicinales", disponible: 1, icono: "☕" },
-                { nombre: "Limonada Frozen", categoria: "Bebidas", precio: 12, descripcion: "Limonada peruana bien helada", disponible: 1, icono: "🍋" },
-                { nombre: "Suspiro Limeño", categoria: "Postres", precio: 18, descripcion: "Manjar blanco con merengue de oporto", disponible: 1, icono: "🍮" },
-                { nombre: "Mazamorra Morada", categoria: "Postres", precio: 15, descripcion: "Postre de maíz morado con frutas", disponible: 1, icono: "🍇" },
-                { nombre: "Picarones", categoria: "Postres", precio: 16, descripcion: "Buñuelos de zapallo con miel de chancaca", disponible: 1, icono: "🍩" },
-                { nombre: "Alfajores", categoria: "Postres", precio: 12, descripcion: "Galletas rellenas de manjar blanco", disponible: 1, icono: "🍪" },
-                { nombre: "Arroz con Leche", categoria: "Postres", precio: 14, descripcion: "Arroz cremoso con leche, canela y pasas", disponible: 1, icono: "🍚" }
-            ];
-
-            const insertMenu = db.prepare('INSERT INTO menu (_id, nombre, categoria, precio, descripcion, disponible, icono) VALUES (?, ?, ?, ?, ?, ?, ?)');
-            const insertManyMenu = db.transaction((items) => {
-                for (const item of items) {
-                    insertMenu.run(generarId(), item.nombre, item.categoria, item.precio, item.descripcion, item.disponible, item.icono);
-                }
-            });
-            insertManyMenu(menuPeruano);
-            console.log('✅ Menú peruano inicializado');
-        }
-
-        if (mesasCount === 0) {
-            const mesas = [
-                { numero: 1, capacidad: 4, estado: "disponible" },
-                { numero: 2, capacidad: 2, estado: "disponible" },
-                { numero: 3, capacidad: 6, estado: "disponible" },
-                { numero: 4, capacidad: 4, estado: "disponible" },
-                { numero: 5, capacidad: 8, estado: "disponible" },
-                { numero: 6, capacidad: 2, estado: "disponible" },
-                { numero: 7, capacidad: 4, estado: "disponible" },
-                { numero: 8, capacidad: 4, estado: "disponible" },
-                { numero: 9, capacidad: 6, estado: "disponible" },
-                { numero: 10, capacidad: 2, estado: "disponible" }
-            ];
-            const insertMesa = db.prepare('INSERT INTO mesas (_id, numero, capacidad, estado) VALUES (?, ?, ?, ?)');
-            const insertManyMesas = db.transaction((items) => {
-                for (const item of items) {
-                    insertMesa.run(generarId(), item.numero, item.capacidad, item.estado);
-                }
-            });
-            insertManyMesas(mesas);
-            console.log('✅ Mesas inicializadas');
-        }
+        // Menú y mesas: el administrador los crea desde el panel — no se precargan datos.
 
         if (usuariosCount === 0) {
             const usuariosPorDefecto = [
