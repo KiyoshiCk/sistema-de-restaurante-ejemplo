@@ -102,18 +102,35 @@
 
 /* En móvil, más pequeño y pegado a la esquina */
 @media (max-width: 768px) {
+    /* En táctil no existe :hover — mostrar el botón expandido siempre */
     .btn-ubicacion-maps-floating {
-        right: 18px;
-        bottom: 18px;
-        width: 50px;
-        height: 50px;
+        right: 16px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        width: auto;
+        height: 48px;
+        border-radius: 30px;
+        padding: 0 18px 0 0;
+        gap: 2px;
     }
     .btn-ubicacion-maps-floating i {
-        min-width: 50px;
-        font-size: 1.15em;
+        min-width: 48px;
+        font-size: 1.1em;
     }
-    .btn-ubicacion-maps-floating:hover {
-        width: 165px;
+    .btn-ubicacion-maps-floating .ubicacion-label {
+        max-width: 120px;  /* siempre visible en móvil */
+        opacity: 1;
+        font-size: 0.88em;
+        padding-right: 4px;
+    }
+    /* Sin animación de pulso en móvil (consume batería, distrae) */
+    .btn-ubicacion-maps-floating::before {
+        animation: none;
+        opacity: 0;
+    }
+    /* Feedback táctil claro al presionar */
+    .btn-ubicacion-maps-floating:active {
+        transform: scale(0.94);
+        box-shadow: 0 3px 12px rgba(9, 132, 227, 0.3);
     }
 }
 .menu-digital-title {
