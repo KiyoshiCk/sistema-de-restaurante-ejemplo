@@ -3369,8 +3369,8 @@ class AdminApp {
                 <div class="usuario-header">
                     <span class="usuario-icono">${rolIcono[usuario.rol] || '<i class="fa-solid fa-user"></i>'}</span>
                     <div class="usuario-info">
-                        <h3>${usuario.nombre}</h3>
-                        <span class="usuario-username">@${usuario.username}</span>
+                        <h3>${this.escapeHTML(usuario.nombre)}</h3>
+                        <span class="usuario-username">@${this.escapeHTML(usuario.username)}</span>
                     </div>
                 </div>
                 <div class="usuario-detalles">

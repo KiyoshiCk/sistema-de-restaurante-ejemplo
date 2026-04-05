@@ -159,7 +159,7 @@ class ClienteApp {
         }
 
         // === Footer ===
-        setHTML('footer-nombre', `<i class="fa-solid fa-utensils"></i> <span>${nombre}</span>`);
+        setHTML('footer-nombre', `<i class="fa-solid fa-utensils"></i> <span>${this.escapeHTML(nombre)}</span>`);
         setText('footer-slogan', slogan);
         setText('footer-copyright-nombre', nombre);
         setText('footer-horario-semana', c.horarioSemana || '');
@@ -179,7 +179,15 @@ class ClienteApp {
         if (c.telefono || c.email || c.whatsapp) {
             if (footerTelEl) {
                 if (c.whatsapp) {
-                    footerTelEl.innerHTML = `<a href="https://wa.me/${c.whatsapp}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;"><i class="fa-brands fa-whatsapp"></i> ${c.telefono || c.whatsapp}</a>`;
+                    const waLink = document.createElement('a');
+                    waLink.href = `https://wa.me/${encodeURIComponent(String(c.whatsapp).replace(/\D/g, ''))}`;
+                    waLink.target = '_blank';
+                    waLink.rel = 'noopener';
+                    waLink.style.cssText = 'color:inherit;text-decoration:none;';
+                    waLink.innerHTML = '<i class="fa-brands fa-whatsapp"></i> ';
+                    waLink.appendChild(document.createTextNode(c.telefono || c.whatsapp));
+                    footerTelEl.innerHTML = '';
+                    footerTelEl.appendChild(waLink);
                 } else {
                     footerTelEl.textContent = c.telefono || '';
                 }
@@ -319,7 +327,10 @@ class ClienteApp {
             btn.className = 'categoria-btn';
             btn.dataset.categoria = cat;
             btn.dataset.dinamico = '1';
-            btn.innerHTML = `<i class="fa-solid ${icono}"></i><span>${cat}</span>`;
+            btn.innerHTML = `<i class="fa-solid ${icono}"></i>`;
+            const catSpan = document.createElement('span');
+            catSpan.textContent = cat;
+            btn.appendChild(catSpan);
             nav.appendChild(btn);
         }
 
