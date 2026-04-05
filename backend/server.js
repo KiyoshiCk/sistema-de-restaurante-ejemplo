@@ -17,12 +17,19 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*",
-        methods: ["GET", "POST", "PUT", "DELETE"]
+        origin: CORS_ORIGINS,
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        credentials: true
     }
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Whitelist de origenes permitidos — configurar CORS_ORIGIN en .env para producción
+// Ejemplo: CORS_ORIGIN=https://mi-restaurante.com,https://www.mi-restaurante.com
+const CORS_ORIGINS = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+    : ['http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000'];
 
 // JWT_SECRET: usar variable de entorno o generar uno seguro por instalación
 const JWT_SECRET_PATH = path.join(__dirname, '.jwt_secret');
@@ -69,7 +76,7 @@ app.use(helmet({
     contentSecurityPolicy: false       // el frontend corre en puerto separado
 }));
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: CORS_ORIGINS,
     credentials: true
 }));
 app.use(bodyParser.json({ limit: '10mb' }));
@@ -549,17 +556,24 @@ const inicializarDatos = () => {
 
         if (usuariosCount === 0) {
             const usuariosPorDefecto = [
-                { username: 'admin', password: 'admin123', nombre: 'Administrador', rol: 'administrador', activo: 1 },
-                { username: 'mesero', password: 'mesero123', nombre: 'Mesero', rol: 'mesero', activo: 1 },
-                { username: 'cocinero', password: 'cocinero123', nombre: 'Cocinero', rol: 'cocinero', activo: 1 }
+                { username: 'admin',    nombre: 'Administrador', rol: 'administrador', activo: 1 },
+                { username: 'mesero',   nombre: 'Mesero',        rol: 'mesero',        activo: 1 },
+                { username: 'cocinero', nombre: 'Cocinero',      rol: 'cocinero',      activo: 1 }
             ];
             const insertUsuario = db.prepare('INSERT INTO usuarios (_id, username, password, nombre, rol, activo) VALUES (?, ?, ?, ?, ?, ?)');
-            // Hashear contraseñas antes de guardar
+            console.log('\n╔══════════════════════════════════════════════════╗');
+            console.log('║  ⚠  CREDENCIALES INICIALES — SOLO PRIMERA VEZ  ║');
+            console.log('║  Ve a Admin → Usuarios y cámbialas de inmediato ║');
+            console.log('╠══════════════════════════════════════════════════╣');
             for (const item of usuariosPorDefecto) {
-                const hashedPassword = bcrypt.hashSync(item.password, 10);
+                // Contraseña aleatoria de 12 chars URL-safe (no predecible, única por instalación)
+                const rawPassword = crypto.randomBytes(9).toString('base64url');
+                const hashedPassword = bcrypt.hashSync(rawPassword, 10);
                 insertUsuario.run(generarId(), item.username, hashedPassword, item.nombre, item.rol, item.activo);
+                console.log(`║  ${item.username.padEnd(10)}: ${rawPassword.padEnd(16)}  ║`);
             }
-            console.log('✅ Usuarios inicializados (contraseñas hasheadas)');
+            console.log('╚══════════════════════════════════════════════════╝\n');
+            console.log('✅ Usuarios inicializados (contraseñas aleatorias hasheadas)');
         }
     } catch (error) {
         console.error('Error inicializando datos:', error);
@@ -1205,7 +1219,11 @@ app.get('/api/backup', verificarToken, soloAdmin, (req, res) => {
             facturas: formatRows(db.prepare('SELECT * FROM facturas').all(), ['items', 'pedidoIds']),
             inventario: db.prepare('SELECT * FROM inventario').all(),
             historial_costos: db.prepare('SELECT * FROM historial_costos').all(),
-            usuarios: db.prepare('SELECT _id, username, password, nombre, rol, activo, createdAt, updatedAt FROM usuarios').all(),
+            // Los hashes bcrypt NO se exportan — evita ataques de crackeo offline si el backup se filtra.
+            // En restore, los usuarios se marcan con password_redacted=true y el admin deberá
+            // resetear sus contraseñas desde el panel.
+            usuarios: db.prepare('SELECT _id, username, nombre, rol, activo, createdAt, updatedAt FROM usuarios').all()
+                .map(u => ({ ...u, password: '__REDACTED__', password_redacted: true })),
             actividad: db.prepare('SELECT * FROM actividad').all(),
             config: db.prepare('SELECT * FROM config LIMIT 1').get(),
             fecha: new Date().toISOString()
@@ -1267,7 +1285,15 @@ app.post('/api/restore', verificarToken, soloAdmin, (req, res) => {
                 db.prepare('DELETE FROM usuarios').run();
                 const stmt = db.prepare('INSERT INTO usuarios (_id, username, password, nombre, rol, activo, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
                 for (const item of usuarios) {
-                    stmt.run(item._id || generarId(), item.username, item.password, item.nombre, item.rol, item.activo ? 1 : 0, item.createdAt || now(), item.updatedAt || now());
+                    // Si el backup tiene la contraseña redactada, generar una temporal aleatoria
+                    // El admin deberá resetear las contraseñas desde el panel de Usuarios
+                    let passwordFinal = item.password;
+                    if (!passwordFinal || passwordFinal === '__REDACTED__' || item.password_redacted) {
+                        const temporal = crypto.randomBytes(9).toString('base64url');
+                        passwordFinal = bcrypt.hashSync(temporal, 10);
+                        console.warn(`⚠️  Restore: contraseña de "${item.username}" fue redactada en el backup. Password temporal generada — cámbiala en Admin → Usuarios.`);
+                    }
+                    stmt.run(item._id || generarId(), item.username, passwordFinal, item.nombre, item.rol, item.activo ? 1 : 0, item.createdAt || now(), item.updatedAt || now());
                 }
             }
             if (actividad && Array.isArray(actividad)) {
