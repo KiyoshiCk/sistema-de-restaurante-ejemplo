@@ -15,6 +15,13 @@ const multer = require('multer');
 
 const app = express();
 const server = http.createServer(app);
+
+// Whitelist de orígenes CORS — en producción definir CORS_ORIGIN en variables de entorno
+// Ejemplo: CORS_ORIGIN=https://mi-restaurante.com,https://www.mi-restaurante.com
+const CORS_ORIGINS = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+    : ['http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000'];
+
 const io = new Server(server, {
     cors: {
         origin: CORS_ORIGINS,
@@ -24,12 +31,6 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
-
-// Whitelist de origenes permitidos — configurar CORS_ORIGIN en .env para producción
-// Ejemplo: CORS_ORIGIN=https://mi-restaurante.com,https://www.mi-restaurante.com
-const CORS_ORIGINS = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-    : ['http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000'];
 
 // JWT_SECRET: usar variable de entorno o generar uno seguro por instalación
 const JWT_SECRET_PATH = path.join(__dirname, '.jwt_secret');
