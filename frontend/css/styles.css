@@ -2824,6 +2824,12 @@ button:disabled {
 }
 .inv-stat.filtrable.warning .inv-filtro-badge  { background: #f39c12; }
 .inv-stat.filtrable.danger  .inv-filtro-badge  { background: var(--danger-color); }
+.inv-stat.filtrable.success .inv-filtro-badge  { background: var(--success-color); }
+
+.inv-stat.filtrable.success.filtro-activo {
+    border-left-color: var(--success-color);
+    background: #f0fdf4;
+}
 
 @keyframes filtro-pop {
     from { transform: scale(0); opacity: 0; }

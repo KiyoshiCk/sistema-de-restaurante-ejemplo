@@ -1050,8 +1050,8 @@ class AdminApp {
                 this.guardarInventario();
             });
 
-            document.getElementById('filtro-categoria')?.addEventListener('change', () => this.cargarMenu());
-            document.getElementById('buscar-platillo')?.addEventListener('input', () => this.cargarMenu());
+            document.getElementById('filtro-categoria')?.addEventListener('change', () => this.renderizarMenu());
+            document.getElementById('buscar-platillo')?.addEventListener('input', () => this.renderizarMenu());
         }
 
         document.getElementById('form-pedido').addEventListener('submit', (e) => {
@@ -1111,22 +1111,89 @@ class AdminApp {
     
     cargarMenu() {
         if (this.usuario.rol !== 'administrador') return;
-        
+
+        if (this._menuFiltroDisp === undefined) this._menuFiltroDisp = '';
+
+        this.mostrarResumenMenu();
+        this.renderizarMenu();
+    }
+
+    mostrarResumenMenu() {
+        const container = document.getElementById('menu-resumen');
+        if (!container) return;
+
+        const total         = this.menu.length;
+        const disponibles   = this.menu.filter(p => p.disponible).length;
+        const noDisponibles = this.menu.filter(p => !p.disponible).length;
+        const f = this._menuFiltroDisp || '';
+
+        container.innerHTML = `
+            <div class="inv-stat filtrable${f === '' ? ' filtro-activo' : ''}" data-filtro="" title="Mostrar todos" style="cursor:pointer;">
+                <i class="fa-solid fa-utensils"></i>
+                <div>
+                    <span class="inv-stat-num">${total}</span>
+                    <span class="inv-stat-label">Total Platillos</span>
+                </div>
+                ${f === '' ? '<span class="inv-filtro-badge"><i class="fa-solid fa-filter"></i></span>' : ''}
+            </div>
+            <div class="inv-stat success filtrable${f === 'disponible' ? ' filtro-activo' : ''}" data-filtro="disponible" title="Filtrar: Disponibles" style="cursor:pointer;">
+                <i class="fa-solid fa-circle-check"></i>
+                <div>
+                    <span class="inv-stat-num">${disponibles}</span>
+                    <span class="inv-stat-label">Disponibles</span>
+                </div>
+                ${f === 'disponible' ? '<span class="inv-filtro-badge"><i class="fa-solid fa-filter"></i></span>' : ''}
+            </div>
+            <div class="inv-stat danger filtrable${f === 'no-disponible' ? ' filtro-activo' : ''}" data-filtro="no-disponible" title="Filtrar: No disponibles" style="cursor:pointer;">
+                <i class="fa-solid fa-ban"></i>
+                <div>
+                    <span class="inv-stat-num">${noDisponibles}</span>
+                    <span class="inv-stat-label">No disponibles</span>
+                </div>
+                ${f === 'no-disponible' ? '<span class="inv-filtro-badge"><i class="fa-solid fa-filter"></i></span>' : ''}
+            </div>
+        `;
+
+        container.querySelectorAll('.inv-stat.filtrable').forEach(card => {
+            card.addEventListener('click', () => {
+                const filtro = card.dataset.filtro;
+                this._menuFiltroDisp = (this._menuFiltroDisp === filtro && filtro !== '') ? '' : filtro;
+                this.mostrarResumenMenu();
+                this.renderizarMenu();
+            });
+        });
+    }
+
+    renderizarMenu() {
         const categoria = document.getElementById('filtro-categoria')?.value || '';
-        const busqueda = document.getElementById('buscar-platillo')?.value.toLowerCase() || '';
-        
+        const busqueda  = document.getElementById('buscar-platillo')?.value.toLowerCase() || '';
+        const dispFiltro = this._menuFiltroDisp || '';
+
         let menuFiltrado = this.menu;
-        
+
+        if (dispFiltro === 'disponible')    menuFiltrado = menuFiltrado.filter(p => p.disponible);
+        if (dispFiltro === 'no-disponible') menuFiltrado = menuFiltrado.filter(p => !p.disponible);
         if (categoria) menuFiltrado = menuFiltrado.filter(p => p.categoria === categoria);
-        if (busqueda) menuFiltrado = menuFiltrado.filter(p => 
+        if (busqueda)  menuFiltrado = menuFiltrado.filter(p =>
             p.nombre.toLowerCase().includes(busqueda) ||
             (p.descripcion && p.descripcion.toLowerCase().includes(busqueda))
         );
 
         const container = document.getElementById('lista-menu');
-        
+
         if (menuFiltrado.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #7f8c8d; grid-column: 1/-1;">No hay platillos para mostrar</p>';
+            const msgs = {
+                'disponible':    { icon: 'fa-circle-check', text: 'No hay platillos disponibles',    sub: 'Marca algún platillo como disponible.' },
+                'no-disponible': { icon: 'fa-ban',          text: 'No hay platillos no disponibles', sub: '¡Todos los platillos están disponibles!' },
+                '':              { icon: 'fa-utensils',     text: 'No hay platillos para mostrar',   sub: 'Agrega tu primer platillo.' },
+            };
+            const m = msgs[dispFiltro] || msgs[''];
+            container.innerHTML = `
+                <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#95a5a6;">
+                    <i class="fa-solid ${m.icon}" style="font-size:2.5em;opacity:0.3;margin-bottom:14px;display:block;"></i>
+                    <p style="font-size:1.05em;font-weight:600;margin-bottom:4px;">${m.text}</p>
+                    <p style="font-size:0.88em;">${m.sub}</p>
+                </div>`;
             return;
         }
 
@@ -1138,8 +1205,8 @@ class AdminApp {
                 <div class="precio">S/${platillo.precio.toFixed(2)}</div>
                 <p class="descripcion">${this.escapeHTML(platillo.descripcion || 'Sin descripción')}</p>
                 <div class="disponibilidad-status">
-                    ${platillo.disponible 
-                        ? '<span class="disp-badge disponible"><i class="fa-solid fa-circle-check"></i> Disponible</span>' 
+                    ${platillo.disponible
+                        ? '<span class="disp-badge disponible"><i class="fa-solid fa-circle-check"></i> Disponible</span>'
                         : '<span class="disp-badge no-disponible"><i class="fa-solid fa-ban"></i> No disponible</span>'}
                 </div>
                 <div class="menu-item-actions">
