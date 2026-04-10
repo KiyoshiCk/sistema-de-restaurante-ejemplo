@@ -3638,50 +3638,190 @@ class AdminApp {
     cargarFacturacion() {
         if (this.usuario.rol !== 'administrador') return;
 
-        const ahora = new Date();
-        const inicioDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-        const diaRef = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-        const inicioSemana = new Date(diaRef.setDate(diaRef.getDate() - diaRef.getDay()));
-        const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+        if (this._factInit === undefined) this._factInit = false;
+        if (this._factPeriodo === undefined) this._factPeriodo = 'hoy';
 
-        const totalDia = this.facturas
-            .filter(f => parsefecha(f.fecha) >= inicioDia)
-            .reduce((sum, f) => sum + f.total, 0);
+        this._renderFactResumen();
 
-        const totalSemana = this.facturas
-            .filter(f => parsefecha(f.fecha) >= inicioSemana)
-            .reduce((sum, f) => sum + f.total, 0);
+        if (!this._factInit) {
+            // Botones de período
+            document.querySelectorAll('.fact-periodo-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.fact-periodo-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    this._factPeriodo = btn.dataset.periodo;
+                    this._renderFactResumen();
+                    this._renderFactTabla();
+                });
+            });
 
-        const totalMes = this.facturas
-            .filter(f => parsefecha(f.fecha) >= inicioMes)
-            .reduce((sum, f) => sum + f.total, 0);
+            // Búsqueda
+            document.getElementById('fact-buscar')?.addEventListener('input', () => this._renderFactTabla());
 
-        document.getElementById('total-dia').textContent = `S/${totalDia.toFixed(2)}`;
-        document.getElementById('total-semana').textContent = `S/${totalSemana.toFixed(2)}`;
-        document.getElementById('total-mes').textContent = `S/${totalMes.toFixed(2)}`;
-
-        const container = document.getElementById('lista-facturas');
-        
-        if (this.facturas.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No hay facturas registradas</p>';
-            return;
+            this._factInit = true;
         }
 
-        const facturasRecientes = [...this.facturas].reverse().slice(0, 50);
-        
-        container.innerHTML = facturasRecientes.map(factura => `
-            <div class="factura-item">
+        this._renderFactTabla();
+    }
+
+    _factGetRango(periodo) {
+        const ahora = new Date();
+        switch (periodo) {
+            case 'hoy':
+                return {
+                    inicio: new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()),
+                    fin: new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59)
+                };
+            case 'semana': {
+                const d = ahora.getDay();
+                const dias = d === 0 ? 6 : d - 1;
+                const ini = new Date(ahora); ini.setDate(ahora.getDate() - dias); ini.setHours(0, 0, 0, 0);
+                const fin = new Date(ahora); fin.setHours(23, 59, 59, 999);
+                return { inicio: ini, fin };
+            }
+            case 'mes':
+                return {
+                    inicio: new Date(ahora.getFullYear(), ahora.getMonth(), 1),
+                    fin: new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59)
+                };
+            default:
+                return { inicio: new Date(0), fin: new Date(8640000000000000) };
+        }
+    }
+
+    _renderFactResumen() {
+        const container = document.getElementById('fact-resumen');
+        if (!container) return;
+
+        const ahora = new Date();
+        const hoyIni = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+        const hoyFin = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59);
+        const d = ahora.getDay(), dias = d === 0 ? 6 : d - 1;
+        const semIni = new Date(ahora); semIni.setDate(ahora.getDate() - dias); semIni.setHours(0,0,0,0);
+        const mesIni = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+
+        const sumar = (ini, fin) => this.facturas
+            .filter(f => { const d = parsefecha(f.fecha); return d >= ini && d <= fin; })
+            .reduce((s, f) => s + (f.total || 0), 0);
+
+        const cntHoy  = this.facturas.filter(f => { const d = parsefecha(f.fecha); return d >= hoyIni && d <= hoyFin; }).length;
+        const cntSem  = this.facturas.filter(f => parsefecha(f.fecha) >= semIni).length;
+        const cntMes  = this.facturas.filter(f => parsefecha(f.fecha) >= mesIni).length;
+        const cntTodo = this.facturas.length;
+
+        const totalHoy  = sumar(hoyIni, hoyFin);
+        const totalSem  = sumar(semIni, new Date(8640000000000000));
+        const totalMes  = sumar(mesIni, new Date(8640000000000000));
+        const totalTodo = this.facturas.reduce((s, f) => s + (f.total || 0), 0);
+
+        const p = this._factPeriodo || 'hoy';
+
+        const card = (periodo, icono, clase, labelNum, num, labelMon, mon) => `
+            <div class="inv-stat ${clase} filtrable${p === periodo ? ' filtro-activo' : ''}"
+                 data-periodo="${periodo}" title="Filtrar: ${labelNum}" style="cursor:pointer;">
+                <i class="fa-solid ${icono}"></i>
                 <div>
-                    <strong>Mesa ${factura.mesaNumero}</strong> -
-                    ${parsefecha(factura.fecha).toLocaleString('es-ES')}
-                    <small style="color: #666; margin-left: 10px;">${this.escapeHTML(factura.metodoPago || '')}</small>
+                    <span class="inv-stat-num">S/${mon.toFixed(2)}</span>
+                    <span class="inv-stat-label">${labelNum} (${num})</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-weight: bold; color: var(--success-color);">S/${factura.total.toFixed(2)}</span>
-                    <button class="btn-info" onclick="app.imprimirFactura('${factura._id}')" style="padding: 5px 10px; font-size: 0.8em;"><i class="fa-solid fa-print"></i></button>
+                ${p === periodo ? '<span class="inv-filtro-badge"><i class="fa-solid fa-filter"></i></span>' : ''}
+            </div>`;
+
+        container.innerHTML =
+            card('hoy',   'fa-calendar-day',  '',        'Hoy',    cntHoy,  '', totalHoy)  +
+            card('semana','fa-calendar-week', 'warning', 'Semana', cntSem,  '', totalSem)  +
+            card('mes',   'fa-calendar',      'success', 'Mes',    cntMes,  '', totalMes)  +
+            card('todo',  'fa-infinity',       '',        'Total',  cntTodo, '', totalTodo);
+
+        container.querySelectorAll('.inv-stat.filtrable').forEach(c => {
+            c.addEventListener('click', () => {
+                this._factPeriodo = c.dataset.periodo;
+                document.querySelectorAll('.fact-periodo-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.periodo === this._factPeriodo);
+                });
+                this._renderFactResumen();
+                this._renderFactTabla();
+            });
+        });
+    }
+
+    _renderFactTabla() {
+        const container = document.getElementById('lista-facturas');
+        const empty     = document.getElementById('fact-empty');
+        const busqueda  = (document.getElementById('fact-buscar')?.value || '').toLowerCase();
+        const { inicio, fin } = this._factGetRango(this._factPeriodo || 'hoy');
+
+        let lista = [...this.facturas]
+            .filter(f => { const d = parsefecha(f.fecha); return d >= inicio && d <= fin; })
+            .sort((a, b) => parsefecha(b.fecha) - parsefecha(a.fecha));
+
+        if (busqueda) {
+            lista = lista.filter(f =>
+                String(f.mesaNumero).includes(busqueda) ||
+                (f.metodoPago || '').toLowerCase().includes(busqueda) ||
+                (f.numeroFactura || '').toLowerCase().includes(busqueda)
+            );
+        }
+
+        if (!lista.length) {
+            container.innerHTML = '';
+            empty.style.display = 'flex';
+            return;
+        }
+        empty.style.display = 'none';
+
+        const metodoIcono = { 'efectivo': 'fa-money-bill-wave', 'tarjeta': 'fa-credit-card', 'yape': 'fa-mobile-screen-button', 'plin': 'fa-mobile-screen-button' };
+        const metodoClase = { 'efectivo': 'met-efectivo', 'tarjeta': 'met-tarjeta', 'yape': 'met-yape', 'plin': 'met-yape' };
+
+        container.innerHTML = lista.map(f => {
+            const fecha = parsefecha(f.fecha);
+            const fechaStr = fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+            const horaStr  = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            const metodo   = (f.metodoPago || 'efectivo').toLowerCase();
+            const icono    = metodoIcono[metodo] || 'fa-money-bill';
+            const clase    = metodoClase[metodo] || 'met-efectivo';
+            const items    = f.items || [];
+            const rowId    = `fact-row-${f._id}`;
+
+            return `
+            <div class="fact-row" id="${rowId}">
+                <div class="fact-row-main" onclick="app._toggleFactRow('${rowId}')">
+                    <span class="fact-num">#${this.escapeHTML(f.numeroFactura || f._id.slice(-6).toUpperCase())}</span>
+                    <span class="fact-mesa"><i class="fa-solid fa-chair"></i> Mesa ${f.mesaNumero}</span>
+                    <span class="fact-fecha"><span class="fact-fecha-dia">${fechaStr}</span><span class="fact-fecha-hora">${horaStr}</span></span>
+                    <span class="fact-metodo-badge ${clase}"><i class="fa-solid ${icono}"></i> ${f.metodoPago || 'Efectivo'}</span>
+                    <span class="fact-total">S/${(f.total || 0).toFixed(2)}</span>
+                    <span class="fact-chevron"><i class="fa-solid fa-chevron-down"></i></span>
                 </div>
-            </div>
-        `).join('');
+                <div class="fact-row-detail">
+                    <div class="fact-items-grid">
+                        ${items.map(i => `
+                            <div class="fact-item">
+                                <span class="fact-item-nombre">${this.escapeHTML(i.nombre || '')}</span>
+                                <span class="fact-item-cant">${i.cantidad || 1}×</span>
+                                <span class="fact-item-precio">S/${((i.precio || 0) * (i.cantidad || 1)).toFixed(2)}</span>
+                            </div>`).join('') || '<p style="color:#94a3b8;font-size:.85em">Sin detalle de items</p>'}
+                    </div>
+                    <div class="fact-row-footer">
+                        <span>Subtotal: <strong>S/${(f.subtotal ?? f.total ?? 0).toFixed(2)}</strong></span>
+                        ${f.impuesto ? `<span>IGV: <strong>S/${Number(f.impuesto).toFixed(2)}</strong></span>` : ''}
+                        <span class="fact-total-final">Total: <strong>S/${(f.total || 0).toFixed(2)}</strong></span>
+                        <button class="btn-secondary fact-print-btn" onclick="event.stopPropagation(); app.imprimirFactura('${f._id}')">
+                            <i class="fa-solid fa-print"></i> Imprimir
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    _toggleFactRow(rowId) {
+        const row = document.getElementById(rowId);
+        if (!row) return;
+        const isOpen = row.classList.contains('open');
+        // Cerrar todos
+        document.querySelectorAll('.fact-row.open').forEach(r => r.classList.remove('open'));
+        if (!isOpen) row.classList.add('open');
     }
 
     // ===== GESTIÓN DE USUARIOS (Solo Admin) =====

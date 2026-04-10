@@ -471,24 +471,42 @@
 
                 <!-- Facturación (Solo Admin) -->
                 <section id="facturacion" class="page admin-only">
-                    <h2>Facturación e Historial</h2>
-                    <div class="facturacion-stats">
-                        <div class="stat-card">
-                            <h3>Total Hoy</h3>
-                            <p class="stat-number" id="total-dia">S/0.00</p>
+                    <div class="section-header">
+                        <h2><i class="fa-solid fa-clock-rotate-left"></i> Historial de Facturación</h2>
+                    </div>
+
+                    <!-- Stats filtrables -->
+                    <div class="inventario-resumen" id="fact-resumen"></div>
+
+                    <!-- Filtros -->
+                    <div class="fact-filtros">
+                        <div class="fact-periodo">
+                            <button class="fact-periodo-btn active" data-periodo="hoy" type="button"><i class="fa-solid fa-calendar-day"></i> Hoy</button>
+                            <button class="fact-periodo-btn" data-periodo="semana" type="button"><i class="fa-solid fa-calendar-week"></i> Semana</button>
+                            <button class="fact-periodo-btn" data-periodo="mes" type="button"><i class="fa-solid fa-calendar"></i> Mes</button>
+                            <button class="fact-periodo-btn" data-periodo="todo" type="button"><i class="fa-solid fa-infinity"></i> Todo</button>
                         </div>
-                        <div class="stat-card">
-                            <h3>Total Semana</h3>
-                            <p class="stat-number" id="total-semana">S/0.00</p>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Total Mes</h3>
-                            <p class="stat-number" id="total-mes">S/0.00</p>
+                        <div class="fact-busqueda">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="fact-buscar" placeholder="Buscar por mesa, método de pago...">
                         </div>
                     </div>
-                    <div class="historial-container">
-                        <h3>Historial de Facturas</h3>
+
+                    <!-- Tabla / lista -->
+                    <div class="fact-tabla-wrap">
+                        <div class="fact-tabla-header">
+                            <span>Factura</span>
+                            <span>Mesa</span>
+                            <span>Fecha</span>
+                            <span>Método</span>
+                            <span>Total</span>
+                            <span></span>
+                        </div>
                         <div id="lista-facturas"></div>
+                        <div id="fact-empty" class="fact-empty" style="display:none;">
+                            <i class="fa-solid fa-receipt"></i>
+                            <p>No hay facturas en este período</p>
+                        </div>
                     </div>
                 </section>
 
