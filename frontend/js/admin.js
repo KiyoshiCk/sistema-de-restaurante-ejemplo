@@ -2445,27 +2445,31 @@ class AdminApp {
 
     renderEditarItemsSeleccionados() {
         const container = document.getElementById('editar-items-seleccionados');
+
         if (!this._editandoItems.length) {
-            container.innerHTML = '<p style="color:#94a3b8;padding:10px">Sin items. Agrega platillos desde el menú.</p>';
+            container.innerHTML = '<p style="text-align:center;color:#7f8c8d;">No hay items seleccionados</p>';
             document.getElementById('editar-pedido-total').textContent = '0.00';
             return;
         }
 
         container.innerHTML = this._editandoItems.map((item, idx) => `
             <div class="item-seleccionado">
-                <div class="item-sel-info">
-                    <span class="item-sel-nombre">${this.escapeHTML(item.nombre)}</span>
-                    <span class="item-sel-precio">S/${(item.precio * item.cantidad).toFixed(2)}</span>
+                <div class="item-info">
+                    <span>${this.escapeHTML(item.nombre)}</span>
+                    <div class="item-cantidad">
+                        <button type="button" onclick="app.cambiarCantEditar(${idx}, -1)">-</button>
+                        <span>${item.cantidad}</span>
+                        <button type="button" onclick="app.cambiarCantEditar(${idx}, 1)">+</button>
+                        <span style="margin-left:10px;font-weight:bold;">S/${(item.precio * item.cantidad).toFixed(2)}</span>
+                    </div>
                 </div>
-                <div class="item-sel-controles">
-                    <button type="button" class="btn-cant" onclick="app.cambiarCantEditar(${idx}, -1)"><i class="fa-solid fa-minus"></i></button>
-                    <span class="item-sel-cant">${item.cantidad}</span>
-                    <button type="button" class="btn-cant" onclick="app.cambiarCantEditar(${idx}, 1)"><i class="fa-solid fa-plus"></i></button>
-                    <button type="button" class="btn-quitar-item" onclick="app.quitarItemEditar(${idx})"><i class="fa-solid fa-trash"></i></button>
+                <div class="item-comentario">
+                    <input type="text"
+                           placeholder="Ej: sin cebolla, extra picante..."
+                           value="${this.escapeHTML(item.comentario || '')}"
+                           oninput="app.editarComentarioItem(${idx}, this.value)"
+                           class="input-comentario">
                 </div>
-                <input type="text" class="item-comentario-input" placeholder="Nota (sin cebolla, término...)"
-                    value="${this.escapeHTML(item.comentario || '')}"
-                    oninput="app.editarComentarioItem(${idx}, this.value)">
             </div>
         `).join('');
 
@@ -2476,11 +2480,6 @@ class AdminApp {
     cambiarCantEditar(idx, delta) {
         this._editandoItems[idx].cantidad += delta;
         if (this._editandoItems[idx].cantidad <= 0) this._editandoItems.splice(idx, 1);
-        this.renderEditarItemsSeleccionados();
-    }
-
-    quitarItemEditar(idx) {
-        this._editandoItems.splice(idx, 1);
         this.renderEditarItemsSeleccionados();
     }
 
@@ -2530,13 +2529,16 @@ class AdminApp {
         // Cancelar
         document.getElementById('btn-cancelar-editar-pedido').addEventListener('click', () => modal.classList.remove('active'));
 
-        // Guardar
-        document.getElementById('btn-confirmar-editar-pedido').addEventListener('click', () => this.guardarEdicionPedido());
+        // Guardar vía form submit
+        document.getElementById('form-editar-pedido').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.guardarEdicionPedido();
+        });
 
         // Filtros de categoría
-        modal.querySelectorAll('.filtro-cat').forEach(btn => {
+        modal.querySelectorAll('.filtro-cat-editar').forEach(btn => {
             btn.addEventListener('click', () => {
-                modal.querySelectorAll('.filtro-cat').forEach(b => b.classList.remove('active'));
+                modal.querySelectorAll('.filtro-cat-editar').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.renderMenuEditarPedido(btn.dataset.categoria);
             });
