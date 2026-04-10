@@ -751,8 +751,8 @@ app.post('/api/pedidos', verificarToken, soloMeseroOAdmin, (req, res) => {
         }
 
         const items = JSON.stringify(pedidoData.items || []);
-        db.prepare('INSERT INTO pedidos (_id, mesaId, mesaNumero, items, estado, total) VALUES (?, ?, ?, ?, ?, ?)')
-            .run(_id, pedidoData.mesaId || null, pedidoData.mesaNumero || null, items, pedidoData.estado, pedidoData.total);
+        db.prepare('INSERT INTO pedidos (_id, mesaId, mesaNumero, items, estado, total, fecha) VALUES (?, ?, ?, ?, ?, ?, ?)')
+            .run(_id, pedidoData.mesaId || null, pedidoData.mesaNumero || null, items, pedidoData.estado, pedidoData.total, now());
 
         const pedido = formatRow(db.prepare('SELECT * FROM pedidos WHERE _id = ?').get(_id), ['items']);
         emitirEvento('nuevo-pedido', pedido);
@@ -832,8 +832,8 @@ app.post('/api/facturas', verificarToken, soloMeseroOAdmin, (req, res) => {
         if (typeof total !== 'number' || isNaN(total) || total < 0) {
             return res.status(400).json({ error: 'Total inválido' });
         }
-        db.prepare('INSERT INTO facturas (_id, numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-            .run(_id, numeroFactura, mesaNumero, JSON.stringify(pedidoIds || []), JSON.stringify(items || []), subtotal, impuesto, total, metodoPago);
+        db.prepare('INSERT INTO facturas (_id, numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago, fecha) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            .run(_id, numeroFactura, mesaNumero, JSON.stringify(pedidoIds || []), JSON.stringify(items || []), subtotal, impuesto, total, metodoPago, now());
 
         const factura = formatRow(db.prepare('SELECT * FROM facturas WHERE _id = ?').get(_id), ['items', 'pedidoIds']);
         emitirEvento('nueva-factura', factura);
@@ -871,8 +871,8 @@ app.post('/api/cobrar', verificarToken, soloMeseroOAdmin, (req, res) => {
         let facturaId;
         const cobrarTx = db.transaction(() => {
             facturaId = generarId();
-            db.prepare('INSERT INTO facturas (_id, numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                .run(facturaId, numFac, mesaNumero, JSON.stringify(pedidoIds), JSON.stringify(todosItems), total, 0, total, metodoPagoFinal);
+            db.prepare('INSERT INTO facturas (_id, numeroFactura, mesaNumero, pedidoIds, items, subtotal, impuesto, total, metodoPago, fecha) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                .run(facturaId, numFac, mesaNumero, JSON.stringify(pedidoIds), JSON.stringify(todosItems), total, 0, total, metodoPagoFinal, now());
 
             const stmtPedido = db.prepare("UPDATE pedidos SET estado = 'cobrado', updatedAt = ? WHERE _id = ?");
             for (const pedido of pedidos) {
@@ -1026,8 +1026,8 @@ app.post('/api/actividad', verificarToken, (req, res) => {
         // Sanitizar descripcion: truncar a 500 chars
         const descripcion = String(req.body.descripcion || '').substring(0, 500);
         const insertarActividadTx = db.transaction(() => {
-            db.prepare('INSERT INTO actividad (_id, tipo, descripcion, usuario) VALUES (?, ?, ?, ?)')
-                .run(_id, tipo, descripcion, String(usuario || '').substring(0, 100));
+            db.prepare('INSERT INTO actividad (_id, tipo, descripcion, usuario, fecha) VALUES (?, ?, ?, ?, ?)')
+                .run(_id, tipo, descripcion, String(usuario || '').substring(0, 100), now());
             // Auto-limpiar: mantener solo los últimos 500 registros
             // Usa la fecha del registro en la posición 500 como frontera (O(log n) con el índice)
             db.prepare(`
@@ -1048,11 +1048,11 @@ app.post('/api/actividad', verificarToken, (req, res) => {
 // ============= AUTENTICACIÓN =============
 
 const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 10,
+    windowMs: 5 * 60 * 1000, // 5 minutos
+    max: 30,                  // 30 intentos por ventana (red local interna)
     standardHeaders: true,
     legacyHeaders: false,
-    message: { success: false, message: 'Demasiados intentos fallidos. Espera 15 minutos antes de intentar de nuevo.' }
+    message: { success: false, message: 'Demasiados intentos fallidos. Espera 5 minutos antes de intentar de nuevo.' }
 });
 
 app.post('/api/login', loginLimiter, async (req, res) => {
@@ -1334,5 +1334,15 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
     db.close();
     process.exit(0);
+});
+
+// Evitar que errores no capturados maten el proceso
+process.on('uncaughtException', (err) => {
+    console.error('❌ Error no capturado:', err.message);
+    console.error(err.stack);
+    // No hacer process.exit — PM2 reiniciará si es necesario
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('❌ Promesa rechazada sin capturar:', reason);
 });
 

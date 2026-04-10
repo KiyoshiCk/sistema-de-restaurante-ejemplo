@@ -517,6 +517,11 @@ class CocinaApp {
     }
 
     async cambiarEstado(pedidoId, nuevoEstado) {
+        // Evitar doble clic / llamadas concurrentes para el mismo pedido
+        if (!this._procesandoEstado) this._procesandoEstado = new Set();
+        if (this._procesandoEstado.has(pedidoId)) return;
+        this._procesandoEstado.add(pedidoId);
+
         try {
             const response = await fetch(`${this.API_URL}/pedidos/${pedidoId}`, {
                 method: 'PUT',
@@ -545,6 +550,8 @@ class CocinaApp {
         } catch (error) {
             console.error('Error:', error);
             alert('Error al conectar con el servidor');
+        } finally {
+            this._procesandoEstado.delete(pedidoId);
         }
     }
 

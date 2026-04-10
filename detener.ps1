@@ -7,14 +7,20 @@ Write-Host "  🛑 DETENIENDO SISTEMA" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
 Write-Host ""
 
-# Detener Backend (Node.js)
+# Detener Backend (PM2 o Node.js directo)
 Write-Host "🔄 Deteniendo Backend (Node.js)..." -ForegroundColor Cyan
-$nodeProcess = Get-Process node -ErrorAction SilentlyContinue
-if ($nodeProcess) {
-    Stop-Process -Name node -Force
-    Write-Host "   ✅ Backend detenido" -ForegroundColor Green
+$pm2Cmd = Get-Command pm2 -ErrorAction SilentlyContinue
+if ($pm2Cmd) {
+    pm2 delete restaurante-backend 2>$null | Out-Null
+    Write-Host "   ✅ Backend detenido (PM2)" -ForegroundColor Green
 } else {
-    Write-Host "   ℹ️  Backend no estaba corriendo" -ForegroundColor Gray
+    $nodeProcess = Get-Process node -ErrorAction SilentlyContinue
+    if ($nodeProcess) {
+        Stop-Process -Name node -Force
+        Write-Host "   ✅ Backend detenido" -ForegroundColor Green
+    } else {
+        Write-Host "   ℹ️  Backend no estaba corriendo" -ForegroundColor Gray
+    }
 }
 
 # Detener Frontend (Python)

@@ -1,4 +1,18 @@
 // Panel de Administración con Control de Acceso
+
+// Normaliza strings de fecha de SQLite sin timezone (UTC sin Z) → Date UTC correcta
+// "2026-04-09 01:00:00"  → trata como UTC (agrega Z)
+// "2026-04-09T01:00:00Z" → ya es correcto
+// "2026-04-09T01:00:00.000Z" → ya es correcto
+function parsefecha(str) {
+    if (!str) return new Date(0);
+    // SQLite datetime('now') devuelve "YYYY-MM-DD HH:MM:SS" sin timezone → UTC sin Z
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(str)) {
+        return new Date(str.replace(' ', 'T') + 'Z');
+    }
+    return new Date(str);
+}
+
 class AdminApp {
     constructor() {
         this.API_URL = (typeof API_CONFIG !== 'undefined' && API_CONFIG.url)
@@ -81,6 +95,14 @@ class AdminApp {
             console.log('Pedido actualizado:', pedido);
             // Detectar cambio a "listo" para notificación especial al mesero
             const pedidoAnterior = this.pedidos.find(p => p._id === pedido._id);
+
+            // Ignorar eventos obsoletos que intenten revertir un estado terminal
+            const estadosTerminales = ['cobrado', 'cancelado'];
+            if (pedidoAnterior && estadosTerminales.includes(pedidoAnterior.estado) && !estadosTerminales.includes(pedido.estado)) {
+                console.warn('Evento obsoleto ignorado: intentaba revertir', pedidoAnterior.estado, '→', pedido.estado);
+                return;
+            }
+
             const cambioAListo = pedidoAnterior && pedidoAnterior.estado !== 'listo' && pedido.estado === 'listo';
             
             if (cambioAListo && this.puedeEntregar()) {
@@ -384,18 +406,14 @@ class AdminApp {
                     Usuarios
                 </button>
                 <button class="nav-btn" data-page="config-ubicacion">
-                    <span class="icon"><i class="fa-solid fa-location-dot"></i></span>
-                    Ubicación
+                    <span class="icon"><i class="fa-solid fa-store"></i></span>
+                    Datos
                 </button>
             `;
         } else if (this.usuario.rol === 'mesero') {
-            // Mesero: dashboard, mesas, pedidos, cobrar
+            // Mesero: mesas y pedidos (sin dashboard)
             nav.innerHTML = `
-                <button class="nav-btn active" data-page="dashboard">
-                    <span class="icon"><i class="fa-solid fa-gauge"></i></span>
-                    Dashboard
-                </button>
-                <button class="nav-btn" data-page="mesas">
+                <button class="nav-btn active" data-page="mesas">
                     <span class="icon"><i class="fa-solid fa-chair"></i></span>
                     Mesas
                 </button>
@@ -441,10 +459,10 @@ class AdminApp {
         
         document.getElementById('btn-logout').addEventListener('click', () => this.logout());
         
-        await this.cargarDatos();
+        this.cargarDatos();
         try { this.config = await fetch(`${this.API_URL}/config`).then(r => r.json()); } catch { this.config = {}; }
 
-        this.cargarDashboard();
+        if (this.usuario.rol !== 'mesero') this.cargarDashboard();
         if (this.usuario.rol === 'administrador') {
             this.cargarMenu();
             this.cargarFacturacion();
@@ -466,6 +484,11 @@ class AdminApp {
         // Cargar sección cobrar para mesero
         if (this.usuario.rol === 'mesero' || this.usuario.rol === 'administrador') {
             this.cargarMesasParaCobrar();
+        }
+
+        // Mesero: activar página mesas por defecto (en lugar del dashboard)
+        if (this.usuario.rol === 'mesero') {
+            this.cambiarPagina('mesas');
         }
         
         setInterval(() => this.actualizarFechaHora(), 1000);
@@ -829,7 +852,7 @@ class AdminApp {
         if (this.usuario.rol === 'administrador') {
             const hoy = new Date().toDateString();
             const ventasHoy = this.facturas
-                .filter(f => new Date(f.fecha).toDateString() === hoy)
+                .filter(f => parsefecha(f.fecha).toDateString() === hoy)
                 .reduce((sum, f) => sum + (f.total || 0), 0);
             document.getElementById('ventas-hoy').textContent = `S/${ventasHoy.toFixed(2)}`;
         }
@@ -874,7 +897,7 @@ class AdminApp {
                         </div>
                         <div class="activity-desc">${this.escapeHTML(act.descripcion || 'Sin descripción')}</div>
                     </div>
-                    <div class="time">${new Date(act.fecha).toLocaleString('es-ES')}</div>
+                    <div class="time">${parsefecha(act.fecha).toLocaleString('es-ES')}</div>
                 </div>
             `;
         }).join('');
@@ -1340,12 +1363,12 @@ class AdminApp {
         // Buscar todos los pedidos/facturas de esta mesa
         const historial = this.facturas
             .filter(f => f.mesaNumero === mesaNumero)
-            .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+            .sort((a, b) => parsefecha(b.fecha) - parsefecha(a.fecha))
             .slice(0, 20);
         
         const pedidosActivos = this.pedidos
             .filter(p => (p.mesaId === mesaId || p.mesaNumero === mesaNumero) && p.estado !== 'cancelado' && p.estado !== 'cobrado')
-            .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            .sort((a, b) => parsefecha(b.fecha) - parsefecha(a.fecha));
         
         let contenido = `
             <div style="max-height: 60vh; overflow-y: auto;">
@@ -1356,7 +1379,7 @@ class AdminApp {
             contenido += pedidosActivos.map(p => `
                 <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${p.estado === 'pendiente' ? '#f39c12' : p.estado === 'en-preparacion' ? '#3498db' : p.estado === 'listo' ? '#27ae60' : '#95a5a6'};">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <strong>${new Date(p.fecha).toLocaleString('es-ES')}</strong>
+                        <strong>${parsefecha(p.fecha).toLocaleString('es-ES')}</strong>
                         <span class="pedido-estado ${p.estado}" style="font-size: 0.85em;">${this.obtenerTextoEstado(p.estado)}</span>
                     </div>
                     <div style="font-size: 0.9em;">
@@ -1380,7 +1403,7 @@ class AdminApp {
             contenido += historial.map(f => `
                 <div style="background: #fff; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #e0e0e0;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <strong>${new Date(f.fecha).toLocaleString('es-ES')}</strong>
+                        <strong>${parsefecha(f.fecha).toLocaleString('es-ES')}</strong>
                         <span style="color: #27ae60;"><i class="fa-solid fa-circle-check"></i> Pagado</span>
                     </div>
                     <div style="font-size: 0.9em; color: #666;">
@@ -1853,6 +1876,11 @@ class AdminApp {
     }
 
     async entregarPedido(pedidoId) {
+        // Evitar doble clic / llamadas concurrentes para el mismo pedido
+        if (!this._entregandoPedidos) this._entregandoPedidos = new Set();
+        if (this._entregandoPedidos.has(pedidoId)) return;
+        this._entregandoPedidos.add(pedidoId);
+
         const pedido = this.pedidos.find(p => p._id === pedidoId);
         const estadoAnterior = pedido.estado;
         pedido.estado = 'entregado';
@@ -1870,6 +1898,8 @@ class AdminApp {
             pedido.estado = estadoAnterior;
             this.cargarPedidos();
             alert('Error al entregar el pedido');
+        } finally {
+            this._entregandoPedidos.delete(pedidoId);
         }
     }
 
@@ -1911,8 +1941,21 @@ class AdminApp {
         
         container.innerHTML = mesas.map(mesa => {
             const todosItems = mesa.pedidos.flatMap(p => p.items);
-            const total = mesa.pedidos.reduce((sum, p) => sum + p.total, 0);
-            
+            const total = mesa.pedidos.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
+
+            // Consolidar items del mismo nombre+precio para la preview
+            const itemsConsolidados = [];
+            for (const item of todosItems) {
+                const existente = itemsConsolidados.find(
+                    i => i.nombre === item.nombre && i.precio === item.precio
+                );
+                if (existente) {
+                    existente.cantidad += item.cantidad;
+                } else {
+                    itemsConsolidados.push({ ...item });
+                }
+            }
+
             return `
                 <div class="mesa-cobrar-card">
                     <div class="mesa-header">
@@ -1920,13 +1963,13 @@ class AdminApp {
                         <span class="pedidos-count">${mesa.pedidos.length} pedido(s)</span>
                     </div>
                     <div class="items-preview">
-                        ${todosItems.slice(0, 5).map(item => `
+                        ${itemsConsolidados.slice(0, 5).map(item => `
                             <div class="item-preview">
                                 <span>${item.cantidad}x ${this.escapeHTML(item.nombre)}</span>
                                 <span>S/${(item.precio * item.cantidad).toFixed(2)}</span>
                             </div>
                         `).join('')}
-                        ${todosItems.length > 5 ? `<div class="item-preview"><span>... y ${todosItems.length - 5} más</span></div>` : ''}
+                        ${itemsConsolidados.length > 5 ? `<div class="item-preview"><span>... y ${itemsConsolidados.length - 5} más</span></div>` : ''}
                     </div>
                     <div class="total-mesa">Total: S/${total.toFixed(2)}</div>
                     <div class="mesa-cobrar-actions">
@@ -1966,11 +2009,33 @@ class AdminApp {
         };
         
         const todosItems = pedidosMesa.flatMap(p => p.items);
-        const total = pedidosMesa.reduce((sum, p) => sum + p.total, 0);
+        const total = pedidosMesa.reduce((sum, p) => sum + (parseFloat(p.total) || 0), 0);
+
+        // Consolidar items del mismo nombre+precio en una sola fila
+        const itemsConsolidados = [];
+        for (const item of todosItems) {
+            const existente = itemsConsolidados.find(
+                i => i.nombre === item.nombre && i.precio === item.precio
+            );
+            if (existente) {
+                existente.cantidad += item.cantidad;
+                if (item.comentario && !existente.comentario) {
+                    existente.comentario = item.comentario;
+                }
+            } else {
+                itemsConsolidados.push({ ...item });
+            }
+        }
         
         document.getElementById('cobrar-mesa-numero').textContent = mesaNumero;
+
+        const encabezadoPedidos = pedidosMesa.length > 1
+            ? `<div class="cuenta-item cuenta-pedidos-aviso" style="font-size:0.82em;color:#7f8c8d;margin-bottom:6px;border-bottom:1px dashed #ddd;padding-bottom:6px;">
+                   <span>${pedidosMesa.length} pedidos combinados</span>
+               </div>`
+            : '';
         
-        document.getElementById('cuenta-items').innerHTML = todosItems.map(item => `
+        document.getElementById('cuenta-items').innerHTML = encabezadoPedidos + itemsConsolidados.map(item => `
             <div class="cuenta-item">
                 <span class="item-cantidad">${item.cantidad}x</span>
                 <span class="item-nombre">${this.escapeHTML(item.nombre)}</span>
@@ -1979,48 +2044,29 @@ class AdminApp {
             ${item.comentario ? `<div class="cuenta-item-comentario"><i class="fa-solid fa-comment"></i> ${this.escapeHTML(item.comentario)}</div>` : ''}
         `).join('');
         
-        document.getElementById('cuenta-total').textContent = `S/${total.toFixed(2)}`
+        document.getElementById('cuenta-total').textContent = `S/${total.toFixed(2)}`;
         
         document.getElementById('modal-cobrar').classList.add('active');
     }
 
-    // Cobrar un pedido individual desde el botón en la tarjeta
+    // Cobrar desde el botón en la tarjeta de pedido — agrupa todos los entregados de la mesa
     cobrarPedido(pedidoId) {
         const pedido = this.pedidos.find(p => p._id === pedidoId);
         if (!pedido) {
             alert('Pedido no encontrado');
             return;
         }
-        
-        // Buscar número de mesa de varias formas
+
+        // Resolver número de mesa
         let mesaNumero = pedido.mesaNumero;
         if (!mesaNumero && pedido.mesaId) {
             const mesa = this.mesas.find(m => m._id === pedido.mesaId);
             if (mesa) mesaNumero = mesa.numero;
         }
         mesaNumero = mesaNumero || 'N/A';
-        
-        this.mesaACobrar = {
-            mesaNumero,
-            pedidos: [pedido]
-        };
-        
-        const total = pedido.total;
-        
-        document.getElementById('cobrar-mesa-numero').textContent = mesaNumero;
-        
-        document.getElementById('cuenta-items').innerHTML = pedido.items.map(item => `
-            <div class="cuenta-item">
-                <span class="item-cantidad">${item.cantidad}x</span>
-                <span class="item-nombre">${this.escapeHTML(item.nombre)}</span>
-                <span class="item-precio">S/${(item.precio * item.cantidad).toFixed(2)}</span>
-            </div>
-            ${item.comentario ? `<div class="cuenta-item-comentario"><i class="fa-solid fa-comment"></i> ${this.escapeHTML(item.comentario)}</div>` : ''}
-        `).join('');
-        
-        document.getElementById('cuenta-total').textContent = `S/${total.toFixed(2)}`
-        
-        document.getElementById('modal-cobrar').classList.add('active');
+
+        // Usar abrirModalCobrar para que consolide TODOS los pedidos entregados de la mesa
+        this.abrirModalCobrar(mesaNumero);
     }
 
     async procesarPago() {
@@ -2063,7 +2109,10 @@ class AdminApp {
             this.cargarMesasParaCobrar();
             if (this.usuario.rol === 'administrador') this.cargarFacturacion();
         } catch (error) {
-            alert('Error al procesar el pago');
+            const msg = error?.message && error.message !== '[object Object]'
+                ? error.message
+                : 'Error de conexión. Verifica que el servidor esté activo.';
+            alert(`Error al procesar el pago:\n${msg}`);
             console.error(error);
         } finally {
             if (btn) btn.disabled = false;
@@ -2071,7 +2120,7 @@ class AdminApp {
     }
     
     imprimirTicket(factura) {
-        const fecha = new Date(factura.fecha).toLocaleString('es-ES');
+        const fecha = parsefecha(factura.fecha).toLocaleString('es-ES');
         const items = factura.items || [];
         
         const ticketHTML = `
@@ -2427,11 +2476,21 @@ class AdminApp {
                 this.validarRangoFechas();
             });
             
-            this._reportesInit = true;
+        this._reportesInit = true;
         }
         
-        // Cargar reporte inicial (mes actual)
-        this.generarReporte('mes');
+        // Regenerar con el periodo activo actual (no siempre 'mes')
+        const btnActivo = document.querySelector('.periodo-btn.active');
+        const periodoActivo = btnActivo?.dataset.periodo || 'mes';
+
+        if (periodoActivo === 'personalizado') {
+            // Solo regenerar si ya hay fechas cargadas
+            const fi = document.getElementById('reporte-fecha-inicio').value;
+            const ff = document.getElementById('reporte-fecha-fin').value;
+            if (fi && ff) this.generarReporte('personalizado');
+        } else {
+            this.generarReporte(periodoActivo);
+        }
     }
     
     validarRangoFechas() {
@@ -2493,7 +2552,7 @@ class AdminApp {
         
         // Filtrar facturas por período
         const facturasDelPeriodo = this.facturas.filter(f => {
-            const fecha = new Date(f.fecha);
+            const fecha = parsefecha(f.fecha);
             return fecha >= inicio && fecha <= fin;
         });
         
@@ -2642,22 +2701,34 @@ class AdminApp {
     
     mostrarVentasPorDia(facturas) {
         const conteo = {};
-        
+
         facturas.forEach(f => {
-            const fecha = new Date(f.fecha);
-            const clave = fecha.toISOString().slice(0, 10); // YYYY-MM-DD para ordenar
+            const fecha = parsefecha(f.fecha);
+            const clave = fecha.toISOString().slice(0, 10);
             const dia = fecha.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
             if (!conteo[clave]) {
                 conteo[clave] = { label: dia, total: 0 };
             }
             conteo[clave].total += f.total || 0;
         });
-        
-        const ordenado = Object.entries(conteo)
-            .sort((a, b) => a[0].localeCompare(b[0]))
-            .slice(-7);
+
+        let ordenado = Object.entries(conteo).sort((a, b) => a[0].localeCompare(b[0]));
+
+        // Si hay más de 31 días con datos, agrupar por mes para que sea legible
+        if (ordenado.length > 31) {
+            const porMes = {};
+            for (const [clave, data] of ordenado) {
+                const mes = clave.slice(0, 7); // YYYY-MM
+                const fecha = new Date(clave + 'T12:00:00');
+                const label = fecha.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
+                if (!porMes[mes]) porMes[mes] = { label, total: 0 };
+                porMes[mes].total += data.total;
+            }
+            ordenado = Object.entries(porMes).sort((a, b) => a[0].localeCompare(b[0]));
+        }
+
         const maxVenta = Math.max(...ordenado.map(([_, v]) => v.total)) || 1;
-        
+
         document.getElementById('reporte-ventas-dia').innerHTML = ordenado.length > 0
             ? ordenado.map(([_, data]) => `
                 <div class="reporte-item">
@@ -2675,7 +2746,7 @@ class AdminApp {
         const conteo = {};
         
         facturas.forEach(f => {
-            const fecha = new Date(f.fecha);
+            const fecha = parsefecha(f.fecha);
             const hora = fecha.getHours();
             const rango = `${hora}:00 - ${hora + 1}:00`;
             if (!conteo[rango]) {
@@ -2756,6 +2827,9 @@ class AdminApp {
     
     cargarInventario() {
         if (this.usuario.rol !== 'administrador') return;
+
+        // Inicializar filtro de stock (preservar si ya estaba activo)
+        if (this._inventarioFiltroStock === undefined) this._inventarioFiltroStock = '';
         
         // Mostrar resumen y alertas
         this.mostrarResumenInventario();
@@ -2786,30 +2860,34 @@ class AdminApp {
         const stockBajo = this.inventario.filter(i => i.cantidad <= i.stockMinimo && i.cantidad > 0).length;
         const agotados = this.inventario.filter(i => i.cantidad <= 0).length;
         const valorTotal = this.inventario.reduce((sum, i) => sum + (i.cantidad * (i.costo || 0)), 0);
+        const filtroActual = this._inventarioFiltroStock || '';
         
         container.innerHTML = `
-            <div class="inv-stat">
+            <div class="inv-stat filtrable${filtroActual === '' ? ' filtro-activo' : ''}" data-filtro="" title="Mostrar todos los items" style="cursor:pointer;">
                 <i class="fa-solid fa-boxes-stacked"></i>
                 <div>
                     <span class="inv-stat-num">${total}</span>
                     <span class="inv-stat-label">Total Items</span>
                 </div>
+                ${filtroActual === '' ? '<span class="inv-filtro-badge"><i class="fa-solid fa-filter"></i></span>' : ''}
             </div>
-            <div class="inv-stat warning">
+            <div class="inv-stat warning filtrable${filtroActual === 'bajo' ? ' filtro-activo' : ''}" data-filtro="bajo" title="Filtrar: Stock Bajo" style="cursor:pointer;">
                 <i class="fa-solid fa-triangle-exclamation"></i>
                 <div>
                     <span class="inv-stat-num">${stockBajo}</span>
                     <span class="inv-stat-label">Stock Bajo</span>
                 </div>
+                ${filtroActual === 'bajo' ? '<span class="inv-filtro-badge"><i class="fa-solid fa-filter"></i></span>' : ''}
             </div>
-            <div class="inv-stat danger">
+            <div class="inv-stat danger filtrable${filtroActual === 'agotado' ? ' filtro-activo' : ''}" data-filtro="agotado" title="Filtrar: Agotados" style="cursor:pointer;">
                 <i class="fa-solid fa-xmark-circle"></i>
                 <div>
                     <span class="inv-stat-num">${agotados}</span>
                     <span class="inv-stat-label">Agotados</span>
                 </div>
+                ${filtroActual === 'agotado' ? '<span class="inv-filtro-badge"><i class="fa-solid fa-filter"></i></span>' : ''}
             </div>
-            <div class="inv-stat success">
+            <div class="inv-stat success" title="Valor total del inventario">
                 <i class="fa-solid fa-sack-dollar"></i>
                 <div>
                     <span class="inv-stat-num">S/${valorTotal.toFixed(2)}</span>
@@ -2817,6 +2895,17 @@ class AdminApp {
                 </div>
             </div>
         `;
+
+        // Eventos de filtro en las tarjetas
+        container.querySelectorAll('.inv-stat.filtrable').forEach(card => {
+            card.addEventListener('click', () => {
+                const filtro = card.dataset.filtro;
+                // Toggle: si ya está activo ese filtro, volver a "todos"
+                this._inventarioFiltroStock = (this._inventarioFiltroStock === filtro && filtro !== '') ? '' : filtro;
+                this.mostrarResumenInventario();
+                this.renderizarInventario();
+            });
+        });
     }
     
     mostrarAlertasInventario() {
@@ -2879,6 +2968,7 @@ class AdminApp {
         const container = document.getElementById('lista-inventario');
         const catActiva = document.querySelector('.inv-cat-btn.active')?.dataset.cat || '';
         const busqueda = document.getElementById('buscar-inventario')?.value.toLowerCase() || '';
+        const filtroStock = this._inventarioFiltroStock || '';
         
         let items = this.inventario;
         
@@ -2889,11 +2979,22 @@ class AdminApp {
         if (busqueda) {
             items = items.filter(i => i.nombre.toLowerCase().includes(busqueda));
         }
+
+        if (filtroStock === 'bajo') {
+            items = items.filter(i => i.cantidad > 0 && i.cantidad <= i.stockMinimo);
+        } else if (filtroStock === 'agotado') {
+            items = items.filter(i => i.cantidad <= 0);
+        }
         
         if (items.length === 0) {
-            const mensaje = this.inventario.length === 0 
-                ? { icon: 'fa-boxes-stacked', text: 'No hay items en el inventario', sub: 'Agrega tu primer item con el botón de arriba' }
-                : { icon: 'fa-filter-circle-xmark', text: 'Sin resultados', sub: 'Prueba cambiando los filtros de búsqueda' };
+            const mensajes = {
+                '':        { icon: 'fa-boxes-stacked',      text: 'No hay items en el inventario', sub: 'Agrega tu primer item con el botón de arriba' },
+                'bajo':    { icon: 'fa-triangle-exclamation', text: 'Sin items con stock bajo',     sub: '¡Todo el inventario está en niveles correctos!' },
+                'agotado': { icon: 'fa-circle-check',         text: 'No hay productos agotados',   sub: '¡Excelente! Todos los productos tienen stock.' },
+            };
+            const mensaje = this.inventario.length === 0
+                ? mensajes['']
+                : (mensajes[filtroStock] || { icon: 'fa-filter-circle-xmark', text: 'Sin resultados', sub: 'Prueba cambiando los filtros de búsqueda' });
             container.innerHTML = `
                 <div class="inventario-empty">
                     <i class="fa-solid ${mensaje.icon}"></i>
@@ -3301,15 +3402,15 @@ class AdminApp {
         const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
 
         const totalDia = this.facturas
-            .filter(f => new Date(f.fecha) >= inicioDia)
+            .filter(f => parsefecha(f.fecha) >= inicioDia)
             .reduce((sum, f) => sum + f.total, 0);
 
         const totalSemana = this.facturas
-            .filter(f => new Date(f.fecha) >= inicioSemana)
+            .filter(f => parsefecha(f.fecha) >= inicioSemana)
             .reduce((sum, f) => sum + f.total, 0);
 
         const totalMes = this.facturas
-            .filter(f => new Date(f.fecha) >= inicioMes)
+            .filter(f => parsefecha(f.fecha) >= inicioMes)
             .reduce((sum, f) => sum + f.total, 0);
 
         document.getElementById('total-dia').textContent = `S/${totalDia.toFixed(2)}`;
@@ -3329,7 +3430,7 @@ class AdminApp {
             <div class="factura-item">
                 <div>
                     <strong>Mesa ${factura.mesaNumero}</strong> -
-                    ${new Date(factura.fecha).toLocaleString('es-ES')}
+                    ${parsefecha(factura.fecha).toLocaleString('es-ES')}
                     <small style="color: #666; margin-left: 10px;">${this.escapeHTML(factura.metodoPago || '')}</small>
                 </div>
                 <div style="display: flex; align-items: center; gap: 10px;">

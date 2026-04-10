@@ -53,13 +53,13 @@ New-NetFirewallRule -DisplayName "Node.js Allow All" -Direction Inbound -Program
 Abre PowerShell y ejecuta:
 
 ```powershell
-cd "f:\sistema de restaurante\backend"
+cd "f:\sistema de restaurante - cliente\backend"
 ```
 
 ### Ejecución en segundo plano (recomendado)
 
 ```powershell
-Start-Process -NoNewWindow -FilePath "node" -ArgumentList "server.js" -WorkingDirectory "f:\sistema de restaurante\backend"
+Start-Process -NoNewWindow -FilePath "node" -ArgumentList "server.js" -WorkingDirectory "f:\sistema de restaurante - cliente\backend"
 ```
 
 Para verificar que está corriendo:
@@ -77,7 +77,7 @@ Deberías ver: `TCP 0.0.0.0:3000 ... LISTENING`
 Abre **otra** ventana de PowerShell y ejecuta:
 
 ```powershell
-Start-Process -NoNewWindow -FilePath "python" -ArgumentList "-m", "http.server", "5500", "--bind", "0.0.0.0" -WorkingDirectory "f:\sistema de restaurante\frontend"
+Start-Process -NoNewWindow -FilePath "python" -ArgumentList "-m", "http.server", "5500", "--bind", "0.0.0.0" -WorkingDirectory "f:\sistema de restaurante - cliente\frontend"
 ```
 
 Para verificar que está corriendo:
@@ -152,12 +152,12 @@ Crea un archivo `iniciar.ps1` y pega esto:
 ```powershell
 # Iniciar Backend (SQLite, sin configuración adicional)
 Write-Host "🚀 Iniciando Backend..." -ForegroundColor Green
-Start-Process -NoNewWindow -FilePath "node" -ArgumentList "server.js" -WorkingDirectory "f:\sistema de restaurante\backend"
+Start-Process -NoNewWindow -FilePath "node" -ArgumentList "server.js" -WorkingDirectory "f:\sistema de restaurante - cliente\backend"
 Start-Sleep -Seconds 3
 
 # Iniciar Frontend
 Write-Host "🌐 Iniciando Frontend..." -ForegroundColor Cyan
-Start-Process -NoNewWindow -FilePath "python" -ArgumentList "-m", "http.server", "5500", "--bind", "0.0.0.0" -WorkingDirectory "f:\sistema de restaurante\frontend"
+Start-Process -NoNewWindow -FilePath "python" -ArgumentList "-m", "http.server", "5500", "--bind", "0.0.0.0" -WorkingDirectory "f:\sistema de restaurante - cliente\frontend"
 Start-Sleep -Seconds 2
 
 # Obtener IP
@@ -177,7 +177,7 @@ Write-Host "🔑 Credenciales: admin / admin123" -ForegroundColor Cyan
 Para ejecutarlo:
 
 ```powershell
-cd "f:\sistema de restaurante"
+cd "f:\sistema de restaurante - cliente"
 powershell -ExecutionPolicy Bypass -File iniciar.ps1
 ```
 
@@ -229,4 +229,4 @@ Set-NetConnectionProfile -InterfaceAlias "Wi-Fi" -NetworkCategory Private
 
 ---
 
-## 📅 Última actualización: Marzo 2026
+## 📅 Última actualización: Abril 2026

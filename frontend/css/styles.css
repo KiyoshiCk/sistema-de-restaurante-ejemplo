@@ -593,15 +593,39 @@
 }
 
 :root {
-    --primary-color: #ff6b35;
+    /* ── Marca ─────────────────────────────── */
+    --primary-color:   #ff6b35;
     --secondary-color: #f7931e;
-    --dark-color: #2c3e50;
-    --light-color: #ecf0f1;
-    --success-color: #27ae60;
-    --danger-color: #e74c3c;
-    --warning-color: #f39c12;
-    --info-color: #3498db;
-    --shadow: 0 2px 10px rgba(0,0,0,0.1);
+
+    /* ── Estructura ────────────────────────── */
+    --dark-color:  #1e293b;   /* slate-800  — más profesional que #2c3e50 */
+    --light-color: #f1f5f9;   /* slate-100  — más frío y limpio            */
+
+    /* ── Semántico ─────────────────────────── */
+    --success-color: #16a34a;
+    --danger-color:  #dc2626;
+    --warning-color: #d97706;
+    --info-color:    #2563eb;
+
+    /* ── Superficie / Texto ────────────────── */
+    --surface:        #ffffff;
+    --surface-2:      #f8fafc;
+    --border-color:   #e2e8f0;
+    --text-primary:   #1e293b;
+    --text-secondary: #64748b;
+    --text-muted:     #94a3b8;
+
+    /* ── Radios consistentes ───────────────── */
+    --radius-sm: 6px;
+    --radius:    10px;
+    --radius-lg: 16px;
+    --radius-xl: 22px;
+
+    /* ── Sombras escaladas ─────────────────── */
+    --shadow:    0 1px 3px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 8px  rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
+    --shadow-lg: 0 10px 28px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.06);
+    --shadow-xl: 0 24px 48px rgba(0,0,0,0.20), 0 8px 16px rgba(0,0,0,0.10);
 }
 
 html {
@@ -610,7 +634,10 @@ html {
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #0f172a;
+    background-image:
+        radial-gradient(ellipse at 15% 50%, rgba(30,55,120,0.35) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 15%, rgba(255,107,53,0.07) 0%, transparent 45%);
     min-height: 100vh;
     padding: 20px;
 }
@@ -713,17 +740,21 @@ body.cliente-view h4 {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #0f172a;
+    background-image:
+        radial-gradient(ellipse at 20% 60%, rgba(30,55,120,0.40) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 20%, rgba(255,107,53,0.08) 0%, transparent 45%);
     padding: 20px;
 }
 
 .login-container {
     background: white;
-    border-radius: 15px;
+    border-radius: var(--radius-xl);
     padding: 40px;
     max-width: 450px;
     width: 100%;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(255,255,255,0.06);
 }
 
 .login-header {
@@ -732,9 +763,11 @@ body.cliente-view h4 {
 }
 
 .login-header h1 {
-    font-size: 2.5em;
-    color: var(--dark-color);
-    margin-bottom: 10px;
+    font-size: 2.2em;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
 }
 
 .login-header p {
@@ -816,14 +849,15 @@ header .header-info {
 }
 
 .btn-logout {
-    background: rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.12);
     color: white;
-    border: 2px solid white;
-    padding: 8px 16px;
-    border-radius: 5px;
+    border: 1.5px solid rgba(255,255,255,0.6);
+    padding: 7px 16px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    font-weight: bold;
-    transition: all 0.3s;
+    font-weight: 600;
+    font-size: 0.9em;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 
 .btn-logout:hover {
@@ -854,27 +888,41 @@ header .header-info {
 .container {
     max-width: 1400px;
     margin: 0 auto;
-    background: white;
-    border-radius: 15px;
-    box-shadow: var(--shadow);
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
     overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.06);
 }
 
 header {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    background: linear-gradient(135deg, #e85a1e 0%, #f7931e 100%);
     color: white;
-    padding: 30px;
+    padding: 18px 28px;
     text-align: center;
+    position: relative;
+}
+
+header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.08) 0%, transparent 100%);
+    pointer-events: none;
 }
 
 header h1 {
-    font-size: 2.5em;
-    margin-bottom: 10px;
+    font-size: 1.85em;
+    margin-bottom: 4px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
 }
 
 #fecha-hora {
-    font-size: 1.1em;
-    opacity: 0.9;
+    font-size: 0.9em;
+    opacity: 0.8;
+    letter-spacing: 0.01em;
 }
 
 .main-nav {
@@ -882,39 +930,48 @@ header h1 {
     background: var(--dark-color);
     padding: 0;
     overflow-x: auto;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.12) transparent;
 }
 
 .nav-btn {
     flex: 1;
-    padding: 20px;
+    padding: 14px 16px;
     border: none;
     background: transparent;
-    color: white;
-    font-size: 1em;
+    color: rgba(255,255,255,0.55);
+    font-size: 0.82em;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
-    min-width: 120px;
+    gap: 4px;
+    min-width: 100px;
     position: relative;
+    border-bottom: 3px solid transparent;
+    letter-spacing: 0.01em;
 }
 
 .nav-btn .icon {
-    font-size: 1.5em;
+    font-size: 1.25em;
 }
 
 .nav-btn:hover {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.85);
 }
 
 .nav-btn.active {
-    background: var(--primary-color);
+    background: rgba(255,107,53,0.14);
+    color: #ff8555;
+    border-bottom-color: var(--primary-color);
 }
 
 main {
-    padding: 30px;
+    padding: 24px 28px;
 }
 
 .page {
@@ -935,12 +992,29 @@ main {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 25px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1.5px solid var(--border-color);
 }
 
 .section-header h2 {
-    color: var(--dark-color);
-    font-size: 2em;
+    color: var(--text-primary);
+    font-size: 1.55em;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    padding-left: 14px;
+    position: relative;
+}
+
+.section-header h2::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 12%;
+    bottom: 12%;
+    width: 4px;
+    background: linear-gradient(to bottom, var(--primary-color), var(--secondary-color));
+    border-radius: 4px;
 }
 
 /* Estadísticas */
@@ -954,15 +1028,73 @@ main {
 .stat-card {
     background: linear-gradient(135deg, var(--info-color), var(--primary-color));
     color: white;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: var(--shadow);
+    padding: 24px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Círculo decorativo glassmorphism en esquina superior derecha */
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: -18px;
+    right: -18px;
+    width: 90px;
+    height: 90px;
+    background: rgba(255,255,255,0.10);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.stat-card::after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* ─── Stat cards semánticas por posición ─────────────────── */
+/* 1 — Mesas Ocupadas → Azul índigo */
+.stats-grid .stat-card:nth-child(1) {
+    background: linear-gradient(135deg, #3b5bdb, #1971c2);
+    box-shadow: 0 4px 14px rgba(59,91,219,0.30);
+}
+/* 2 — Pedidos Activos → Ámbar */
+.stats-grid .stat-card:nth-child(2) {
+    background: linear-gradient(135deg, #f59f00, #e67700);
+    box-shadow: 0 4px 14px rgba(245,159,0,0.30);
+}
+/* 3 — Ventas Hoy → Verde */
+.stats-grid .stat-card:nth-child(3) {
+    background: linear-gradient(135deg, #2f9e44, #1e7e34);
+    box-shadow: 0 4px 14px rgba(47,158,68,0.30);
+}
+/* 4 — Platillos en Menú → Violeta */
+.stats-grid .stat-card:nth-child(4) {
+    background: linear-gradient(135deg, #7048e8, #5f3dc4);
+    box-shadow: 0 4px 14px rgba(112,72,232,0.30);
 }
 
 .stat-card h3 {
-    font-size: 1em;
+    font-size: 0.82em;
     margin-bottom: 10px;
-    opacity: 0.9;
+    opacity: 0.88;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
 .stat-number {
@@ -972,32 +1104,37 @@ main {
 
 /* Botones */
 .btn-primary, .btn-secondary, .btn-danger, .btn-success {
-    padding: 12px 24px;
+    padding: 10px 22px;
     border: none;
-    border-radius: 5px;
-    font-size: 1em;
+    border-radius: var(--radius-sm);
+    font-size: 0.95em;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+    letter-spacing: 0.01em;
 }
 
 .btn-primary {
     background: var(--primary-color);
     color: white;
+    box-shadow: 0 2px 8px rgba(255,107,53,0.35);
 }
 
 .btn-primary:hover {
-    background: var(--secondary-color);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
+    background: #e85a25;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(255,107,53,0.45);
 }
 
 .btn-secondary {
     background: var(--light-color);
-    color: var(--dark-color);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover {
-    background: #d5dbdb;
+    background: #e2e8f0;
+    border-color: #cbd5e1;
 }
 
 .btn-danger {
@@ -1039,12 +1176,22 @@ button:disabled {
 
 .filters select,
 .filters input {
-    padding: 10px;
-    border: 2px solid var(--light-color);
-    border-radius: 5px;
-    font-size: 1em;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.95em;
     flex: 1;
     min-width: 200px;
+    background: var(--surface);
+    color: var(--text-primary);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.filters select:focus,
+.filters input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255,107,53,0.14);
+    outline: none;
 }
 
 /* Grid de Menú */
@@ -1097,8 +1244,8 @@ button:disabled {
 }
 
 .menu-item:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
     border-color: var(--primary-color);
 }
 
@@ -1107,8 +1254,9 @@ button:disabled {
 }
 
 .menu-item h3 {
-    color: var(--dark-color);
+    color: var(--text-primary);
     margin-bottom: 10px;
+    font-weight: 600;
 }
 
 .menu-item .categoria {
@@ -1142,9 +1290,10 @@ button:disabled {
     flex: 1;
     padding: 8px;
     border: none;
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
+    font-weight: 500;
 }
 
 /* Mesas */
@@ -1230,13 +1379,13 @@ button:disabled {
 
 .mesa-card {
     background: white;
-    border: 2px solid var(--light-color);
+    border: 1.5px solid var(--border-color);
     border-radius: 14px;
     padding: 0;
     cursor: default;
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: var(--shadow);
 }
 
 .mesa-card.disponible {
@@ -1248,8 +1397,8 @@ button:disabled {
 }
 
 .mesa-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
 }
 
 /* Card Header */
@@ -2588,6 +2737,58 @@ button:disabled {
 .inv-stat.warning { border-left-color: #f39c12; }
 .inv-stat.danger { border-left-color: var(--danger-color); }
 .inv-stat.success { border-left-color: var(--success-color); }
+
+/* Tarjetas filtrables */
+.inv-stat.filtrable {
+    position: relative;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    user-select: none;
+}
+.inv-stat.filtrable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+.inv-stat.filtrable:active {
+    transform: translateY(0);
+}
+
+/* Estado activo de filtro */
+.inv-stat.filtrable.filtro-activo {
+    background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
+    box-shadow: 0 4px 16px rgba(52,152,219,0.2);
+}
+.inv-stat.filtrable.warning.filtro-activo {
+    background: linear-gradient(135deg, #fffbf0 0%, #fef9e7 100%);
+    box-shadow: 0 4px 16px rgba(243,156,18,0.2);
+}
+.inv-stat.filtrable.danger.filtro-activo {
+    background: linear-gradient(135deg, #fff5f5 0%, #fdecea 100%);
+    box-shadow: 0 4px 16px rgba(231,76,60,0.2);
+}
+
+/* Badge del filtro activo */
+.inv-filtro-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65em;
+    animation: filtro-pop 0.2s ease;
+}
+.inv-stat.filtrable.warning .inv-filtro-badge  { background: #f39c12; }
+.inv-stat.filtrable.danger  .inv-filtro-badge  { background: var(--danger-color); }
+
+@keyframes filtro-pop {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}
 
 .inv-stat > i {
     font-size: 1.5em;

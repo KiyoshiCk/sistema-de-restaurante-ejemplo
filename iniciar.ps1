@@ -64,17 +64,45 @@ if (-not (Test-Path $nodeModulesPath)) {
     }
 }
 
-# Iniciar Backend
-Write-Host "[+] Iniciando Backend (Node.js)..." -ForegroundColor Green
-$backendProcess = Start-Process -NoNewWindow -PassThru -FilePath "node" -ArgumentList "server.js" -WorkingDirectory "$PSScriptRoot\backend"
-Start-Sleep -Seconds 5
+# Iniciar Backend con PM2 (auto-restart si crashea)
+Write-Host "[+] Iniciando Backend (Node.js con PM2)..." -ForegroundColor Green
+$pm2Cmd = Get-Command pm2 -ErrorAction SilentlyContinue
 
-# Verificar Backend
-$backendOK = $null -ne $backendProcess -and !$backendProcess.HasExited
-if ($backendOK) {
-    Write-Host "    [OK] Backend iniciado correctamente (PID: $($backendProcess.Id))" -ForegroundColor Green
+if ($pm2Cmd) {
+    # Detener instancia anterior si existe
+    pm2 delete restaurante-backend 2>$null | Out-Null
+
+    Push-Location "$PSScriptRoot\backend"
+    pm2 start ecosystem.config.js 2>&1 | Out-Null
+    Pop-Location
+    Start-Sleep -Seconds 4
+
+    $pm2Status = pm2 jlist 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
+    $backendApp = $pm2Status | Where-Object { $_.name -eq 'restaurante-backend' }
+    if ($backendApp -and $backendApp.pm2_env.status -eq 'online') {
+        Write-Host "    [OK] Backend iniciado con PM2 (auto-restart activado)" -ForegroundColor Green
+        $backendOK = $true
+    } else {
+        Write-Host "    [WARN] PM2 no reporta estado online, verificando puerto..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 3
+        $backendOK = $null -ne (Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue)
+        if ($backendOK) {
+            Write-Host "    [OK] Backend escuchando en puerto 3000" -ForegroundColor Green
+        } else {
+            Write-Host "    [ERROR] Backend no pudo iniciarse. Revisa logs\backend-error.log" -ForegroundColor Red
+        }
+    }
 } else {
-    Write-Host "    [ERROR] Error al iniciar Backend" -ForegroundColor Red
+    # Fallback: arrancar con node directamente si PM2 no está disponible
+    Write-Host "    [WARN] PM2 no encontrado, usando node directo..." -ForegroundColor Yellow
+    $backendProcess = Start-Process -NoNewWindow -PassThru -FilePath "node" -ArgumentList "server.js" -WorkingDirectory "$PSScriptRoot\backend"
+    Start-Sleep -Seconds 5
+    $backendOK = $null -ne $backendProcess -and !$backendProcess.HasExited
+    if ($backendOK) {
+        Write-Host "    [OK] Backend iniciado (PID: $($backendProcess.Id))" -ForegroundColor Green
+    } else {
+        Write-Host "    [ERROR] Error al iniciar Backend" -ForegroundColor Red
+    }
 }
 
 # Iniciar Frontend
