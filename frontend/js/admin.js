@@ -3091,8 +3091,149 @@ class AdminApp {
             document.getElementById('buscar-inventario')?.addEventListener('input', () => this.renderizarInventario());
             this._inventarioInit = true;
         }
+
+        // Tab switcher (solo una vez)
+        if (!this._inventarioTabsInit) {
+            document.getElementById('inv-tab-stock')?.addEventListener('click', () => this._switchInvTab('stock'));
+            document.getElementById('inv-tab-reporte')?.addEventListener('click', () => this._switchInvTab('reporte'));
+            this._inventarioTabsInit = true;
+        }
         
         this.renderizarInventario();
+    }
+
+    _switchInvTab(tab) {
+        document.querySelectorAll('.inv-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+        const stockPanel = document.getElementById('inventario-stock-panel');
+        const repPanel   = document.getElementById('inv-reporte-panel');
+        if (tab === 'reporte') {
+            stockPanel.style.display = 'none';
+            repPanel.style.display   = '';
+            this.cargarReporteInventario();
+        } else {
+            stockPanel.style.display = '';
+            repPanel.style.display   = 'none';
+        }
+    }
+
+    async cargarReporteInventario() {
+        // ---- Stats ----
+        const valorTotal   = this.inventario.reduce((s, i) => s + (i.cantidad * (i.costo || 0)), 0);
+        const conCambio    = this.inventario.filter(i => i.costoAnterior && i.costoAnterior > 0 && i.costo !== i.costoAnterior).length;
+        const agotados     = this.inventario.filter(i => i.cantidad <= 0).length;
+        const topItem      = [...this.inventario].filter(i => i.costo > 0).sort((a, b) => (b.cantidad * b.costo) - (a.cantidad * a.costo))[0];
+
+        const statsEl = document.getElementById('inv-rep-stats');
+        if (statsEl) {
+            statsEl.innerHTML = `
+                <div class="inv-stat success">
+                    <i class="fa-solid fa-sack-dollar"></i>
+                    <div>
+                        <span class="inv-stat-num">S/${valorTotal.toFixed(2)}</span>
+                        <span class="inv-stat-label">Valor Total</span>
+                    </div>
+                </div>
+                <div class="inv-stat${conCambio > 0 ? ' warning' : ''}">
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                    <div>
+                        <span class="inv-stat-num">${conCambio}</span>
+                        <span class="inv-stat-label">Costos Modificados</span>
+                    </div>
+                </div>
+                <div class="inv-stat${agotados > 0 ? ' danger' : ''}">
+                    <i class="fa-solid fa-xmark-circle"></i>
+                    <div>
+                        <span class="inv-stat-num">${agotados}</span>
+                        <span class="inv-stat-label">Agotados</span>
+                    </div>
+                </div>
+                <div class="inv-stat">
+                    <i class="fa-solid fa-trophy"></i>
+                    <div>
+                        <span class="inv-stat-num inv-stat-num--sm">${topItem ? topItem.nombre : '—'}</span>
+                        <span class="inv-stat-label">Mayor Valor</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ---- Top Items por Valor ----
+        const topItems = [...this.inventario]
+            .filter(i => i.costo > 0)
+            .sort((a, b) => (b.cantidad * b.costo) - (a.cantidad * a.costo))
+            .slice(0, 6);
+
+        const topEl = document.getElementById('inv-rep-top');
+        if (topEl) {
+            topEl.innerHTML = topItems.length === 0
+                ? '<p class="inv-rep-vacio">Sin datos de costos</p>'
+                : topItems.map((item, idx) => `
+                    <div class="inv-rep-top-row">
+                        <span class="inv-rep-rank">${idx + 1}</span>
+                        <span class="inv-rep-nombre">${item.nombre}</span>
+                        <span class="inv-rep-cat-pill">${item.categoria}</span>
+                        <span class="inv-rep-stock-val">${item.cantidad} ${item.unidad}</span>
+                        <span class="inv-rep-valor">S/${(item.cantidad * item.costo).toFixed(2)}</span>
+                    </div>
+                `).join('');
+        }
+
+        // ---- Distribución por Categoría ----
+        const cats = {};
+        this.inventario.forEach(item => {
+            if (!cats[item.categoria]) cats[item.categoria] = { items: 0, valor: 0 };
+            cats[item.categoria].items++;
+            cats[item.categoria].valor += item.cantidad * (item.costo || 0);
+        });
+        const catList = Object.entries(cats).sort((a, b) => b[1].valor - a[1].valor);
+        const catEl = document.getElementById('inv-rep-categorias');
+        if (catEl) {
+            catEl.innerHTML = catList.length === 0
+                ? '<p class="inv-rep-vacio">Sin categorías</p>'
+                : catList.map(([cat, data]) => `
+                    <div class="inv-rep-cat-row">
+                        <span class="inv-rep-cat-name">${cat}</span>
+                        <span class="inv-rep-cat-count">${data.items} item${data.items !== 1 ? 's' : ''}</span>
+                        <span class="inv-rep-cat-valor">S/${data.valor.toFixed(2)}</span>
+                    </div>
+                `).join('');
+        }
+
+        // ---- Historial de Costos ----
+        const historialEl = document.getElementById('inv-rep-historial');
+        const emptyEl     = document.getElementById('inv-rep-empty');
+        if (!historialEl) return;
+
+        try {
+            const historial = await this.apiRequest('/inventario/historial-costos', 'GET');
+            if (!historial || historial.length === 0) {
+                historialEl.innerHTML = '';
+                if (emptyEl) emptyEl.style.display = '';
+                return;
+            }
+            if (emptyEl) emptyEl.style.display = 'none';
+            historialEl.innerHTML = historial.map(h => {
+                const subio     = h.variacion > 0;
+                const fecha     = new Date(h.fecha);
+                const fechaStr  = fecha.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
+                const horaStr   = fecha.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+                const pct       = Math.abs(h.variacion).toFixed(1);
+                return `
+                    <div class="inv-hist-row">
+                        <span class="inv-hist-nombre">${h.itemNombre || '<em>Item eliminado</em>'}</span>
+                        <span class="inv-hist-cat-pill">${h.itemCategoria || '—'}</span>
+                        <span class="inv-hist-costo old">S/${h.costoAnterior.toFixed(2)}</span>
+                        <span class="inv-hist-costo new">S/${h.costoNuevo.toFixed(2)}</span>
+                        <span class="inv-hist-variacion ${subio ? 'subio' : 'bajo'}">
+                            <i class="fa-solid fa-arrow-${subio ? 'up' : 'down'}"></i> ${subio ? '+' : '-'}${pct}%
+                        </span>
+                        <span class="inv-hist-fecha">${fechaStr}<small>${horaStr}</small></span>
+                    </div>
+                `;
+            }).join('');
+        } catch {
+            historialEl.innerHTML = '<p class="inv-rep-vacio">Error al cargar el historial de costos.</p>';
+        }
     }
     
     mostrarResumenInventario() {

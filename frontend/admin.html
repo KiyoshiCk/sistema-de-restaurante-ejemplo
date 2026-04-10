@@ -444,29 +444,80 @@
                         <h2><i class="fa-solid fa-boxes-stacked"></i> Control de Inventario</h2>
                         <button class="btn-primary" id="btn-agregar-inventario"><i class="fa-solid fa-plus"></i> Agregar Item</button>
                     </div>
-                    
-                    <div class="inventario-resumen" id="inventario-resumen"></div>
-                    <div class="inventario-alertas" id="inventario-alertas"></div>
-                    
-                    <div class="inventario-filtros">
-                        <div class="inventario-categorias" id="inventario-categorias">
-                            <button class="inv-cat-btn active" data-cat=""><i class="fa-solid fa-border-all"></i> Todos</button>
-                            <button class="inv-cat-btn" data-cat="Carnes"><i class="fa-solid fa-drumstick-bite"></i> Carnes</button>
-                            <button class="inv-cat-btn" data-cat="Verduras"><i class="fa-solid fa-leaf"></i> Verduras</button>
-                            <button class="inv-cat-btn" data-cat="Frutas"><i class="fa-solid fa-apple-whole"></i> Frutas</button>
-                            <button class="inv-cat-btn" data-cat="Granos"><i class="fa-solid fa-wheat-awn"></i> Granos</button>
-                            <button class="inv-cat-btn" data-cat="Lácteos"><i class="fa-solid fa-cheese"></i> Lácteos</button>
-                            <button class="inv-cat-btn" data-cat="Bebidas"><i class="fa-solid fa-glass-water"></i> Bebidas</button>
-                            <button class="inv-cat-btn" data-cat="Condimentos"><i class="fa-solid fa-jar"></i> Condimentos</button>
-                            <button class="inv-cat-btn" data-cat="Otros"><i class="fa-solid fa-boxes-stacked"></i> Otros</button>
+
+                    <!-- Tab switcher -->
+                    <div class="inv-tabs">
+                        <button class="inv-tab active" data-tab="stock" id="inv-tab-stock">
+                            <i class="fa-solid fa-boxes-stacked"></i> Stock
+                        </button>
+                        <button class="inv-tab" data-tab="reporte" id="inv-tab-reporte">
+                            <i class="fa-solid fa-chart-line"></i> Reporte
+                        </button>
+                    </div>
+
+                    <!-- Panel Stock -->
+                    <div id="inventario-stock-panel">
+                        <div class="inventario-resumen" id="inventario-resumen"></div>
+                        <div class="inventario-alertas" id="inventario-alertas"></div>
+
+                        <div class="inventario-filtros">
+                            <div class="inventario-categorias" id="inventario-categorias">
+                                <button class="inv-cat-btn active" data-cat=""><i class="fa-solid fa-border-all"></i> Todos</button>
+                                <button class="inv-cat-btn" data-cat="Carnes"><i class="fa-solid fa-drumstick-bite"></i> Carnes</button>
+                                <button class="inv-cat-btn" data-cat="Verduras"><i class="fa-solid fa-leaf"></i> Verduras</button>
+                                <button class="inv-cat-btn" data-cat="Frutas"><i class="fa-solid fa-apple-whole"></i> Frutas</button>
+                                <button class="inv-cat-btn" data-cat="Granos"><i class="fa-solid fa-wheat-awn"></i> Granos</button>
+                                <button class="inv-cat-btn" data-cat="Lácteos"><i class="fa-solid fa-cheese"></i> Lácteos</button>
+                                <button class="inv-cat-btn" data-cat="Bebidas"><i class="fa-solid fa-glass-water"></i> Bebidas</button>
+                                <button class="inv-cat-btn" data-cat="Condimentos"><i class="fa-solid fa-jar"></i> Condimentos</button>
+                                <button class="inv-cat-btn" data-cat="Otros"><i class="fa-solid fa-boxes-stacked"></i> Otros</button>
+                            </div>
+                            <div class="inventario-busqueda">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="buscar-inventario" placeholder="Buscar en inventario...">
+                            </div>
                         </div>
-                        <div class="inventario-busqueda">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="buscar-inventario" placeholder="Buscar en inventario...">
+
+                        <div class="inventario-grid" id="lista-inventario"></div>
+                    </div>
+
+                    <!-- Panel Reporte -->
+                    <div id="inv-reporte-panel" style="display:none">
+                        <!-- Stats -->
+                        <div class="inventario-resumen" id="inv-rep-stats"></div>
+
+                        <!-- Dos columnas: Top Items + Por Categoría -->
+                        <div class="inv-rep-grid">
+                            <div class="inv-rep-section">
+                                <h3 class="inv-rep-titulo"><i class="fa-solid fa-ranking-star"></i> Top Items por Valor</h3>
+                                <div id="inv-rep-top"></div>
+                            </div>
+                            <div class="inv-rep-section">
+                                <h3 class="inv-rep-titulo"><i class="fa-solid fa-chart-pie"></i> Distribución por Categoría</h3>
+                                <div id="inv-rep-categorias"></div>
+                            </div>
+                        </div>
+
+                        <!-- Historial de Costos -->
+                        <div class="inv-rep-section">
+                            <h3 class="inv-rep-titulo"><i class="fa-solid fa-arrow-trend-up"></i> Historial de Cambios de Costo</h3>
+                            <div class="fact-tabla-wrap">
+                                <div class="fact-tabla-header inv-hist-header">
+                                    <span>Producto</span>
+                                    <span>Categoría</span>
+                                    <span>Antes</span>
+                                    <span>Nuevo</span>
+                                    <span>Variación</span>
+                                    <span>Fecha</span>
+                                </div>
+                                <div id="inv-rep-historial"></div>
+                                <div id="inv-rep-empty" class="fact-empty" style="display:none">
+                                    <i class="fa-solid fa-chart-line"></i>
+                                    <p>No hay historial de cambios de costo aún</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="inventario-grid" id="lista-inventario"></div>
                 </section>
 
                 <!-- Facturación (Solo Admin) -->

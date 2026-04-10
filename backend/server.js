@@ -994,6 +994,21 @@ app.get('/api/inventario/alertas', verificarToken, (req, res) => {
     }
 });
 
+app.get('/api/inventario/historial-costos', verificarToken, (req, res) => {
+    try {
+        const historial = db.prepare(`
+            SELECT h.*, i.nombre as itemNombre, i.unidad as itemUnidad, i.categoria as itemCategoria
+            FROM historial_costos h
+            LEFT JOIN inventario i ON h.inventarioId = i._id
+            ORDER BY h.fecha DESC
+            LIMIT 200
+        `).all();
+        res.json(historial);
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener historial de costos' });
+    }
+});
+
 app.get('/api/inventario/:id/historial-costos', verificarToken, (req, res) => {
     try {
         const historial = db.prepare('SELECT * FROM historial_costos WHERE inventarioId = ? ORDER BY fecha DESC LIMIT 20').all(req.params.id);
