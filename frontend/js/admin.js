@@ -926,6 +926,8 @@ class AdminApp {
                 this.imagenBase64 = null;
                 document.getElementById('modal-platillo-titulo').textContent = 'Agregar Platillo';
                 document.getElementById('form-platillo').reset();
+                document.getElementById('platillo-disponible').checked = true;
+                document.getElementById('platillo-disponible-label').textContent = 'Disponible';
                 this.limpiarPreviewImagen();
                 document.getElementById('modal-platillo').classList.add('active');
             });
@@ -955,6 +957,12 @@ class AdminApp {
                 this.imagenBase64 = '';
                 this.limpiarPreviewImagen();
                 document.getElementById('platillo-imagen').value = '';
+            });
+
+            document.getElementById('platillo-disponible')?.addEventListener('change', (e) => {
+                const label = document.getElementById('platillo-disponible-label');
+                label.textContent = e.target.checked ? 'Disponible' : 'No disponible';
+                label.style.color  = e.target.checked ? '#27ae60' : '#e74c3c';
             });
 
             document.getElementById('btn-agregar-mesa')?.addEventListener('click', () => {
@@ -1229,7 +1237,8 @@ class AdminApp {
             nombre: document.getElementById('platillo-nombre').value,
             categoria: document.getElementById('platillo-categoria').value,
             precio: parseFloat(document.getElementById('platillo-precio').value),
-            descripcion: document.getElementById('platillo-descripcion').value
+            descripcion: document.getElementById('platillo-descripcion').value,
+            disponible: document.getElementById('platillo-disponible').checked
         };
 
         // Incluir imagen si se seleccionó una nueva o se quitó
@@ -1272,6 +1281,11 @@ class AdminApp {
         document.getElementById('platillo-precio').value = platillo.precio;
         document.getElementById('platillo-descripcion').value = platillo.descripcion || '';
         document.getElementById('platillo-imagen').value = '';
+        const dispChk = document.getElementById('platillo-disponible');
+        dispChk.checked = platillo.disponible !== false;
+        const dispLabel = document.getElementById('platillo-disponible-label');
+        dispLabel.textContent = dispChk.checked ? 'Disponible' : 'No disponible';
+        dispLabel.style.color  = dispChk.checked ? '#27ae60' : '#e74c3c';
 
         if (platillo.imagen) {
             this.mostrarPreviewImagen(platillo.imagen);
