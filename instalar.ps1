@@ -110,6 +110,51 @@ if ($reiniciarPath) {
     Write-Ok "No hubo nuevas instalaciones que requieran actualizar PATH."
 }
 
+# ── PASO 4b: Visual Studio Build Tools (requerido por better-sqlite3) ──
+Write-Step "4b" "Verificando Visual Studio Build Tools (compilador C++)..."
+$vsBuildOk = $false
+
+# Buscar cl.exe (compilador MSVC) en rutas comunes
+$clPaths = @(
+    "${env:ProgramFiles}\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC",
+    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC",
+    "${env:ProgramFiles}\Microsoft Visual Studio\2019\BuildTools\VC\Tools\MSVC"
+)
+foreach ($p in $clPaths) {
+    if (Test-Path $p) { $vsBuildOk = $true; break }
+}
+
+# También verificar via vswhere
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+if (-not $vsBuildOk -and (Test-Path $vswhere)) {
+    $vsPath = & $vswhere -products * -requires Microsoft.VisualCpp.Tools.HostX64.TargetX64 -find VC\Tools\MSVC 2>$null
+    if ($vsPath) { $vsBuildOk = $true }
+}
+
+if ($vsBuildOk) {
+    Write-Ok "Visual Studio Build Tools ya instalado."
+} else {
+    Write-Info "Build Tools no encontrado. Instalando Visual Studio Build Tools con C++..."
+    Write-Info "Esto puede tardar 5-10 minutos segun la velocidad de internet..."
+    try {
+        winget install Microsoft.VisualStudio.2022.BuildTools `
+            --silent `
+            --accept-package-agreements `
+            --accept-source-agreements `
+            --override "--quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended" 2>&1 | Out-Null
+        Write-Ok "Visual Studio Build Tools instalado."
+        $reiniciarPath = $true
+        # Refrescar PATH nuevamente
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
+                    [System.Environment]::GetEnvironmentVariable("Path","User")
+    } catch {
+        Write-Err "No se pudo instalar Build Tools automaticamente: $_"
+        Write-Warn "Instala manualmente desde: https://visualstudio.microsoft.com/visual-cpp-build-tools/"
+        Write-Warn "Selecciona: 'Desarrollo de escritorio con C++' y vuelve a ejecutar este instalador."
+        $errores += "Visual Studio Build Tools no instalado. npm install fallara con better-sqlite3."
+    }
+}
+
 # ── PASO 5: npm install ──────────────────────────────────────────
 Write-Step 5 "Verificando dependencias del proyecto..."
 $backendPath = Join-Path $PSScriptRoot "backend"
