@@ -111,10 +111,27 @@ if ($reiniciarPath) {
 }
 
 # ── PASO 5: npm install ──────────────────────────────────────────
-Write-Step 5 "Instalando dependencias del proyecto (npm install)..."
+Write-Step 5 "Verificando dependencias del proyecto..."
 $backendPath = Join-Path $PSScriptRoot "backend"
+$nodeModulesPath = Join-Path $backendPath "node_modules"
 
-if (Test-Path (Join-Path $backendPath "package.json")) {
+# Leer dependencias requeridas del package.json
+$pkgJson = Get-Content (Join-Path $backendPath "package.json") -Raw | ConvertFrom-Json
+$depsRequeridas = $pkgJson.dependencies.PSObject.Properties.Name
+
+# Verificar si todas las dependencias ya están instaladas
+$todasInstaladas = $true
+foreach ($dep in $depsRequeridas) {
+    if (-not (Test-Path (Join-Path $nodeModulesPath $dep))) {
+        $todasInstaladas = $false
+        break
+    }
+}
+
+if ($todasInstaladas) {
+    Write-Ok "Todas las dependencias ya estan instaladas. Saltando npm install."
+} elseif (Test-Path (Join-Path $backendPath "package.json")) {
+    Write-Info "Faltan dependencias. Ejecutando npm install..."
     try {
         Push-Location $backendPath
         npm install --loglevel=warn 2>&1
