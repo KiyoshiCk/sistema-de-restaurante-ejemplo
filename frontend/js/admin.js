@@ -1138,7 +1138,9 @@ class AdminApp {
                 <div class="precio">S/${platillo.precio.toFixed(2)}</div>
                 <p class="descripcion">${this.escapeHTML(platillo.descripcion || 'Sin descripción')}</p>
                 <div class="disponibilidad-status">
-                    ${platillo.disponible ? '<i class="fa-solid fa-circle-check" style="color:#27ae60"></i> Disponible' : '<i class="fa-solid fa-circle-xmark" style="color:#e74c3c"></i> No disponible'}
+                    ${platillo.disponible 
+                        ? '<span class="disp-badge disponible"><i class="fa-solid fa-circle-check"></i> Disponible</span>' 
+                        : '<span class="disp-badge no-disponible"><i class="fa-solid fa-ban"></i> No disponible</span>'}
                 </div>
                 <div class="menu-item-actions">
                     <button class="btn-secondary" onclick="app.toggleDisponibilidad('${platillo._id}')">

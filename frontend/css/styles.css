@@ -1225,9 +1225,9 @@ button:disabled {
 }
 
 .menu-item.no-disponible {
-    opacity: 0.6;
-    background: #f8f9fa;
-    border-color: #dee2e6;
+    background: #fff5f5;
+    border-color: #f5b7b1;
+    border-top: 4px solid #e74c3c;
 }
 
 .menu-item.no-disponible h3 {
@@ -1235,12 +1235,30 @@ button:disabled {
 }
 
 .disponibilidad-status {
-    font-size: 0.9em;
-    font-weight: bold;
-    padding: 5px 10px;
-    border-radius: 5px;
     margin-bottom: 10px;
-    display: inline-block;
+}
+
+.disp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.78em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.disp-badge.disponible {
+    background: #e8f8f5;
+    color: #27ae60;
+}
+
+.disp-badge.no-disponible {
+    background: #fdedec;
+    color: #e74c3c;
 }
 
 .menu-item:hover {
