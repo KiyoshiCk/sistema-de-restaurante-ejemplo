@@ -2306,6 +2306,189 @@ class AdminApp {
         if (factura) this.imprimirTicket(factura);
     }
 
+    imprimirReporteFacturacion() {
+        const { inicio, fin } = this._factGetRango(this._factPeriodo || 'hoy');
+        const periodoLabel = { hoy: 'Hoy', semana: 'Esta Semana', mes: 'Este Mes', todo: 'Todo el Historial' };
+        const label = periodoLabel[this._factPeriodo || 'hoy'];
+
+        let lista = [...this.facturas]
+            .filter(f => { const d = parsefecha(f.fecha); return d >= inicio && d <= fin; })
+            .sort((a, b) => parsefecha(b.fecha) - parsefecha(a.fecha));
+
+        const totalGeneral = lista.reduce((s, f) => s + (f.total || 0), 0);
+        const promedio     = lista.length > 0 ? (totalGeneral / lista.length).toFixed(2) : '0.00';
+        const ahora        = new Date().toLocaleString('es-PE');
+        const nombreRest   = this.escapeHTML(this.config?.nombre || 'RESTAURANTE');
+
+        const metodoColor = { efectivo: '#27ae60', tarjeta: '#4f46e5', yape: '#9d174d', plin: '#9d174d' };
+        const metodoBadge = m => {
+            const color = metodoColor[(m||'efectivo').toLowerCase()] || '#555';
+            return `<span style="background:${color}1a;color:${color};padding:2px 8px;border-radius:20px;font-size:0.78em;font-weight:700">${m || 'Efectivo'}</span>`;
+        };
+
+        const rowsHTML = lista.map(f => {
+            const fecha  = parsefecha(f.fecha).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const items  = (f.items || []).map(i => `${i.cantidad||1}× ${this.escapeHTML(i.nombre||'')}`).join(', ');
+            return `<tr>
+                <td>#${this.escapeHTML(f.numeroFactura || f._id.slice(-6).toUpperCase())}</td>
+                <td>Mesa ${f.mesaNumero}</td>
+                <td>${fecha}</td>
+                <td>${metodoBadge(f.metodoPago)}</td>
+                <td style="font-size:0.82em;color:#555">${items || '—'}</td>
+                <td style="text-align:right;font-weight:700;color:#27ae60">S/${(f.total||0).toFixed(2)}</td>
+            </tr>`;
+        }).join('');
+
+        const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <title>Reporte Facturación - ${label}</title>
+        <style>
+            *{margin:0;padding:0;box-sizing:border-box}
+            body{font-family:Arial,sans-serif;font-size:13px;padding:30px;color:#1e293b}
+            .hdr{text-align:center;margin-bottom:22px;border-bottom:2px solid #e2e8f0;padding-bottom:14px}
+            .hdr h1{font-size:22px;font-weight:800;color:#0f172a}
+            .hdr p{color:#64748b;font-size:12px;margin-top:4px}
+            .stats{display:flex;gap:14px;margin-bottom:20px}
+            .stat{flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px}
+            .stat-n{font-size:20px;font-weight:800;color:#0f172a}
+            .stat-l{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+            table{width:100%;border-collapse:collapse}
+            thead tr{background:#f1f5f9}
+            th{padding:9px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;border-bottom:2px solid #e2e8f0}
+            td{padding:8px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+            tr:last-child td{border-bottom:none}
+            tfoot td{font-weight:800;background:#f8fafc;border-top:2px solid #e2e8f0}
+            .foot{margin-top:22px;text-align:center;font-size:11px;color:#94a3b8}
+            @media print{body{padding:15px}}
+        </style></head><body>
+        <div class="hdr"><h1>${nombreRest}</h1><p>Reporte de Facturación — ${label}</p><p>Generado: ${ahora}</p></div>
+        <div class="stats">
+            <div class="stat"><div class="stat-n">${lista.length}</div><div class="stat-l">Facturas</div></div>
+            <div class="stat"><div class="stat-n">S/${totalGeneral.toFixed(2)}</div><div class="stat-l">Total del Período</div></div>
+            <div class="stat"><div class="stat-n">S/${promedio}</div><div class="stat-l">Ticket Promedio</div></div>
+        </div>
+        <table>
+            <thead><tr><th>Factura</th><th>Mesa</th><th>Fecha / Hora</th><th>Método</th><th>Items</th><th style="text-align:right">Total</th></tr></thead>
+            <tbody>${rowsHTML || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px">Sin facturas en este período</td></tr>'}</tbody>
+            <tfoot><tr><td colspan="5">TOTAL GENERAL (${lista.length} facturas)</td><td style="text-align:right">S/${totalGeneral.toFixed(2)}</td></tr></tfoot>
+        </table>
+        <div class="foot">Generado por ${nombreRest} — Sistema de Gestión de Restaurante</div>
+        </body></html>`;
+
+        const w = window.open('', '_blank', 'width=960,height=700');
+        if (!w) { alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio e intenta de nuevo.'); return; }
+        w.document.write(html);
+        w.document.close();
+        setTimeout(() => w.print(), 300);
+    }
+
+    imprimirReporteInventario() {
+        const ahora      = new Date().toLocaleString('es-PE');
+        const nombreRest = this.escapeHTML(this.config?.nombre || 'RESTAURANTE');
+
+        const valorTotal = this.inventario.reduce((s, i) => s + (i.cantidad * (i.costo||0)), 0);
+        const agotados   = this.inventario.filter(i => i.cantidad <= 0).length;
+        const stockBajo  = this.inventario.filter(i => i.cantidad > 0 && i.cantidad <= i.stockMinimo).length;
+        const conCambio  = this.inventario.filter(i => i.costoAnterior && i.costoAnterior > 0 && i.costo !== i.costoAnterior).length;
+
+        const topItems = [...this.inventario].filter(i => i.costo > 0)
+            .sort((a, b) => (b.cantidad * b.costo) - (a.cantidad * a.costo)).slice(0, 10);
+
+        const cats = {};
+        this.inventario.forEach(item => {
+            if (!cats[item.categoria]) cats[item.categoria] = { items: 0, valor: 0 };
+            cats[item.categoria].items++;
+            cats[item.categoria].valor += item.cantidad * (item.costo || 0);
+        });
+        const catList = Object.entries(cats).sort((a, b) => b[1].valor - a[1].valor);
+
+        const historial = this._invHistorialData || [];
+
+        const topRows = topItems.map((item, idx) => `<tr>
+            <td>${idx+1}</td>
+            <td>${this.escapeHTML(item.nombre)}</td>
+            <td>${item.categoria}</td>
+            <td>${item.cantidad} ${item.unidad}</td>
+            <td>S/${(item.costo||0).toFixed(2)}</td>
+            <td style="text-align:right;font-weight:700;color:#27ae60">S/${(item.cantidad * item.costo).toFixed(2)}</td>
+        </tr>`).join('');
+
+        const catRows = catList.map(([cat, data]) => `<tr>
+            <td>${cat}</td>
+            <td style="text-align:center">${data.items}</td>
+            <td style="text-align:right;font-weight:700;color:#27ae60">S/${data.valor.toFixed(2)}</td>
+        </tr>`).join('');
+
+        const histRows = historial.map(h => {
+            const subio = h.variacion > 0;
+            const pct   = Math.abs(h.variacion).toFixed(1);
+            const fecha = new Date(h.fecha).toLocaleString('es-PE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            return `<tr>
+                <td>${this.escapeHTML(h.itemNombre || 'Item eliminado')}</td>
+                <td>${h.itemCategoria || '—'}</td>
+                <td>S/${h.costoAnterior.toFixed(2)}</td>
+                <td>S/${h.costoNuevo.toFixed(2)}</td>
+                <td style="font-weight:700;color:${subio ? '#e74c3c' : '#27ae60'}">${subio ? '▲' : '▼'} ${pct}%</td>
+                <td>${fecha}</td>
+            </tr>`;
+        }).join('');
+
+        const empty = txt => `<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:16px">${txt}</td></tr>`;
+
+        const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <title>Reporte de Inventario</title>
+        <style>
+            *{margin:0;padding:0;box-sizing:border-box}
+            body{font-family:Arial,sans-serif;font-size:13px;padding:30px;color:#1e293b}
+            .hdr{text-align:center;margin-bottom:22px;border-bottom:2px solid #e2e8f0;padding-bottom:14px}
+            .hdr h1{font-size:22px;font-weight:800;color:#0f172a}
+            .hdr p{color:#64748b;font-size:12px;margin-top:4px}
+            .stats{display:flex;gap:12px;margin-bottom:22px;flex-wrap:wrap}
+            .stat{flex:1;min-width:100px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px}
+            .stat-n{font-size:18px;font-weight:800;color:#0f172a}
+            .stat-l{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+            .two{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px}
+            .sec{margin-bottom:24px}
+            .sec h2{font-size:13px;font-weight:700;color:#0f172a;border-left:3px solid #6366f1;padding-left:9px;margin-bottom:10px}
+            table{width:100%;border-collapse:collapse}
+            thead tr{background:#f1f5f9}
+            th{padding:8px 9px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;border-bottom:2px solid #e2e8f0}
+            td{padding:7px 9px;border-bottom:1px solid #f1f5f9;font-size:.9em;vertical-align:middle}
+            tr:last-child td{border-bottom:none}
+            .foot{margin-top:22px;text-align:center;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px}
+            @media print{body{padding:15px}.two{grid-template-columns:1fr 1fr}}
+        </style></head><body>
+        <div class="hdr"><h1>${nombreRest}</h1><p>Reporte de Inventario</p><p>Generado: ${ahora}</p></div>
+        <div class="stats">
+            <div class="stat"><div class="stat-n">${this.inventario.length}</div><div class="stat-l">Total Items</div></div>
+            <div class="stat"><div class="stat-n">S/${valorTotal.toFixed(2)}</div><div class="stat-l">Valor Total</div></div>
+            <div class="stat"><div class="stat-n">${stockBajo}</div><div class="stat-l">Stock Bajo</div></div>
+            <div class="stat"><div class="stat-n">${agotados}</div><div class="stat-l">Agotados</div></div>
+            <div class="stat"><div class="stat-n">${conCambio}</div><div class="stat-l">Costos Modificados</div></div>
+        </div>
+        <div class="two">
+            <div class="sec"><h2>Top Items por Valor</h2>
+                <table><thead><tr><th>#</th><th>Nombre</th><th>Cat.</th><th>Stock</th><th>Costo</th><th style="text-align:right">Valor</th></tr></thead>
+                <tbody>${topRows || empty('Sin datos de costos')}</tbody></table>
+            </div>
+            <div class="sec"><h2>Distribución por Categoría</h2>
+                <table><thead><tr><th>Categoría</th><th style="text-align:center">Items</th><th style="text-align:right">Valor</th></tr></thead>
+                <tbody>${catRows || empty('Sin categorías')}</tbody></table>
+            </div>
+        </div>
+        <div class="sec"><h2>Historial de Cambios de Costo</h2>
+            <table><thead><tr><th>Producto</th><th>Categoría</th><th>Antes</th><th>Nuevo</th><th>Variación</th><th>Fecha</th></tr></thead>
+            <tbody>${histRows || empty('Sin historial de cambios de costo')}</tbody></table>
+        </div>
+        <div class="foot">Generado por ${nombreRest} — Sistema de Gestión de Restaurante</div>
+        </body></html>`;
+
+        const w = window.open('', '_blank', 'width=1050,height=800');
+        if (!w) { alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio e intenta de nuevo.'); return; }
+        w.document.write(html);
+        w.document.close();
+        setTimeout(() => w.print(), 300);
+    }
+
     // ===== DIVISIÓN DE CUENTA =====
     
     divisionData = {
@@ -3212,6 +3395,7 @@ class AdminApp {
                 return;
             }
             if (emptyEl) emptyEl.style.display = 'none';
+            this._invHistorialData = historial;
             historialEl.innerHTML = historial.map(h => {
                 const subio     = h.variacion > 0;
                 const fecha     = new Date(h.fecha);

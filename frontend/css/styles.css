@@ -3812,6 +3812,13 @@ button:disabled {
     display: block;
 }
 
+/* Report toolbar (print button row) */
+.inv-rep-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+}
+
 @media (max-width: 700px) {
     .inv-hist-header,
     .inv-hist-row {
