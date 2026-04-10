@@ -1969,6 +1969,27 @@ button:disabled {
     box-shadow: 0 3px 8px rgba(231, 76, 60, 0.4);
 }
 
+.btn-editar-pedido {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    font-size: 0.85em;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-editar-pedido:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.45);
+}
+
 /* Indicadores de estado para mesero */
 .pedido-estado-info {
     width: 100%;
@@ -2295,6 +2316,99 @@ button:disabled {
     justify-content: space-between;
     align-items: center;
     width: 100%;
+}
+
+/* Edit-modal item layout */
+.item-sel-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.item-sel-nombre {
+    font-weight: 600;
+    font-size: 0.95em;
+    color: #1e293b;
+    flex: 1;
+}
+
+.item-sel-precio {
+    font-weight: 700;
+    color: var(--primary-color, #0ea5e9);
+    font-size: 0.95em;
+    white-space: nowrap;
+}
+
+.item-sel-controles {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.item-sel-cant {
+    min-width: 24px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1em;
+}
+
+.btn-cant {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: #e2e8f0;
+    color: #334155;
+    cursor: pointer;
+    font-size: 0.85em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.btn-cant:hover {
+    background: #cbd5e1;
+}
+
+.btn-quitar-item {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: #fee2e2;
+    color: #dc2626;
+    cursor: pointer;
+    font-size: 0.78em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    transition: background 0.15s;
+}
+
+.btn-quitar-item:hover {
+    background: #fecaca;
+}
+
+.item-comentario-input {
+    margin-top: 6px;
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.82em;
+    color: #475569;
+    background: #f8fafc;
+    box-sizing: border-box;
+}
+
+.item-comentario-input:focus {
+    outline: none;
+    border-color: #0ea5e9;
+    background: #fff;
 }
 
 .item-comentario {

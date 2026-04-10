@@ -679,6 +679,7 @@ class AdminApp {
                     ${!this.puedePreparar() && pedido.estado === 'en-preparacion' ? `<div class="pedido-estado-info preparando-info"><i class="fa-solid fa-fire fa-beat"></i> Cocina está preparando este pedido</div>` : ''}
                     ${this.puedeEntregar() && pedido.estado === 'listo' ? `<button class="btn-success" onclick="app.entregarPedido('${pedido._id}')"><i class="fa-solid fa-utensils"></i> Entregar</button>` : ''}
                     ${this.puedeEntregar() && pedido.estado === 'entregado' ? `<button class="btn-cobrar" onclick="app.cobrarPedido('${pedido._id}')"><i class="fa-solid fa-money-bill"></i> Cobrar</button>` : ''}
+                    ${(this.usuario.rol === 'administrador' || this.usuario.rol === 'mesero') && (pedido.estado === 'pendiente' || pedido.estado === 'en-preparacion') ? `<button class="btn-editar-pedido" onclick="app.abrirEditarPedido('${pedido._id}')"><i class="fa-solid fa-pen-to-square"></i> Editar</button>` : ''}
                     ${(this.usuario.rol === 'administrador' || this.usuario.rol === 'mesero') && pedido.estado !== 'entregado' && pedido.estado !== 'listo' ? `<button class="btn-danger btn-cancelar-pedido" onclick="app.cancelarPedido('${pedido._id}')"><i class="fa-solid fa-xmark"></i> Cancelar</button>` : ''}
                 </div>
             </div>
@@ -992,6 +993,8 @@ class AdminApp {
                 document.getElementById('modal-inventario').classList.remove('active');
             });
         }
+
+        this.setupModalEditarPedido();
 
         document.getElementById('btn-nuevo-pedido').addEventListener('click', () => {
             this.pedidoActual = [];
@@ -2383,6 +2386,161 @@ class AdminApp {
             alert('Error al procesar la división');
             console.error(error);
         }
+    }
+
+    // ============= EDITAR PEDIDO =============
+    abrirEditarPedido(pedidoId) {
+        const pedido = this.pedidos.find(p => p._id === pedidoId);
+        if (!pedido) return;
+
+        this._editandoPedidoId = pedidoId;
+        this._editandoItems = pedido.items.map(i => ({ ...i })); // copia profunda
+
+        // Etiqueta de mesa en el título
+        document.getElementById('editar-pedido-mesa-label').textContent = `Mesa ${pedido.mesaNumero}`;
+
+        // Renderizar menú disponible
+        this.renderMenuEditarPedido('');
+
+        // Renderizar items actuales
+        this.renderEditarItemsSeleccionados();
+
+        // Abrir modal
+        document.getElementById('modal-editar-pedido').classList.add('active');
+    }
+
+    renderMenuEditarPedido(categoriaFiltro) {
+        const grid = document.getElementById('menu-editar-pedido');
+        const itemsFiltrados = this.menu.filter(p =>
+            p.disponible && (!categoriaFiltro || p.categoria === categoriaFiltro)
+        );
+
+        grid.innerHTML = itemsFiltrados.map(p => `
+            <div class="menu-pedido-item" onclick="app.agregarItemEditarPedido('${p._id}')">
+                <div class="menu-pedido-item-nombre">${this.escapeHTML(p.nombre)}</div>
+                <div class="menu-pedido-item-precio">S/${p.precio.toFixed(2)}</div>
+                <div class="menu-pedido-item-cat">${this.escapeHTML(p.categoria)}</div>
+            </div>
+        `).join('') || '<p style="color:#94a3b8;padding:20px;grid-column:1/-1">Sin platillos en esta categoría</p>';
+    }
+
+    agregarItemEditarPedido(platilloId) {
+        const platillo = this.menu.find(p => p._id === platilloId);
+        if (!platillo) return;
+
+        const existente = this._editandoItems.find(i => i.platilloId === platilloId);
+        if (existente) {
+            existente.cantidad++;
+        } else {
+            this._editandoItems.push({
+                platilloId: platillo._id,
+                nombre: platillo.nombre,
+                precio: platillo.precio,
+                cantidad: 1,
+                comentario: ''
+            });
+        }
+        this.renderEditarItemsSeleccionados();
+    }
+
+    renderEditarItemsSeleccionados() {
+        const container = document.getElementById('editar-items-seleccionados');
+        if (!this._editandoItems.length) {
+            container.innerHTML = '<p style="color:#94a3b8;padding:10px">Sin items. Agrega platillos desde el menú.</p>';
+            document.getElementById('editar-pedido-total').textContent = '0.00';
+            return;
+        }
+
+        container.innerHTML = this._editandoItems.map((item, idx) => `
+            <div class="item-seleccionado">
+                <div class="item-sel-info">
+                    <span class="item-sel-nombre">${this.escapeHTML(item.nombre)}</span>
+                    <span class="item-sel-precio">S/${(item.precio * item.cantidad).toFixed(2)}</span>
+                </div>
+                <div class="item-sel-controles">
+                    <button type="button" class="btn-cant" onclick="app.cambiarCantEditar(${idx}, -1)"><i class="fa-solid fa-minus"></i></button>
+                    <span class="item-sel-cant">${item.cantidad}</span>
+                    <button type="button" class="btn-cant" onclick="app.cambiarCantEditar(${idx}, 1)"><i class="fa-solid fa-plus"></i></button>
+                    <button type="button" class="btn-quitar-item" onclick="app.quitarItemEditar(${idx})"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                <input type="text" class="item-comentario-input" placeholder="Nota (sin cebolla, término...)"
+                    value="${this.escapeHTML(item.comentario || '')}"
+                    oninput="app.editarComentarioItem(${idx}, this.value)">
+            </div>
+        `).join('');
+
+        const total = this._editandoItems.reduce((s, i) => s + i.precio * i.cantidad, 0);
+        document.getElementById('editar-pedido-total').textContent = total.toFixed(2);
+    }
+
+    cambiarCantEditar(idx, delta) {
+        this._editandoItems[idx].cantidad += delta;
+        if (this._editandoItems[idx].cantidad <= 0) this._editandoItems.splice(idx, 1);
+        this.renderEditarItemsSeleccionados();
+    }
+
+    quitarItemEditar(idx) {
+        this._editandoItems.splice(idx, 1);
+        this.renderEditarItemsSeleccionados();
+    }
+
+    editarComentarioItem(idx, valor) {
+        this._editandoItems[idx].comentario = valor;
+    }
+
+    async guardarEdicionPedido() {
+        if (!this._editandoItems.length) {
+            alert('El pedido debe tener al menos un item.');
+            return;
+        }
+
+        const pedido = this.pedidos.find(p => p._id === this._editandoPedidoId);
+        const total = this._editandoItems.reduce((s, i) => s + i.precio * i.cantidad, 0);
+
+        const btn = document.getElementById('btn-confirmar-editar-pedido');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+
+        try {
+            const actualizado = await this.apiRequest(`/pedidos/${this._editandoPedidoId}`, 'PUT', {
+                ...pedido,
+                items: this._editandoItems,
+                total
+            });
+
+            // Actualizar local
+            const idx = this.pedidos.findIndex(p => p._id === this._editandoPedidoId);
+            if (idx !== -1) this.pedidos[idx] = actualizado;
+
+            await this.agregarActividad(`Pedido editado - Mesa ${pedido.mesaNumero}`);
+
+            document.getElementById('modal-editar-pedido').classList.remove('active');
+            this.cargarPedidos();
+        } catch (e) {
+            alert('Error al guardar los cambios.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Guardar Cambios';
+        }
+    }
+
+    setupModalEditarPedido() {
+        const modal = document.getElementById('modal-editar-pedido');
+
+        // Cancelar
+        document.getElementById('btn-cancelar-editar-pedido').addEventListener('click', () => modal.classList.remove('active'));
+
+        // Guardar
+        document.getElementById('btn-confirmar-editar-pedido').addEventListener('click', () => this.guardarEdicionPedido());
+
+        // Filtros de categoría
+        modal.querySelectorAll('.filtro-cat').forEach(btn => {
+            btn.addEventListener('click', () => {
+                modal.querySelectorAll('.filtro-cat').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.renderMenuEditarPedido(btn.dataset.categoria);
+            });
+        });
     }
 
     async cancelarPedido(pedidoId) {

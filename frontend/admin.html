@@ -585,6 +585,34 @@
             </div>
         </div>
 
+        <!-- Modal Editar Pedido -->
+        <div id="modal-editar-pedido" class="modal">
+            <div class="modal-content modal-large">
+                <span class="close" role="button" tabindex="0" aria-label="Cerrar">&times;</span>
+                <h2><i class="fa-solid fa-pen-to-square"></i> Editar Pedido — <span id="editar-pedido-mesa-label"></span></h2>
+                <div class="pedido-items">
+                    <h3>Platillos</h3>
+                    <div class="filtros-pedido">
+                        <button type="button" class="filtro-cat active" data-categoria=""><i class="fa-solid fa-utensils"></i> Todos</button>
+                        <button type="button" class="filtro-cat" data-categoria="Entradas"><i class="fa-solid fa-leaf"></i> Entradas</button>
+                        <button type="button" class="filtro-cat" data-categoria="Platos Fuertes"><i class="fa-solid fa-drumstick-bite"></i> Platos Fuertes</button>
+                        <button type="button" class="filtro-cat" data-categoria="Postres"><i class="fa-solid fa-cake-candles"></i> Postres</button>
+                        <button type="button" class="filtro-cat" data-categoria="Bebidas"><i class="fa-solid fa-glass-water"></i> Bebidas</button>
+                    </div>
+                    <div id="menu-editar-pedido" class="menu-pedido-grid"></div>
+                    <h3>Items del Pedido</h3>
+                    <div id="editar-items-seleccionados"></div>
+                    <div class="pedido-total">
+                        <strong>Total: S/<span id="editar-pedido-total">0.00</span></strong>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-primary" id="btn-confirmar-editar-pedido"><i class="fa-solid fa-check"></i> Guardar Cambios</button>
+                    <button type="button" class="btn-secondary" id="btn-cancelar-editar-pedido">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal Agregar Mesa -->
         <div id="modal-mesa" class="modal">
             <div class="modal-content">
