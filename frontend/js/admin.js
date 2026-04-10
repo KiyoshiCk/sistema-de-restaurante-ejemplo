@@ -1169,7 +1169,7 @@ class AdminApp {
         const busqueda  = document.getElementById('buscar-platillo')?.value.toLowerCase() || '';
         const dispFiltro = this._menuFiltroDisp || '';
 
-        let menuFiltrado = this.menu;
+        let menuFiltrado = [...this.menu].sort((a, b) => parsefecha(b.createdAt) - parsefecha(a.createdAt));
 
         if (dispFiltro === 'disponible')    menuFiltrado = menuFiltrado.filter(p => p.disponible);
         if (dispFiltro === 'no-disponible') menuFiltrado = menuFiltrado.filter(p => !p.disponible);
@@ -1245,7 +1245,7 @@ class AdminApp {
                 await this.agregarActividad(`Platillo actualizado: ${platillo.nombre}`);
             } else {
                 const nuevo = await this.apiRequest('/menu', 'POST', platillo);
-                this.menu.push(nuevo);
+                this.menu.unshift(nuevo);
                 await this.agregarActividad(`Nuevo platillo agregado: ${platillo.nombre}`);
             }
 
