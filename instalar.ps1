@@ -49,11 +49,37 @@ Write-Step 2 "Verificando Node.js..."
 $nodeOk = $false
 try {
     $nodeVer = node --version 2>$null
-    if ($nodeVer -match "v\d") { $nodeOk = $true; Write-Ok "Node.js ya instalado: $nodeVer" }
+    if ($nodeVer -match "v(\d+)\.") {
+        $nodeMajor = [int]$Matches[1]
+        if ($nodeMajor -le 22) {
+            $nodeOk = $true
+            Write-Ok "Node.js LTS detectado: $nodeVer"
+        } else {
+            Write-Warn "Node.js $nodeVer detectado (muy reciente, sin binarios para modulos nativos)."
+            Write-Info "Instalando Node.js LTS v22 para compatibilidad con better-sqlite3..."
+            winget install -e --id OpenJS.NodeJS.LTS `
+                --accept-package-agreements `
+                --accept-source-agreements `
+                --silent 2>&1 | Out-Null
+            # Refrescar PATH para usar el Node recien instalado
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
+                        [System.Environment]::GetEnvironmentVariable("Path","User")
+            $nodeVerNew = node --version 2>$null
+            if ($nodeVerNew -match "v(\d+)\." -and [int]$Matches[1] -le 22) {
+                $nodeOk = $true
+                Write-Ok "Node.js LTS instalado: $nodeVerNew"
+                $reiniciarPath = $true
+            } else {
+                Write-Warn "Sigue activa la version $nodeVer. Puede que necesites reiniciar el PC."
+                Write-Warn "Si el sistema falla, desinstala Node.js v$nodeMajor e instala v22 LTS desde https://nodejs.org"
+                $nodeOk = $true  # Continuar de todas formas
+            }
+        }
+    }
 } catch {}
 
 if (-not $nodeOk) {
-    Write-Info "Node.js no encontrado. Instalando Node.js LTS (puede tardar unos minutos)..."
+    Write-Info "Node.js no encontrado. Instalando Node.js LTS v22..."
     try {
         winget install -e --id OpenJS.NodeJS.LTS `
             --accept-package-agreements `
