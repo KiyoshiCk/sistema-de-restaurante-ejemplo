@@ -3024,17 +3024,29 @@ button:disabled {
 
 .reporte-card {
     background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: var(--shadow);
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    border-top: 3px solid var(--primary-color);
+    transition: box-shadow 0.2s;
+}
+
+.reporte-card:hover {
+    box-shadow: 0 6px 24px rgba(255,107,53,0.10);
 }
 
 .reporte-card h3 {
-    margin-bottom: 15px;
+    margin-bottom: 16px;
     color: var(--dark-color);
-    font-size: 1.1em;
-    border-bottom: 2px solid var(--light-color);
-    padding-bottom: 10px;
+    font-size: 1em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .reporte-stats {
@@ -3066,9 +3078,10 @@ button:disabled {
 .reporte-lista {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    max-height: 250px;
+    gap: 8px;
+    max-height: 260px;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .reporte-item {
@@ -3076,32 +3089,36 @@ button:disabled {
     justify-content: space-between;
     align-items: center;
     padding: 10px 12px;
-    background: var(--light-color);
+    background: #f8f9fc;
     border-radius: 8px;
-    transition: all 0.2s;
+    border-left: 3px solid transparent;
+    transition: border-color 0.18s, background 0.18s;
 }
 
 .reporte-item:hover {
-    transform: translateX(5px);
-    background: #e0e0e0;
+    background: #f1f3f9;
+    border-left-color: var(--primary-color);
 }
 
 .reporte-item-name {
     font-weight: 500;
     color: var(--dark-color);
+    font-size: 0.92rem;
 }
 
 .reporte-item-value {
-    font-weight: bold;
-    color: var(--success-color);
+    font-weight: 700;
+    color: var(--primary-color);
+    font-size: 0.95rem;
 }
 
 .reporte-item-bar {
-    height: 6px;
+    height: 5px;
     background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
     border-radius: 3px;
     margin-top: 5px;
-    transition: width 0.3s ease;
+    min-width: 4px;
+    /* sin transition de width para evitar conflicto de layout */
 }
 
 .reporte-item-rank {
