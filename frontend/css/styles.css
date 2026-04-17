@@ -2052,7 +2052,7 @@ button:disabled {
 .filtro-estado-btn.active[data-estado="pendiente"] { background: var(--warning-color); border-color: var(--warning-color); }
 .filtro-estado-btn.active[data-estado="en-preparacion"] { background: var(--info-color); border-color: var(--info-color); }
 .filtro-estado-btn.active[data-estado="listo"] { background: var(--success-color); border-color: var(--success-color); }
-.filtro-estado-btn.active[data-estado="entregado"] { background: #8e44ad; border-color: #8e44ad; }
+.filtro-estado-btn.active[data-estado="entregado"] { background: #64748b; border-color: #64748b; }
 
 .filtro-badge {
     display: none;
@@ -2173,8 +2173,8 @@ button:disabled {
 }
 
 .pedido-card:has(.pedido-estado.entregado) {
-    border-left-color: #8e44ad;
-    background: linear-gradient(135deg, #fff 0%, #f4ecf7 100%);
+    border-left-color: #64748b;
+    background: linear-gradient(135deg, #fff 0%, #f1f5f9 100%);
 }
 
 @keyframes pulseCardListo {
@@ -2290,7 +2290,7 @@ button:disabled {
 }
 
 .pedido-estado.entregado {
-    background: #8e44ad !important;
+    background: #64748b !important;
     color: white !important;
 }
 
