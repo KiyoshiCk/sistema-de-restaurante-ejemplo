@@ -466,7 +466,7 @@ class AdminApp {
         
         document.getElementById('btn-logout').addEventListener('click', () => this.logout());
         
-        this.cargarDatos();
+        await this.cargarDatos();
         try { this.config = await fetch(`${this.API_URL}/config`).then(r => r.json()); } catch { this.config = {}; }
 
         if (this.usuario.rol !== 'mesero') this.cargarDashboard();
