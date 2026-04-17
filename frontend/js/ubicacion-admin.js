@@ -59,6 +59,14 @@
             });
             if (res.ok) {
                 mostrarExito(exitoId);
+                // Registrar en historial y dashboard
+                const mensajes = {
+                    'datos-restaurante-guardado': 'Datos del restaurante actualizados',
+                    'ubicacion-guardada': 'Ubicación del restaurante actualizada'
+                };
+                if (typeof window._registrarActividad === 'function') {
+                    window._registrarActividad(mensajes[exitoId] || 'Configuración actualizada');
+                }
             } else {
                 const errData = await res.json().catch(() => ({}));
                 alert(errData.error || `Error al guardar (${res.status}). Verifica que estés logueado como admin.`);

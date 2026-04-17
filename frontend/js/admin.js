@@ -378,6 +378,9 @@ class AdminApp {
         
         // Inicializar funcionalidad
         await this.init();
+
+        // Exponer registrador de actividad para scripts externos (ubicacion-admin.js, etc.)
+        window._registrarActividad = (desc) => this.agregarActividad(desc);
     }
 
     cargarNavegacion() {
