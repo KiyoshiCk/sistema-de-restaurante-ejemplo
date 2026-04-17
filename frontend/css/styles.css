@@ -746,6 +746,7 @@ body.cliente-view h4 {
     display: flex;
     width: 100%;
     min-height: 100vh;
+    overflow: hidden;
 }
 
 /* --- Branding panel (left) --- */
@@ -757,7 +758,7 @@ body.cliente-view h4 {
     justify-content: center;
     padding: 60px 48px;
     position: relative;
-    overflow: hidden;
+    /* animación declarada junto a login-card más abajo */
 }
 
 .login-brand::before {
@@ -829,15 +830,23 @@ body.cliente-view h4 {
 }
 
 /* --- Form card (right) --- */
-@keyframes loginCardSlideIn {
-    from {
-        transform: translateX(60px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+/* ── Login entrance animations ─────────────────────────── */
+@keyframes loginFromLeft {
+    from { transform: translateX(-48px); opacity: 0; }
+    to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes loginFromRight {
+    from { transform: translateX(48px);  opacity: 0; }
+    to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes loginFadeUp {
+    from { transform: translateY(16px);  opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+
+/* Brand panel entra desde la izquierda */
+.login-brand {
+    animation: loginFromLeft 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .login-card {
@@ -849,9 +858,22 @@ body.cliente-view h4 {
     justify-content: center;
     padding: 48px 40px;
     box-shadow: -8px 0 48px rgba(0,0,0,0.45);
-    animation: loginCardSlideIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    /* Card entra desde la derecha, mismo timing que brand */
+    animation: loginFromRight 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
     position: relative;
 }
+
+/* Stagger interno: cada elemento del formulario sube en cascada */
+.login-card-inner > * {
+    animation: loginFadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.login-card-inner > *:nth-child(1) { animation-delay: 0.18s; }
+.login-card-inner > *:nth-child(2) { animation-delay: 0.24s; }
+.login-card-inner > *:nth-child(3) { animation-delay: 0.30s; }
+.login-card-inner > *:nth-child(4) { animation-delay: 0.36s; }
+.login-card-inner > *:nth-child(5) { animation-delay: 0.42s; }
+.login-card-inner > *:nth-child(6) { animation-delay: 0.47s; }
+.login-card-inner > *:nth-child(7) { animation-delay: 0.52s; }
 
 .login-card::before {
     content: '';
