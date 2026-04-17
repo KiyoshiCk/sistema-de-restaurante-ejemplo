@@ -157,10 +157,14 @@ class AdminApp {
 
         this.socket.on('nueva-factura', (factura) => {
             console.log('Nueva factura:', factura);
-            // Agregar factura localmente
-            this.facturas.push(factura);
-            if (this.usuario.rol === 'administrador') {
-                this.cargarFacturacion();
+            // Evitar duplicados: solo agregar si no existe
+            const existe = this.facturas.some(f => f._id === factura._id);
+            if (!existe) {
+                this.facturas.push(factura);
+                if (this.usuario.rol === 'administrador') {
+                    this.cargarFacturacion();
+                    this.cargarDashboard();
+                }
             }
         });
 
@@ -2183,7 +2187,7 @@ class AdminApp {
                 metodoPago
             });
 
-            this.facturas.push(resultado.factura);
+            // La factura se agrega via socket 'nueva-factura' con deduplicación
             for (const pedido of pedidos) pedido.estado = 'cobrado';
             if (mesa) mesa.estado = 'disponible';
 
@@ -2640,7 +2644,7 @@ class AdminApp {
 
             for (const pedido of pedidos) pedido.estado = 'cobrado';
             mesa.estado = 'disponible';
-            this.facturas.push(resultado.factura);
+            // La factura se agrega via socket 'nueva-factura' con deduplicación
 
             await this.agregarActividad(`Cuenta dividida - Mesa ${mesa.numero} - ${numPersonas} personas - S/${total.toFixed(2)}`);
 
@@ -3970,8 +3974,7 @@ class AdminApp {
     cargarFacturacion() {
         if (this.usuario.rol !== 'administrador') return;
 
-        if (this._factInit === undefined) this._factInit = false;
-        if (this._factPeriodo === undefined) this._factPeriodo = 'hoy';
+        if (!this._factPeriodo) this._factPeriodo = 'hoy';
 
         this._renderFactResumen();
 
@@ -4042,8 +4045,8 @@ class AdminApp {
         const cntTodo = this.facturas.length;
 
         const totalHoy  = sumar(hoyIni, hoyFin);
-        const totalSem  = sumar(semIni, new Date(8640000000000000));
-        const totalMes  = sumar(mesIni, new Date(8640000000000000));
+        const totalSem  = sumar(semIni, ahora);
+        const totalMes  = sumar(mesIni, ahora);
         const totalTodo = this.facturas.reduce((s, f) => s + (f.total || 0), 0);
 
         const p = this._factPeriodo || 'hoy';
