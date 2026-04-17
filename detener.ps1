@@ -23,16 +23,6 @@ if ($pm2Cmd) {
     }
 }
 
-# Detener Frontend (Python)
-Write-Host "🔄 Deteniendo Frontend (Python)..." -ForegroundColor Cyan
-$pythonProcesses = Get-Process python -ErrorAction SilentlyContinue
-if ($pythonProcesses) {
-    Stop-Process -Name python -Force
-    Write-Host "   ✅ Frontend detenido" -ForegroundColor Green
-} else {
-    Write-Host "   ℹ️  Frontend no estaba corriendo" -ForegroundColor Gray
-}
-
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "  ✅ SISTEMA DETENIDO" -ForegroundColor Green

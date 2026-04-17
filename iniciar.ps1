@@ -14,8 +14,7 @@ Write-Host ""
 # Configurar reglas de Firewall para permitir acceso en red local
 Write-Host "[*] Configurando Firewall para acceso en red local..." -ForegroundColor Yellow
 $firewallRules = @(
-    @{ Name = "Restaurante-Backend-3000"; Port = 3000; Description = "Sistema Restaurante - Backend API" },
-    @{ Name = "Restaurante-Frontend-5500"; Port = 5500; Description = "Sistema Restaurante - Frontend Web" }
+    @{ Name = "Restaurante-Backend-3000"; Port = 3000; Description = "Sistema Restaurante - Servidor Web + API" }
 )
 
 foreach ($rule in $firewallRules) {
@@ -32,9 +31,9 @@ foreach ($rule in $firewallRules) {
     }
 }
 
-# Detener procesos anteriores si existen (solo los puertos del sistema)
-Write-Host "[*] Deteniendo procesos anteriores en puertos 3000 y 5500..." -ForegroundColor Yellow
-$portsToFree = @(3000, 5500)
+# Detener procesos anteriores si existen
+Write-Host "[*] Deteniendo procesos anteriores en puerto 3000..." -ForegroundColor Yellow
+$portsToFree = @(3000)
 foreach ($port in $portsToFree) {
     $listeners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
     foreach ($listener in $listeners) {
@@ -105,19 +104,6 @@ if ($pm2Cmd) {
     }
 }
 
-# Iniciar Frontend
-Write-Host "[+] Iniciando Frontend (Python HTTP Server puerto 5500)..." -ForegroundColor Cyan
-$frontendProcess = Start-Process -NoNewWindow -PassThru -FilePath "python" -ArgumentList "-m", "http.server", "5500", "--bind", "0.0.0.0" -WorkingDirectory "$PSScriptRoot\frontend"
-Start-Sleep -Seconds 3
-
-# Verificar Frontend
-$frontendOK = $null -ne $frontendProcess -and !$frontendProcess.HasExited
-if ($frontendOK) {
-    Write-Host "    [OK] Frontend iniciado correctamente (PID: $($frontendProcess.Id))" -ForegroundColor Green
-} else {
-    Write-Host "    [ERROR] Error al iniciar Frontend" -ForegroundColor Red
-}
-
 # Obtener IP local - Usar adaptador con gateway (el que tiene conexion real a la red)
 $netConfigs = Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway -ne $null }
 
@@ -148,13 +134,13 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "URLs para acceder desde cualquier dispositivo:" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "   Inicio:   http://${ip}:5500/" -ForegroundColor White
-Write-Host "   Admin:    http://${ip}:5500/admin.html" -ForegroundColor White
-Write-Host "   Cliente:  http://${ip}:5500/cliente.html" -ForegroundColor White
-Write-Host "   Cocina:   http://${ip}:5500/cocina.html" -ForegroundColor White
+Write-Host "   Inicio:   http://${ip}:3000/" -ForegroundColor White
+Write-Host "   Admin:    http://${ip}:3000/admin" -ForegroundColor White
+Write-Host "   Cliente:  http://${ip}:3000/cliente" -ForegroundColor White
+Write-Host "   Cocina:   http://${ip}:3000/cocina" -ForegroundColor White
 
 # Copiar URL principal al portapapeles
-$urlPrincipal = "http://${ip}:5500/"
+$urlPrincipal = "http://${ip}:3000/"
 Set-Clipboard -Value $urlPrincipal
 Write-Host ""
 Write-Host "   [COPIADO] URL copiada al portapapeles: $urlPrincipal" -ForegroundColor Magenta

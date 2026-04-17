@@ -92,6 +92,22 @@ if (!fs.existsSync(uploadsDir)) {
 // Servir archivos estáticos de uploads
 app.use('/uploads', express.static(uploadsDir));
 
+// ============= FRONTEND (rutas limpias sin .html) =============
+const frontendDir = path.join(__dirname, '..', 'frontend');
+app.use(express.static(frontendDir));
+
+// Rutas limpias: /admin → admin.html, /cliente → cliente.html, etc.
+const paginasFrontend = [
+    { ruta: '/admin',   archivo: 'admin.html'   },
+    { ruta: '/cliente', archivo: 'cliente.html' },
+    { ruta: '/cocina',  archivo: 'cocina.html'  },
+];
+paginasFrontend.forEach(({ ruta, archivo }) => {
+    app.get(ruta, (req, res) => res.sendFile(path.join(frontendDir, archivo)));
+});
+// Raíz → index.html
+app.get('/', (req, res) => res.sendFile(path.join(frontendDir, 'index.html')));
+
 // Configurar multer para subida de logo
 const logoStorage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
