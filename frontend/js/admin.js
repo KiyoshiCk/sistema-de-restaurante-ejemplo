@@ -302,8 +302,28 @@ class AdminApp {
                 e.preventDefault();
                 this.login();
             });
+
+            // Role selector buttons
+            document.querySelectorAll('.login-role-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.login-role-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    // Si eligen cocina, redirigir
+                    if (btn.dataset.rol === 'cocina') {
+                        window.location.href = '/cocina';
+                    }
+                });
+            });
+
             this._loginListenerAdded = true;
         }
+    }
+
+    togglePasswordVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        btn.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
     }
 
     async login() {

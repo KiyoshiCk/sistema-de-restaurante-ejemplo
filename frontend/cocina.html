@@ -540,13 +540,16 @@
             <h1><i class="fa-solid fa-kitchen-set"></i> Panel de Cocina</h1>
             <h2 class="sr-only">Panel de cocina para restaurante</h2>
             <form id="login-form" aria-label="Formulario de acceso a cocina">
-                <div class="form-group">
-                    <label>Usuario:</label>
-                    <input type="text" id="login-username" required autofocus autocomplete="username">
+                <div class="login-input-group">
+                    <i class="fa-solid fa-user login-input-icon"></i>
+                    <input type="text" id="login-username" placeholder="Usuario" required autofocus autocomplete="username">
                 </div>
-                <div class="form-group">
-                    <label>Contraseña:</label>
-                    <input type="password" id="login-password" required autocomplete="current-password">
+                <div class="login-input-group">
+                    <i class="fa-solid fa-lock login-input-icon"></i>
+                    <input type="password" id="login-password" placeholder="Contraseña" required autocomplete="current-password">
+                    <button type="button" class="login-pwd-toggle" onclick="togglePwd('login-password', this)" tabindex="-1" title="Mostrar/ocultar contraseña">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
                 </div>
                 <button type="submit" class="btn-login"><i class="fa-solid fa-right-to-bracket"></i> Ingresar a Cocina</button>
             </form>
@@ -604,6 +607,14 @@
     </div>
 
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+        function togglePwd(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            btn.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        }
+    </script>
     <script src="js/config.js"></script>
     <script src="js/cocina.js"></script>
 </body>
