@@ -956,14 +956,60 @@ class AdminApp {
 
             document.getElementById('hist-buscar').addEventListener('input', render);
             document.getElementById('hist-rol').addEventListener('change', render);
-            document.getElementById('hist-fecha-desde').addEventListener('change', render);
-            document.getElementById('hist-fecha-hasta').addEventListener('change', render);
+
+            // Botones de período
+            document.querySelectorAll('.hist-periodo-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.hist-periodo-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const periodo = btn.dataset.periodo;
+                    const rangoEl = document.getElementById('hist-rango-fechas');
+                    if (periodo === 'personalizado') {
+                        rangoEl.style.display = 'block';
+                        const hoy = new Date();
+                        const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+                        document.getElementById('hist-fecha-desde').value = inicioMes.toISOString().slice(0, 10);
+                        document.getElementById('hist-fecha-hasta').value = hoy.toISOString().slice(0, 10);
+                        document.getElementById('hist-fecha-hasta').max = hoy.toISOString().slice(0, 10);
+                    } else {
+                        rangoEl.style.display = 'none';
+                        document.getElementById('hist-fecha-error').style.display = 'none';
+                        render();
+                    }
+                });
+            });
+
+            // Validación rango personalizado
+            const desdeInput = document.getElementById('hist-fecha-desde');
+            const hastaInput = document.getElementById('hist-fecha-hasta');
+            desdeInput.addEventListener('change', () => {
+                if (desdeInput.value) {
+                    hastaInput.min = desdeInput.value;
+                    if (hastaInput.value && hastaInput.value < desdeInput.value)
+                        hastaInput.value = desdeInput.value;
+                }
+            });
+            hastaInput.addEventListener('change', () => {
+                if (hastaInput.value) desdeInput.max = hastaInput.value;
+            });
+
+            document.getElementById('btn-hist-aplicar-rango').addEventListener('click', () => {
+                const errorEl = document.getElementById('hist-fecha-error');
+                const errorTxt = document.getElementById('hist-fecha-error-texto');
+                errorEl.style.display = 'none';
+                const d = desdeInput.value, h = hastaInput.value;
+                if (!d || !h) { errorTxt.textContent = 'Selecciona ambas fechas.'; errorEl.style.display = 'flex'; return; }
+                if (d > h) { errorTxt.textContent = 'La fecha de inicio no puede ser mayor que la fecha fin.'; errorEl.style.display = 'flex'; return; }
+                render();
+            });
 
             document.getElementById('btn-hist-limpiar').addEventListener('click', () => {
                 document.getElementById('hist-buscar').value = '';
                 document.getElementById('hist-rol').value = '';
-                document.getElementById('hist-fecha-desde').value = '';
-                document.getElementById('hist-fecha-hasta').value = '';
+                document.getElementById('hist-rango-fechas').style.display = 'none';
+                document.getElementById('hist-fecha-error').style.display = 'none';
+                document.querySelectorAll('.hist-periodo-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('.hist-periodo-btn[data-periodo="todo"]').classList.add('active');
                 this._renderHistorialTabla();
             });
 
@@ -978,10 +1024,27 @@ class AdminApp {
     _renderHistorialTabla() {
         const busqueda  = (document.getElementById('hist-buscar').value || '').toLowerCase().trim();
         const rolFiltro = (document.getElementById('hist-rol').value || '').toLowerCase();
-        const desdeVal  = document.getElementById('hist-fecha-desde').value;
-        const hastaVal  = document.getElementById('hist-fecha-hasta').value;
-        const desde     = desdeVal ? new Date(desdeVal + 'T00:00:00') : null;
-        const hasta     = hastaVal ? new Date(hastaVal + 'T23:59:59') : null;
+        const periodoActivo = document.querySelector('.hist-periodo-btn.active')?.dataset.periodo || 'todo';
+
+        let desde = null, hasta = null;
+        if (periodoActivo === 'personalizado') {
+            const d = document.getElementById('hist-fecha-desde').value;
+            const h = document.getElementById('hist-fecha-hasta').value;
+            if (d) desde = new Date(d + 'T00:00:00');
+            if (h) hasta = new Date(h + 'T23:59:59');
+        } else if (periodoActivo !== 'todo') {
+            const ahora = new Date();
+            hasta = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59);
+            if (periodoActivo === 'hoy') {
+                desde = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0);
+            } else if (periodoActivo === 'semana') {
+                const dow = ahora.getDay();
+                const lunes = new Date(ahora); lunes.setDate(ahora.getDate() - ((dow + 6) % 7));
+                desde = new Date(lunes.getFullYear(), lunes.getMonth(), lunes.getDate(), 0, 0, 0);
+            } else if (periodoActivo === 'mes') {
+                desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0);
+            }
+        }
 
         const iconosRol = {
             'administrador': '<i class="fa-solid fa-user-shield"></i>',
@@ -1042,10 +1105,29 @@ class AdminApp {
     _imprimirHistorial() {
         const busqueda  = (document.getElementById('hist-buscar').value || '').trim();
         const rolFiltro = document.getElementById('hist-rol').value || '';
-        const desdeVal  = document.getElementById('hist-fecha-desde').value;
-        const hastaVal  = document.getElementById('hist-fecha-hasta').value;
-        const desde     = desdeVal ? new Date(desdeVal + 'T00:00:00') : null;
-        const hasta     = hastaVal ? new Date(hastaVal + 'T23:59:59') : null;
+        const periodoActivo = document.querySelector('.hist-periodo-btn.active')?.dataset.periodo || 'todo';
+
+        let desde = null, hasta = null;
+        if (periodoActivo === 'personalizado') {
+            const d = document.getElementById('hist-fecha-desde').value;
+            const h = document.getElementById('hist-fecha-hasta').value;
+            if (d) desde = new Date(d + 'T00:00:00');
+            if (h) hasta = new Date(h + 'T23:59:59');
+        } else if (periodoActivo !== 'todo') {
+            const ahora = new Date();
+            hasta = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59);
+            if (periodoActivo === 'hoy') {
+                desde = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0);
+            } else if (periodoActivo === 'semana') {
+                const dow = ahora.getDay();
+                const lunes = new Date(ahora); lunes.setDate(ahora.getDate() - ((dow + 6) % 7));
+                desde = new Date(lunes.getFullYear(), lunes.getMonth(), lunes.getDate(), 0, 0, 0);
+            } else if (periodoActivo === 'mes') {
+                desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0);
+            }
+        }
+
+        const periodoNombres = { todo: 'Todo el historial', hoy: 'Hoy', semana: 'Esta semana', mes: 'Este mes', personalizado: 'Rango personalizado' };
 
         const coloresRol = {
             'administrador': '#c0392b',
@@ -1074,8 +1156,13 @@ class AdminApp {
         const filtrosAplicados = [];
         if (busqueda)  filtrosAplicados.push(`Búsqueda: "${busqueda}"`);
         if (rolFiltro) filtrosAplicados.push(`Rol: ${rolFiltro}`);
-        if (desdeVal)  filtrosAplicados.push(`Desde: ${desdeVal}`);
-        if (hastaVal)  filtrosAplicados.push(`Hasta: ${hastaVal}`);
+        filtrosAplicados.push(`Período: ${periodoNombres[periodoActivo] || periodoActivo}`);
+        if (periodoActivo === 'personalizado') {
+            const desdeVal = document.getElementById('hist-fecha-desde').value;
+            const hastaVal = document.getElementById('hist-fecha-hasta').value;
+            if (desdeVal) filtrosAplicados.push(`Desde: ${desdeVal}`);
+            if (hastaVal) filtrosAplicados.push(`Hasta: ${hastaVal}`);
+        }
 
         const filas = lista.map(act => {
             const rol    = (act.tipo || '').toLowerCase();

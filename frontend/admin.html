@@ -168,14 +168,50 @@
                                 <option value="mesero">Mesero</option>
                                 <option value="cocinero">Cocinero</option>
                             </select>
-                            <input type="date" id="hist-fecha-desde" title="Desde">
-                            <input type="date" id="hist-fecha-hasta" title="Hasta">
                             <button class="btn btn-secondary btn-sm" id="btn-hist-limpiar">
                                 <i class="fa-solid fa-xmark"></i> Limpiar
                             </button>
                         </div>
+                        <div class="reportes-periodo-rapido" style="margin-top:12px">
+                            <button class="periodo-btn hist-periodo-btn active" data-periodo="todo" type="button"><i class="fa-solid fa-infinity"></i> Todo</button>
+                            <button class="periodo-btn hist-periodo-btn" data-periodo="hoy" type="button"><i class="fa-solid fa-calendar-day"></i> Hoy</button>
+                            <button class="periodo-btn hist-periodo-btn" data-periodo="semana" type="button"><i class="fa-solid fa-calendar-week"></i> Semana</button>
+                            <button class="periodo-btn hist-periodo-btn" data-periodo="mes" type="button"><i class="fa-solid fa-calendar"></i> Mes</button>
+                            <button class="periodo-btn hist-periodo-btn" data-periodo="personalizado" type="button"><i class="fa-solid fa-sliders"></i> Personalizado</button>
+                        </div>
+                        <div class="reportes-rango-fechas" id="hist-rango-fechas" style="display:none;margin-top:10px">
+                            <div class="rango-fechas-inputs">
+                                <div class="fecha-grupo">
+                                    <label for="hist-fecha-desde"><i class="fa-solid fa-calendar-plus"></i> Desde</label>
+                                    <input type="date" id="hist-fecha-desde" class="fecha-input">
+                                </div>
+                                <div class="fecha-separador"><i class="fa-solid fa-arrow-right"></i></div>
+                                <div class="fecha-grupo">
+                                    <label for="hist-fecha-hasta"><i class="fa-solid fa-calendar-minus"></i> Hasta</label>
+                                    <input type="date" id="hist-fecha-hasta" class="fecha-input">
+                                </div>
+                                <button class="btn-primary" id="btn-hist-aplicar-rango"><i class="fa-solid fa-filter"></i> Aplicar</button>
+                            </div>
+                            <div class="fecha-error" id="hist-fecha-error" style="display:none">
+                                <i class="fa-solid fa-triangle-exclamation"></i> <span id="hist-fecha-error-texto"></span>
+                            </div>
+                        </div>
                         <div class="historial-contador" id="hist-contador"></div>
                     </div>
+                    <div class="historial-tabla-wrap">
+                        <table class="historial-tabla">
+                            <thead>
+                                <tr>
+                                    <th><i class="fa-regular fa-clock"></i> Fecha y Hora</th>
+                                    <th><i class="fa-solid fa-user"></i> Usuario</th>
+                                    <th><i class="fa-solid fa-id-badge"></i> Rol</th>
+                                    <th><i class="fa-solid fa-file-lines"></i> Descripción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historial-tbody"></tbody>
+                        </table>
+                    </div>
+                </section>
                     <div class="historial-tabla-wrap">
                         <table class="historial-tabla">
                             <thead>
