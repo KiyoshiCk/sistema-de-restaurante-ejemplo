@@ -1453,14 +1453,16 @@ main {
 }
 
 .btn-secondary {
-    background: var(--light-color);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    background: #eef2f7;
+    color: var(--dark-color);
+    border: 1.5px solid #b8c8d8;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .btn-secondary:hover {
-    background: #e2e8f0;
-    border-color: #cbd5e1;
+    background: #dde6f0;
+    border-color: #94afc8;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
 }
 
 .btn-danger {
@@ -3064,32 +3066,34 @@ button:disabled {
 }
 
 .periodo-btn {
-    padding: 10px 18px;
-    border: 2px solid var(--light-color);
+    padding: 9px 18px;
+    border: 1.5px solid #b8c8d8;
     border-radius: 10px;
-    background: white;
+    background: #eef2f7;
     font-size: 0.9em;
     font-weight: 500;
-    color: #555;
+    color: #475569;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     gap: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
 }
 
 .periodo-btn:hover {
     border-color: var(--primary-color);
     color: var(--primary-color);
-    background: rgba(52, 152, 219, 0.05);
+    background: #fff5f0;
     transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(255,107,53,0.15);
 }
 
 .periodo-btn.active {
     background: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
-    box-shadow: 0 3px 10px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 3px 10px rgba(255,107,53,0.35);
 }
 
 .periodo-btn.active i {
@@ -3516,27 +3520,30 @@ button:disabled {
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
-    border: 2px solid #e0e0e0;
+    border: 1.5px solid #b8c8d8;
     border-radius: 25px;
-    background: white;
-    color: #555;
+    background: #eef2f7;
+    color: #475569;
     font-size: 0.85em;
     cursor: pointer;
     transition: all 0.2s ease;
     font-weight: 500;
     white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
 }
 
 .inv-cat-btn:hover {
     border-color: var(--primary-color);
     color: var(--primary-color);
     background: #fff5f0;
+    box-shadow: 0 2px 6px rgba(255,107,53,0.15);
 }
 
 .inv-cat-btn.active {
     background: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(255,107,53,0.3);
 }
 
 .inventario-busqueda {
@@ -3854,9 +3861,9 @@ button:disabled {
 .ajuste-tipo-btn {
     flex: 1;
     padding: 10px;
-    border: 2px solid #e0e0e0;
+    border: 1.5px solid #b8c8d8;
     border-radius: 10px;
-    background: white;
+    background: #eef2f7;
     cursor: pointer;
     font-size: 0.85em;
     font-weight: 500;
@@ -3865,18 +3872,21 @@ button:disabled {
     justify-content: center;
     gap: 6px;
     transition: all 0.2s;
-    color: #555;
+    color: #475569;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
 }
 
 .ajuste-tipo-btn:hover {
     border-color: var(--primary-color);
     color: var(--primary-color);
+    background: #fff5f0;
 }
 
 .ajuste-tipo-btn.active {
     background: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(255,107,53,0.3);
 }
 
 .form-row {
@@ -4363,9 +4373,10 @@ button:disabled {
 .fact-periodo {
     display: flex;
     gap: 6px;
-    background: #f1f5f9;
+    background: #dde6f0;
     border-radius: 10px;
     padding: 4px;
+    border: 1px solid #b8c8d8;
 }
 
 .fact-periodo-btn {
@@ -4383,10 +4394,15 @@ button:disabled {
     transition: background 0.2s, color 0.2s;
 }
 
+.fact-periodo-btn:hover {
+    background: #e2e8f0;
+    color: var(--dark-color);
+}
+
 .fact-periodo-btn.active {
     background: white;
     color: var(--dark-color);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
 }
 
 .fact-busqueda {
