@@ -65,8 +65,9 @@ const logError = (context, error) => {
 
 // Middleware
 app.use(helmet({
-    crossOriginResourcePolicy: false, // permite cargar /uploads desde el frontend (puerto diferente)
-    contentSecurityPolicy: false       // el frontend corre en puerto separado
+    crossOriginResourcePolicy: false,   // permite cargar /uploads desde el frontend (puerto diferente)
+    contentSecurityPolicy: false,       // el frontend corre en puerto separado
+    crossOriginOpenerPolicy: false      // evita warning en redes locales HTTP (no-localhost)
 }));
 app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
