@@ -346,6 +346,7 @@ class AdminApp {
     }
 
     logout() {
+        sessionStorage.removeItem('admin_pagina_activa');
         localStorage.removeItem('usuario');
         localStorage.removeItem('token');
         this.usuario = null;
@@ -500,6 +501,15 @@ class AdminApp {
         // Mesero: activar página mesas por defecto (en lugar del dashboard)
         if (this.usuario.rol === 'mesero') {
             this.cambiarPagina('mesas');
+        } else {
+            // Restaurar última página visitada si existe y el usuario tiene acceso
+            const paginaGuardada = sessionStorage.getItem('admin_pagina_activa');
+            const paginasAdmin = ['dashboard','menu','mesas','pedidos','inventario','reportes','facturacion','usuarios','config-ubicacion'];
+            const paginasCocinero = ['dashboard','pedidos'];
+            const paginasPermitidas = this.usuario.rol === 'administrador' ? paginasAdmin : paginasCocinero;
+            if (paginaGuardada && paginasPermitidas.includes(paginaGuardada) && document.getElementById(paginaGuardada)) {
+                this.cambiarPagina(paginaGuardada);
+            }
         }
         
         setInterval(() => this.actualizarFechaHora(), 1000);
@@ -820,6 +830,9 @@ class AdminApp {
         
         document.querySelector(`[data-page="${page}"]`).classList.add('active');
         document.getElementById(page).classList.add('active');
+
+        // Persistir página activa para restaurar al recargar
+        sessionStorage.setItem('admin_pagina_activa', page);
         
         if (page === 'dashboard') this.cargarDashboard();
         if (page === 'menu' && this.usuario.rol === 'administrador') this.cargarMenu();
