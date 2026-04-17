@@ -3633,23 +3633,85 @@ ${filtrosAplicados.length ? `<div class="print-meta"><strong>Filtros aplicados:<
         const toggleWrap = document.getElementById('reporte-platillos-toggle-wrap');
         const toggleBtn  = document.getElementById('btn-platillos-ver-todos');
         const lista      = document.getElementById('reporte-platillos-top');
-        if (toggleWrap && toggleBtn && lista) {
+        if (toggleWrap && toggleBtn) {
             if (todos.length > 5) {
                 toggleWrap.style.display = 'block';
-                lista.classList.toggle('expanded', mostrarTodos);
-                toggleBtn.innerHTML = mostrarTodos
-                    ? '<i class="fa-solid fa-chevron-up"></i> Ver menos'
-                    : `<i class="fa-solid fa-list"></i> Ver todos (${todos.length})`;
+                lista?.classList.remove('expanded');
+                toggleBtn.innerHTML = `Ver todos (${todos.length}) <i class="fa-solid fa-arrow-right"></i>`;
             } else {
                 toggleWrap.style.display = 'none';
-                lista.classList.remove('expanded');
             }
         }
     }
 
     _toggleVerTodosPlatillos() {
-        this._platillosMostrandoTodos = !this._platillosMostrandoTodos;
-        this._renderPlatillosTop(this._platillosMostrandoTodos);
+        this._abrirModalPlatillos();
+    }
+
+    _abrirModalPlatillos() {
+        const todos = this._platillosTodos || [];
+        if (!todos.length) return;
+
+        // Período activo para el subtítulo
+        const btnActivo  = document.querySelector('#reportes .periodo-btn.active');
+        const periodo    = btnActivo?.dataset.periodo || 'mes';
+        const { textoInfo } = this.obtenerRangoFechas(periodo);
+        document.getElementById('modal-platillos-periodo').textContent = textoInfo;
+        document.getElementById('modal-platillos-total-label').textContent = `${todos.length} platillo${todos.length !== 1 ? 's' : ''} en total`;
+
+        const maxCantidad = todos[0]?.[1].cantidad || 1;
+
+        const renderLista = (filtro = '') => {
+            const filtrado = filtro
+                ? todos.filter(([n]) => n.toLowerCase().includes(filtro.toLowerCase()))
+                : todos;
+
+            document.getElementById('modal-platillos-lista').innerHTML = filtrado.length
+                ? filtrado.map(([nombre, data], i) => `
+                    <div class="mpl-item">
+                        <span class="mpl-rank ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : ''}">${i + 1}</span>
+                        <div class="mpl-info">
+                            <div class="mpl-nombre">${nombre}</div>
+                            <div class="mpl-bar-wrap">
+                                <div class="mpl-bar" style="width:${(data.cantidad / maxCantidad * 100).toFixed(1)}%"></div>
+                            </div>
+                        </div>
+                        <div class="mpl-nums">
+                            <span class="mpl-cantidad">${data.cantidad} uds</span>
+                            <span class="mpl-total">S/${data.total.toFixed(2)}</span>
+                        </div>
+                    </div>`).join('')
+                : '<p style="text-align:center;color:#aaa;padding:20px 0">Sin resultados</p>';
+        };
+
+        renderLista();
+
+        const modal  = document.getElementById('modal-platillos-top');
+        const input  = document.getElementById('modal-platillos-buscar-input');
+        input.value  = '';
+
+        // Listeners — registrar solo una vez
+        if (!this._modalPlatillosInit) {
+            input.addEventListener('input', () => renderLista(input.value));
+
+            const cerrar = () => {
+                modal.classList.remove('active');
+                input.value = '';
+            };
+            document.getElementById('btn-cerrar-modal-platillos')?.addEventListener('click', cerrar);
+            document.getElementById('btn-cerrar-modal-platillos-2')?.addEventListener('click', cerrar);
+            modal.addEventListener('click', (e) => { if (e.target === modal) cerrar(); });
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('active')) cerrar(); });
+            this._modalPlatillosInit = true;
+        } else {
+            // Re-bind input listener con datos frescos
+            const nuevoInput = input.cloneNode(true);
+            input.parentNode.replaceChild(nuevoInput, input);
+            nuevoInput.addEventListener('input', () => renderLista(nuevoInput.value));
+        }
+
+        modal.classList.add('active');
+        setTimeout(() => document.getElementById('modal-platillos-buscar-input')?.focus(), 150);
     }
     
     mostrarMesasTop(facturas) {

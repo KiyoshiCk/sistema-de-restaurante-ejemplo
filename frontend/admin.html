@@ -513,9 +513,9 @@
                         <div class="reporte-card">
                             <h3><i class="fa-solid fa-utensils"></i> Platillos Más Vendidos</h3>
                             <div id="reporte-platillos-top" class="reporte-lista"></div>
-                            <div id="reporte-platillos-toggle-wrap" style="display:none;padding-top:10px;text-align:center">
-                                <button class="btn btn-secondary btn-sm" id="btn-platillos-ver-todos" type="button">
-                                    <i class="fa-solid fa-list"></i> Ver todos
+                            <div id="reporte-platillos-toggle-wrap" style="display:none;padding-top:8px;text-align:right">
+                                <button class="btn-link-inline" id="btn-platillos-ver-todos" type="button">
+                                    Ver todos <i class="fa-solid fa-arrow-right"></i>
                                 </button>
                             </div>
                         </div>
@@ -960,6 +960,30 @@
     </div>
 
     <!-- Modal División de Cuenta -->
+    <!-- Modal: Todos los platillos vendidos (Reportes) -->
+    <div id="modal-platillos-top" class="modal">
+        <div class="modal-content modal-platillos-top-content">
+            <div class="modal-platillos-header">
+                <div>
+                    <h2><i class="fa-solid fa-utensils"></i> Platillos Vendidos</h2>
+                    <p class="modal-platillos-periodo" id="modal-platillos-periodo"></p>
+                </div>
+                <span class="close" id="btn-cerrar-modal-platillos" role="button" tabindex="0" aria-label="Cerrar">&times;</span>
+            </div>
+            <div class="modal-platillos-buscar">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="modal-platillos-buscar-input" placeholder="Filtrar platillos…">
+            </div>
+            <div id="modal-platillos-lista" class="modal-platillos-lista"></div>
+            <div class="modal-platillos-footer">
+                <span id="modal-platillos-total-label"></span>
+                <button class="btn btn-secondary btn-sm" id="btn-cerrar-modal-platillos-2" type="button">
+                    <i class="fa-solid fa-xmark"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-division" class="modal">
         <div class="modal-content modal-large">
             <span class="close" onclick="app.cerrarModalDivision()" role="button" tabindex="0" aria-label="Cerrar">&times;</span>
