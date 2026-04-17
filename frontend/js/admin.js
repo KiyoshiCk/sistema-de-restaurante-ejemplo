@@ -4091,16 +4091,32 @@ class AdminApp {
             .sort((a, b) => parsefecha(b.fecha) - parsefecha(a.fecha));
 
         if (busqueda) {
-            lista = lista.filter(f =>
-                String(f.mesaNumero).includes(busqueda) ||
-                (f.metodoPago || '').toLowerCase().includes(busqueda) ||
-                (f.numeroFactura || '').toLowerCase().includes(busqueda)
-            );
+            // Normalizar: quitar "mesa" del texto por si el usuario lo escribe
+            const termino = busqueda.replace(/^mesa\s*/i, '');
+            lista = lista.filter(f => {
+                const enMesa    = String(f.mesaNumero).includes(termino);
+                const enMetodo  = (f.metodoPago || '').toLowerCase().includes(busqueda);
+                const enNum     = (f.numeroFactura || '').toLowerCase().includes(busqueda);
+                const enTotal   = (f.total || 0).toFixed(2).includes(termino);
+                const enItems   = (f.items || []).some(i =>
+                    (i.nombre || '').toLowerCase().includes(busqueda)
+                );
+                return enMesa || enMetodo || enNum || enTotal || enItems;
+            });
         }
 
         if (!lista.length) {
             container.innerHTML = '';
             empty.style.display = 'flex';
+            const emptyP = empty.querySelector('p');
+            const emptyI = empty.querySelector('i');
+            if (busqueda) {
+                if (emptyP) emptyP.textContent = `Sin resultados para "${busqueda}"`;
+                if (emptyI) emptyI.className = 'fa-solid fa-magnifying-glass';
+            } else {
+                if (emptyP) emptyP.textContent = 'No hay facturas en este período';
+                if (emptyI) emptyI.className = 'fa-solid fa-receipt';
+            }
             return;
         }
         empty.style.display = 'none';
