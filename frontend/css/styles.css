@@ -599,7 +599,7 @@
 
     /* ── Estructura ────────────────────────── */
     --dark-color:  #1e293b;   /* slate-800  — más profesional que #2c3e50 */
-    --light-color: #f1f5f9;   /* slate-100  — más frío y limpio            */
+    --light-color: #ffffff;   /* blanco puro — pills/filas flotan sobre bg-app   */
 
     /* ── Semántico ─────────────────────────── */
     --success-color: #16a34a;
@@ -610,7 +610,8 @@
     /* ── Superficie / Texto ────────────────── */
     --surface:        #ffffff;
     --surface-2:      #f8fafc;
-    --border-color:   #e2e8f0;
+    --bg-app:         #eef1f7;   /* fondo del área de contenido — rompe el blanco total */
+    --border-color:   #dde3ed;
     --text-primary:   #1e293b;
     --text-secondary: #64748b;
     --text-muted:     #94a3b8;
@@ -1198,7 +1199,7 @@ header .header-info {
 .container {
     max-width: 1400px;
     margin: 0 auto;
-    background: var(--surface);
+    background: var(--bg-app);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-xl);
     overflow: hidden;
@@ -1304,7 +1305,7 @@ main {
     align-items: center;
     margin-bottom: 24px;
     padding-bottom: 16px;
-    border-bottom: 1.5px solid var(--border-color);
+    border-bottom: 1.5px solid #d1d9e6;
 }
 
 .section-header h2 {
