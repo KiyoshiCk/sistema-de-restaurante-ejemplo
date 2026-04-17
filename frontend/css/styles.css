@@ -3363,7 +3363,7 @@ button:disabled {
 
 .reportes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(350px, 100%), 1fr));
     gap: 20px;
 }
 
@@ -5984,6 +5984,7 @@ body.cliente-view .container-cliente {
     /* MUX-02: Reportes — 1 columna para evitar overflow (minmax 350px) */
     .reportes-grid {
         grid-template-columns: 1fr;
+        gap: 14px;
     }
 
     /* MUX-03: Datos restaurante — colapsar a 1 columna */
@@ -6183,12 +6184,66 @@ body.cliente-view .container-cliente {
     .reportes-periodo-rapido::-webkit-scrollbar,
     .inventario-categorias::-webkit-scrollbar { display: none; }
 
+    .periodo-btn {
+        flex-shrink: 0;
+    }
+
     /* AM-08: Rango de fechas — stack vertical */
     .rango-fechas-inputs {
         flex-direction: column;
+        gap: 12px;
     }
 
     .fecha-separador { display: none; }
+
+    .fecha-grupo { min-width: 0; }
+
+    #btn-generar-reporte,
+    #btn-hist-aplicar-rango {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* AM-08b: Cards de reporte — compactas en móvil */
+    .reporte-card {
+        padding: 16px 14px;
+    }
+
+    .reporte-card h3 {
+        font-size: 0.88em;
+        padding-bottom: 10px;
+        margin-bottom: 12px;
+    }
+
+    /* AM-08c: Lista de reporte — quitar altura máxima fija en móvil para no truncar */
+    .reporte-lista {
+        max-height: none;
+        overflow-y: visible;
+    }
+
+    .reporte-item {
+        padding: 9px 10px;
+    }
+
+    .reporte-item-name {
+        font-size: 0.88rem;
+    }
+
+    .reporte-item-value {
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    /* AM-08d: Stat values más compactos */
+    .stat-value {
+        font-size: 1.1em;
+    }
+
+    /* AM-08e: Info de período — texto más pequeño */
+    .reporte-periodo-info {
+        font-size: 0.82em;
+        padding: 10px 14px;
+    }
 
     /* AM-09: Secciones de configuración — ancho completo, sin borde */
     .config-restaurante,
