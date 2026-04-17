@@ -2151,31 +2151,24 @@ button:disabled {
 }
 
 /* Pedido card con border lateral por estado (estilo cocina) */
-.pedido-card[data-pedido-id] {
-    border-left: 5px solid var(--light-color);
-    transition: all 0.3s ease;
+.pedido-card[data-pedido-id]::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    background: var(--border-color);
+    border-radius: 10px 0 0 10px;
+    transition: background 0.3s ease;
 }
 
-.pedido-card:has(.pedido-estado.pendiente) {
-    border-left-color: var(--warning-color);
-    background: linear-gradient(135deg, #fff 0%, #fef9e7 100%);
-}
-
-.pedido-card:has(.pedido-estado.en-preparacion) {
-    border-left-color: #f39c12;
-    background: linear-gradient(135deg, #fff 0%, #fff8e6 100%);
-}
-
-.pedido-card:has(.pedido-estado.listo) {
-    border-left-color: var(--success-color);
-    background: linear-gradient(135deg, #fff 0%, #e8f8ef 100%);
-    animation: pulseCardListo 2s ease 1;
-}
-
-.pedido-card:has(.pedido-estado.entregado) {
-    border-left-color: #64748b;
-    background: linear-gradient(135deg, #fff 0%, #f1f5f9 100%);
-}
+.pedido-card:has(.pedido-estado.pendiente)::before   { background: var(--warning-color); }
+.pedido-card:has(.pedido-estado.en-preparacion)::before { background: #f39c12; }
+.pedido-card:has(.pedido-estado.listo)::before       { background: var(--success-color); }
+.pedido-card:has(.pedido-estado.listo)               { animation: pulseCardListo 2s ease 1; }
+.pedido-card:has(.pedido-estado.entregado)::before   { background: #64748b; }
+.pedido-card:has(.pedido-estado.cancelado)::before   { background: var(--danger-color); }
 
 @keyframes pulseCardListo {
     0%, 100% { box-shadow: var(--shadow); }
@@ -2208,10 +2201,12 @@ button:disabled {
 
 .pedido-card {
     background: white;
-    border: 2px solid var(--light-color);
+    border: 1.5px solid var(--border-color);
     border-radius: 10px;
     padding: 20px;
     box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
 }
 
 .pedido-header {
