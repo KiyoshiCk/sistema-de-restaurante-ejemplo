@@ -966,6 +966,17 @@ body.cliente-view h4 {
     color: #64748b;
 }
 
+/* Evita que el autofill del navegador ponga fondo blanco */
+.login-input-group input:-webkit-autofill,
+.login-input-group input:-webkit-autofill:hover,
+.login-input-group input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #1a1f35 inset;
+    -webkit-text-fill-color: #f1f5f9;
+    caret-color: #f1f5f9;
+    border-color: rgba(255,255,255,0.12);
+    transition: background-color 9999s ease-in-out 0s;
+}
+
 .login-input-group input:focus {
     border-color: var(--primary-color);
     background: rgba(255,255,255,0.11);
