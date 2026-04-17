@@ -4091,14 +4091,25 @@ class AdminApp {
             .sort((a, b) => parsefecha(b.fecha) - parsefecha(a.fecha));
 
         if (busqueda) {
-            // Normalizar: quitar "mesa" del texto por si el usuario lo escribe
-            const termino = busqueda.replace(/^mesa\s*/i, '');
+            // Detectar si el usuario busca por mesa explícitamente: "mesa 4" o solo "4"
+            const esBusquedaMesa = /^mesa\s+\d+$/i.test(busqueda.trim());
+            const termMesa = busqueda.replace(/^mesa\s*/i, '').trim();
+
             lista = lista.filter(f => {
-                const enMesa    = String(f.mesaNumero).includes(termino);
-                const enMetodo  = (f.metodoPago || '').toLowerCase().includes(busqueda);
-                const enNum     = (f.numeroFactura || '').toLowerCase().includes(busqueda);
-                const enTotal   = (f.total || 0).toFixed(2).includes(termino);
-                const enItems   = (f.items || []).some(i =>
+                // Mesa: comparación exacta cuando el usuario escribe "mesa X" o solo dígitos
+                const mesaStr  = String(f.mesaNumero);
+                const enMesa   = esBusquedaMesa
+                    ? mesaStr === termMesa                                   // "mesa 4" → solo Mesa 4
+                    : mesaStr === busqueda || mesaStr.startsWith(busqueda);  // "4" → Mesa 4, no Mesa 14
+
+                const enMetodo = (f.metodoPago || '').toLowerCase().includes(busqueda);
+                const enNum    = (f.numeroFactura || '').toLowerCase().includes(busqueda);
+
+                // Total: solo si la búsqueda parece un número (no contiene letras)
+                const esBusquedaNumero = /^[\d.,]+$/.test(busqueda);
+                const enTotal  = esBusquedaNumero && (f.total || 0).toFixed(2).includes(busqueda);
+
+                const enItems  = (f.items || []).some(i =>
                     (i.nombre || '').toLowerCase().includes(busqueda)
                 );
                 return enMesa || enMetodo || enNum || enTotal || enItems;
