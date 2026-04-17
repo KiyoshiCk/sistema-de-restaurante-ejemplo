@@ -148,6 +148,49 @@
                     </div>
                 </section>
 
+                <!-- Historial de actividad (solo admin) -->
+                <section id="historial" class="page">
+                    <div class="historial-header">
+                        <h2><i class="fa-solid fa-clock-rotate-left"></i> Historial de Actividad</h2>
+                        <button class="btn btn-primary" id="btn-imprimir-historial">
+                            <i class="fa-solid fa-print"></i> Imprimir
+                        </button>
+                    </div>
+                    <div class="historial-filtros">
+                        <div class="historial-filtro-row">
+                            <div class="historial-search-wrap">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="hist-buscar" placeholder="Buscar por usuario o descripción…">
+                            </div>
+                            <select id="hist-rol">
+                                <option value="">Todos los roles</option>
+                                <option value="administrador">Administrador</option>
+                                <option value="mesero">Mesero</option>
+                                <option value="cocinero">Cocinero</option>
+                            </select>
+                            <input type="date" id="hist-fecha-desde" title="Desde">
+                            <input type="date" id="hist-fecha-hasta" title="Hasta">
+                            <button class="btn btn-secondary btn-sm" id="btn-hist-limpiar">
+                                <i class="fa-solid fa-xmark"></i> Limpiar
+                            </button>
+                        </div>
+                        <div class="historial-contador" id="hist-contador"></div>
+                    </div>
+                    <div class="historial-tabla-wrap">
+                        <table class="historial-tabla">
+                            <thead>
+                                <tr>
+                                    <th><i class="fa-regular fa-clock"></i> Fecha y Hora</th>
+                                    <th><i class="fa-solid fa-user"></i> Usuario</th>
+                                    <th><i class="fa-solid fa-id-badge"></i> Rol</th>
+                                    <th><i class="fa-solid fa-file-lines"></i> Descripción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historial-tbody"></tbody>
+                        </table>
+                    </div>
+                </section>
+
                 <!-- Sección de Ubicación (independiente) -->
                 <section id="config-ubicacion" class="page">
 

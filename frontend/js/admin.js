@@ -421,6 +421,10 @@ class AdminApp {
                     <span class="icon"><i class="fa-solid fa-store"></i></span>
                     Datos
                 </button>
+                <button class="nav-btn" data-page="historial">
+                    <span class="icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                    Historial
+                </button>
             `;
         } else if (this.usuario.rol === 'mesero') {
             // Mesero: mesas y pedidos (sin dashboard)
@@ -504,7 +508,7 @@ class AdminApp {
         } else {
             // Restaurar última página visitada si existe y el usuario tiene acceso
             const paginaGuardada = sessionStorage.getItem('admin_pagina_activa');
-            const paginasAdmin = ['dashboard','menu','mesas','pedidos','inventario','reportes','facturacion','usuarios','config-ubicacion'];
+            const paginasAdmin = ['dashboard','menu','mesas','pedidos','inventario','reportes','facturacion','usuarios','config-ubicacion','historial'];
             const paginasCocinero = ['dashboard','pedidos'];
             const paginasPermitidas = this.usuario.rol === 'administrador' ? paginasAdmin : paginasCocinero;
             if (paginaGuardada && paginasPermitidas.includes(paginaGuardada) && document.getElementById(paginaGuardada)) {
@@ -844,6 +848,7 @@ class AdminApp {
         if (page === 'facturacion' && this.usuario.rol === 'administrador') this.cargarFacturacion();
         if (page === 'usuarios' && this.usuario.rol === 'administrador') this.cargarUsuarios();
         if (page === 'config-ubicacion' && this.usuario.rol === 'administrador' && typeof cargarUbicacionAdmin === 'function') cargarUbicacionAdmin();
+        if (page === 'historial' && this.usuario.rol === 'administrador') this.cargarHistorial();
     }
 
     actualizarFechaHora() {
@@ -926,6 +931,211 @@ class AdminApp {
                 </div>
             `;
         }).join('');
+    }
+
+    // ============= HISTORIAL COMPLETO =============
+
+    async cargarHistorial() {
+        const tbody = document.getElementById('historial-tbody');
+        const contador = document.getElementById('hist-contador');
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando historial...</td></tr>';
+
+        try {
+            const datos = await this.apiRequest('/actividad?todas=1');
+            this.historialDatos = datos;
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#e74c3c;padding:24px;">Error al cargar el historial.</td></tr>';
+            return;
+        }
+
+        // Configurar filtros (solo una vez)
+        if (!this._histFiltrosInit) {
+            this._histFiltrosInit = true;
+
+            const render = () => this._renderHistorialTabla();
+
+            document.getElementById('hist-buscar').addEventListener('input', render);
+            document.getElementById('hist-rol').addEventListener('change', render);
+            document.getElementById('hist-fecha-desde').addEventListener('change', render);
+            document.getElementById('hist-fecha-hasta').addEventListener('change', render);
+
+            document.getElementById('btn-hist-limpiar').addEventListener('click', () => {
+                document.getElementById('hist-buscar').value = '';
+                document.getElementById('hist-rol').value = '';
+                document.getElementById('hist-fecha-desde').value = '';
+                document.getElementById('hist-fecha-hasta').value = '';
+                this._renderHistorialTabla();
+            });
+
+            document.getElementById('btn-imprimir-historial').addEventListener('click', () => {
+                this._imprimirHistorial();
+            });
+        }
+
+        this._renderHistorialTabla();
+    }
+
+    _renderHistorialTabla() {
+        const busqueda  = (document.getElementById('hist-buscar').value || '').toLowerCase().trim();
+        const rolFiltro = (document.getElementById('hist-rol').value || '').toLowerCase();
+        const desdeVal  = document.getElementById('hist-fecha-desde').value;
+        const hastaVal  = document.getElementById('hist-fecha-hasta').value;
+        const desde     = desdeVal ? new Date(desdeVal + 'T00:00:00') : null;
+        const hasta     = hastaVal ? new Date(hastaVal + 'T23:59:59') : null;
+
+        const iconosRol = {
+            'administrador': '<i class="fa-solid fa-user-shield"></i>',
+            'mesero':        '<i class="fa-solid fa-bell-concierge"></i>',
+            'cocinero':      '<i class="fa-solid fa-fire"></i>'
+        };
+        const coloresRol = {
+            'administrador': '#e74c3c',
+            'mesero':        '#3498db',
+            'cocinero':      '#e67e22'
+        };
+
+        let lista = (this.historialDatos || []).filter(act => {
+            const rol  = (act.tipo || '').toLowerCase();
+            const user = (act.usuario || '').toLowerCase();
+            const desc = (act.descripcion || '').toLowerCase();
+            const fecha = parsefecha(act.fecha);
+
+            if (rolFiltro && rol !== rolFiltro) return false;
+            if (desde && fecha < desde) return false;
+            if (hasta && fecha > hasta) return false;
+            if (busqueda && !user.includes(busqueda) && !desc.includes(busqueda)) return false;
+            return true;
+        });
+
+        const contador = document.getElementById('hist-contador');
+        const total = (this.historialDatos || []).length;
+        contador.textContent = lista.length === total
+            ? `${total} registros en total`
+            : `${lista.length} de ${total} registros`;
+
+        const tbody = document.getElementById('historial-tbody');
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="historial-empty">No hay registros que coincidan con los filtros.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = lista.map(act => {
+            const rol    = (act.tipo || '').toLowerCase();
+            const icono  = iconosRol[rol] || '<i class="fa-solid fa-user"></i>';
+            const color  = coloresRol[rol] || '#95a5a6';
+            const rolTxt = rol ? rol.charAt(0).toUpperCase() + rol.slice(1) : '–';
+            const fecha  = parsefecha(act.fecha).toLocaleString('es-PE', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+            return `
+                <tr>
+                    <td class="hist-fecha">${fecha}</td>
+                    <td class="hist-usuario">${this.escapeHTML(act.usuario || '–')}</td>
+                    <td><span class="activity-rol-badge" style="background:${color}">${icono} ${this.escapeHTML(rolTxt)}</span></td>
+                    <td class="hist-desc">${this.escapeHTML(act.descripcion || '–')}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    _imprimirHistorial() {
+        const busqueda  = (document.getElementById('hist-buscar').value || '').trim();
+        const rolFiltro = document.getElementById('hist-rol').value || '';
+        const desdeVal  = document.getElementById('hist-fecha-desde').value;
+        const hastaVal  = document.getElementById('hist-fecha-hasta').value;
+        const desde     = desdeVal ? new Date(desdeVal + 'T00:00:00') : null;
+        const hasta     = hastaVal ? new Date(hastaVal + 'T23:59:59') : null;
+
+        const coloresRol = {
+            'administrador': '#c0392b',
+            'mesero':        '#2980b9',
+            'cocinero':      '#d35400'
+        };
+
+        let lista = (this.historialDatos || []).filter(act => {
+            const rol  = (act.tipo || '').toLowerCase();
+            const user = (act.usuario || '').toLowerCase();
+            const desc = (act.descripcion || '').toLowerCase();
+            const fecha = parsefecha(act.fecha);
+            const busqLower = busqueda.toLowerCase();
+            if (rolFiltro && rol !== rolFiltro.toLowerCase()) return false;
+            if (desde && fecha < desde) return false;
+            if (hasta && fecha > hasta) return false;
+            if (busqueda && !user.includes(busqLower) && !desc.includes(busqLower)) return false;
+            return true;
+        });
+
+        const nombreRest = document.getElementById('cfg-nombre')?.value || 'Restaurante';
+        const ahora = new Date().toLocaleString('es-PE', {
+            day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        const filtrosAplicados = [];
+        if (busqueda)  filtrosAplicados.push(`Búsqueda: "${busqueda}"`);
+        if (rolFiltro) filtrosAplicados.push(`Rol: ${rolFiltro}`);
+        if (desdeVal)  filtrosAplicados.push(`Desde: ${desdeVal}`);
+        if (hastaVal)  filtrosAplicados.push(`Hasta: ${hastaVal}`);
+
+        const filas = lista.map(act => {
+            const rol    = (act.tipo || '').toLowerCase();
+            const color  = coloresRol[rol] || '#555';
+            const rolTxt = rol ? rol.charAt(0).toUpperCase() + rol.slice(1) : '–';
+            const fecha  = parsefecha(act.fecha).toLocaleString('es-PE', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+            const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            return `
+                <tr>
+                    <td style="white-space:nowrap;font-size:12px">${esc(fecha)}</td>
+                    <td style="font-weight:700">${esc(act.usuario || '–')}</td>
+                    <td><span style="background:${color};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${esc(rolTxt)}</span></td>
+                    <td>${esc(act.descripcion || '–')}</td>
+                </tr>`;
+        }).join('');
+
+        const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Historial de Actividad — ${nombreRest}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #1a1a1a; padding: 20px; }
+  .print-header { border-bottom: 3px solid #ff6b35; padding-bottom: 12px; margin-bottom: 14px; }
+  .print-header h1 { font-size: 20px; color: #ff6b35; }
+  .print-header p { color: #555; margin-top: 4px; font-size: 12px; }
+  .print-meta { display: flex; gap: 20px; margin-bottom: 14px; font-size: 12px; color: #444; }
+  .filtros-tag { background: #f1f5f9; border: 1px solid #dde3ed; border-radius: 6px; padding: 4px 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #1e293b; color: #fff; padding: 8px 10px; text-align: left; font-size: 12px; }
+  td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; font-size: 12px; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .print-footer { margin-top: 20px; font-size: 11px; color: #888; text-align: right; }
+  @media print {
+    body { padding: 0; }
+    button { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="print-header">
+  <h1>📋 Historial de Actividad — ${nombreRest}</h1>
+  <p>Generado el ${ahora} &nbsp;|&nbsp; Total de registros: ${lista.length}</p>
+</div>
+${filtrosAplicados.length ? `<div class="print-meta"><strong>Filtros aplicados:</strong>${filtrosAplicados.map(f=>`<span class="filtros-tag">${f}</span>`).join('')}</div>` : ''}
+<table>
+  <thead><tr><th>Fecha y Hora</th><th>Usuario</th><th>Rol</th><th>Descripción</th></tr></thead>
+  <tbody>${filas}</tbody>
+</table>
+<div class="print-footer">Sistema de Gestión de Restaurante</div>
+<script>window.onload = function(){ window.print(); }<\/script>
+</body></html>`;
+
+        const win = window.open('', '_blank', 'width=900,height=700');
+        win.document.write(html);
+        win.document.close();
     }
 
     async agregarActividad(accion) {
