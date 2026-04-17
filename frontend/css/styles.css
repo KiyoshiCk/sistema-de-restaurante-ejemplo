@@ -2894,6 +2894,8 @@ button:disabled {
 
 .historial-header h2 {
     margin: 0;
+    font-size: 1.4em;
+    color: var(--dark-color);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -2902,9 +2904,10 @@ button:disabled {
 .historial-filtros {
     background: var(--surface);
     border: 1px solid var(--border-color);
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 16px 20px;
     margin-bottom: 18px;
+    box-shadow: var(--shadow);
 }
 
 .historial-filtro-row {
@@ -2951,8 +2954,7 @@ button:disabled {
     box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.12);
 }
 
-.historial-filtro-row select,
-.historial-filtro-row input[type="date"] {
+.historial-filtro-row select {
     padding: 9px 12px;
     border: 1.5px solid var(--border-color);
     border-radius: 8px;
@@ -2963,8 +2965,7 @@ button:disabled {
     cursor: pointer;
 }
 
-.historial-filtro-row select:focus,
-.historial-filtro-row input[type="date"]:focus {
+.historial-filtro-row select:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.12);
@@ -2977,11 +2978,13 @@ button:disabled {
     font-style: italic;
 }
 
+/* ---- Tabla (desktop) ---- */
 .historial-tabla-wrap {
     overflow-x: auto;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1px solid var(--border-color);
     background: var(--surface);
+    box-shadow: var(--shadow);
 }
 
 .historial-tabla {
@@ -2993,7 +2996,7 @@ button:disabled {
 .historial-tabla thead th {
     background: var(--dark-color);
     color: #fff;
-    padding: 12px 14px;
+    padding: 12px 16px;
     text-align: left;
     font-weight: 600;
     font-size: 0.85em;
@@ -3013,7 +3016,7 @@ button:disabled {
 .historial-tabla tbody tr:hover { background: #eef4ff; }
 
 .historial-tabla td {
-    padding: 10px 14px;
+    padding: 11px 16px;
     vertical-align: middle;
 }
 
@@ -3035,20 +3038,168 @@ button:disabled {
 
 .historial-empty {
     text-align: center;
-    padding: 28px !important;
+    padding: 40px 20px !important;
     color: #94a3b8;
     font-style: italic;
 }
 
-@media (max-width: 768px) {
-    .historial-filtro-row {
+/* ---- Cards (mobile ≤ 640px) ---- */
+@media (max-width: 640px) {
+    .historial-header {
         flex-direction: column;
         align-items: stretch;
+        gap: 12px;
     }
-    .historial-search-wrap { flex: 1 1 auto; }
-    .historial-tabla { font-size: 0.82em; }
-    .historial-tabla td, .historial-tabla th { padding: 8px 10px; }
-    .hist-fecha { font-size: 0.78em; }
+
+    .historial-header h2 { font-size: 1.2em; }
+
+    .historial-header .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .historial-filtros {
+        padding: 14px;
+    }
+
+    .historial-filtro-row {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .historial-search-wrap,
+    .historial-filtro-row select {
+        width: 100%;
+        flex: 1 1 auto;
+    }
+
+    .historial-filtro-row select {
+        width: 100%;
+    }
+
+    /* Botón limpiar ocupa todo el ancho */
+    .historial-filtro-row #btn-hist-limpiar {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Botones de período: scroll horizontal igual que los filtros de pedidos */
+    .historial-filtros .reportes-periodo-rapido {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+        gap: 6px;
+        scrollbar-width: none;
+    }
+    .historial-filtros .reportes-periodo-rapido::-webkit-scrollbar { display: none; }
+
+    .historial-filtros .periodo-btn {
+        flex-shrink: 0;
+        padding: 8px 14px;
+        font-size: 0.82em;
+    }
+
+    /* Tabla → ocultamos el thead y convertimos cada fila en card */
+    .historial-tabla-wrap {
+        border: none;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .historial-tabla thead {
+        display: none;
+    }
+
+    .historial-tabla,
+    .historial-tabla tbody {
+        display: block;
+    }
+
+    .historial-tabla tbody tr {
+        display: flex;
+        flex-direction: column;
+        background: var(--surface);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        margin-bottom: 10px;
+        padding: 14px 16px;
+        gap: 6px;
+        border-bottom: 1px solid var(--border-color); /* override global */
+    }
+
+    .historial-tabla tbody tr:nth-child(even) {
+        background: var(--surface); /* uniforme — el borde ya distingue */
+    }
+
+    .historial-tabla tbody tr:hover {
+        background: #f5f8ff;
+        border-color: var(--primary-color);
+    }
+
+    /* Celdas: ocultar y reconstruir como filas internas */
+    .historial-tabla td {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 0;
+        font-size: 0.88em;
+        border: none;
+    }
+
+    /* Etiqueta sintética antes de cada valor */
+    .historial-tabla td::before {
+        content: attr(data-label);
+        font-size: 0.78em;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #94a3b8;
+        white-space: nowrap;
+        min-width: 64px;
+        padding-top: 2px;
+    }
+
+    /* Fecha arriba en destaque */
+    .historial-tabla td.hist-fecha {
+        order: -2;
+        font-size: 0.78em;
+        color: #64748b;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 8px;
+        margin-bottom: 2px;
+    }
+
+    /* Badge de rol sin etiqueta (es visual) */
+    .historial-tabla td:nth-child(3)::before {
+        display: none;
+    }
+
+    /* Usuario en negrita grande */
+    .hist-usuario {
+        font-size: 1em;
+    }
+
+    /* Descripción con color más suave */
+    .hist-desc {
+        font-size: 0.88em;
+        color: #475569;
+    }
+
+    .historial-empty {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        padding: 40px 20px !important;
+    }
+}
+
+@media (max-width: 400px) {
+    .historial-filtros .periodo-btn {
+        padding: 7px 10px;
+        font-size: 0.78em;
+    }
 }
 
 /* ============= REPORTES ============= */

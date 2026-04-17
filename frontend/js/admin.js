@@ -1096,10 +1096,10 @@ class AdminApp {
             });
             return `
                 <tr>
-                    <td class="hist-fecha">${fecha}</td>
-                    <td class="hist-usuario">${this.escapeHTML(act.usuario || '–')}</td>
-                    <td><span class="activity-rol-badge" style="background:${color}">${icono} ${this.escapeHTML(rolTxt)}</span></td>
-                    <td class="hist-desc">${this.escapeHTML(act.descripcion || '–')}</td>
+                    <td class="hist-fecha" data-label="Fecha">${fecha}</td>
+                    <td class="hist-usuario" data-label="Usuario">${this.escapeHTML(act.usuario || '–')}</td>
+                    <td data-label=""><span class="activity-rol-badge" style="background:${color}">${icono} ${this.escapeHTML(rolTxt)}</span></td>
+                    <td class="hist-desc" data-label="Acción">${this.escapeHTML(act.descripcion || '–')}</td>
                 </tr>
             `;
         }).join('');
