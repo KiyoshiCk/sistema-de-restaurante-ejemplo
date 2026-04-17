@@ -238,16 +238,31 @@
     font-size: 0.95em;
     font-family: inherit;
     background: #fafbfc;
-    transition: all 0.2s;
+    transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
     resize: vertical;
+    cursor: text;
+}
+
+.datos-restaurante-grid .form-group input:hover,
+.datos-restaurante-grid .form-group textarea:hover {
+    border-color: #94a3b8;
+    background: white;
 }
 
 .datos-restaurante-grid .form-group input:focus,
 .datos-restaurante-grid .form-group textarea:focus {
-    border-color: #6366f1;
+    border-color: var(--primary-color);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.12);
     background: white;
+}
+
+/* Lápiz en label al hacer hover sobre el campo — indica que es editable */
+.datos-restaurante-grid .form-group:focus-within label::after {
+    content: ' ✎';
+    font-size: 0.85em;
+    color: var(--primary-color);
+    opacity: 0.7;
 }
 
 .datos-restaurante-grid .form-group input::placeholder,
@@ -315,9 +330,9 @@
 }
 
 .ubicacion-form-grid .form-group input:focus {
-    border-color: #6366f1;
+    border-color: var(--primary-color);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.12);
     background: white;
 }
 
@@ -1500,8 +1515,8 @@ button:disabled {
 
 .filters select:focus,
 .filters input:focus {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255,107,53,0.14);
     outline: none;
 }
 
@@ -2495,23 +2510,33 @@ button:disabled {
 .form-group textarea {
     width: 100%;
     padding: 12px;
-    border: 2px solid var(--light-color);
+    border: 2px solid var(--border-color);
     border-radius: 5px;
     font-size: 1em;
     font-family: inherit;
+    background: var(--surface-2);
+    transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+    cursor: text;
 }
 
-.form-group textarea {
-    resize: vertical;
-    min-height: 80px;
+.form-group select {
+    cursor: pointer;
+}
+
+.form-group input:hover,
+.form-group select:hover,
+.form-group textarea:hover {
+    border-color: #94a3b8;
+    background: white;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-    border-color: #6366f1;
+    border-color: var(--primary-color);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.15);
 }
 
 .form-actions {
@@ -2957,8 +2982,8 @@ button:disabled {
 
 .fecha-input:focus {
     outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
 }
 
 .fecha-input.error {
@@ -3371,8 +3396,7 @@ button:disabled {
 
 .inventario-busqueda input:focus {
     outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+    border-color: var(--primary-color);
 }
 
 /* Grid */
