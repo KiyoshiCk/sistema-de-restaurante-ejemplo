@@ -866,52 +866,25 @@ body.cliente-view h4 {
     margin-bottom: 28px;
 }
 
-/* Role selector */
-.login-roles {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 24px;
+.login-divider {
+    border-top: 1px solid var(--border-color);
+    margin: 20px 0 16px;
 }
 
-.login-role-btn {
+.login-link-cocina {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 5px;
-    padding: 10px 6px;
-    border: 2px solid var(--border-color);
-    border-radius: var(--radius);
-    background: var(--surface-2);
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 10px;
     color: var(--text-secondary);
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.18s;
+    text-decoration: none;
+    font-size: 0.87rem;
+    transition: color 0.18s;
 }
 
-.login-role-btn i {
-    font-size: 1.2rem;
-}
-
-.login-role-btn:hover {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-    background: white;
-}
-
-.login-role-btn.active {
-    border-color: var(--primary-color);
-    background: linear-gradient(135deg, rgba(255,107,53,0.08), rgba(247,147,30,0.06));
-    color: var(--primary-color);
-    box-shadow: 0 2px 8px rgba(255,107,53,0.15);
-}
-
-.login-role-cocina.active {
-    border-color: #e74c3c;
-    background: rgba(231,76,60,0.07);
+.login-link-cocina:hover {
     color: #e74c3c;
-    box-shadow: 0 2px 8px rgba(231,76,60,0.15);
 }
 
 /* Input groups */

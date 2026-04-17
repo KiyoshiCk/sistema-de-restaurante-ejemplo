@@ -42,22 +42,6 @@
                     <h1 class="login-card-title">Bienvenido</h1>
                     <p class="login-card-sub">Ingresa tus credenciales para continuar</p>
 
-                    <!-- Selector de rol -->
-                    <div class="login-roles">
-                        <button type="button" class="login-role-btn active" data-rol="admin">
-                            <i class="fa-solid fa-shield-halved"></i>
-                            <span>Administrador</span>
-                        </button>
-                        <button type="button" class="login-role-btn" data-rol="mesero">
-                            <i class="fa-solid fa-bell-concierge"></i>
-                            <span>Mesero</span>
-                        </button>
-                        <button type="button" class="login-role-btn login-role-cocina" data-rol="cocina">
-                            <i class="fa-solid fa-kitchen-set"></i>
-                            <span>Cocina</span>
-                        </button>
-                    </div>
-
                     <form id="login-form" class="login-form">
                         <div class="login-input-group">
                             <i class="fa-solid fa-user login-input-icon"></i>
@@ -75,6 +59,10 @@
                         </button>
                     </form>
 
+                    <div class="login-divider"></div>
+                    <a href="/cocina" class="login-link-cocina">
+                        <i class="fa-solid fa-kitchen-set"></i> ¿Eres del equipo de cocina?
+                    </a>
                     <a href="/cliente" class="login-link-cliente">
                         <i class="fa-solid fa-arrow-left"></i> Ver menú del cliente
                     </a>

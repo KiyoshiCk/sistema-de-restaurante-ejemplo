@@ -302,19 +302,6 @@ class AdminApp {
                 e.preventDefault();
                 this.login();
             });
-
-            // Role selector buttons
-            document.querySelectorAll('.login-role-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.login-role-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    // Si eligen cocina, redirigir
-                    if (btn.dataset.rol === 'cocina') {
-                        window.location.href = '/cocina';
-                    }
-                });
-            });
-
             this._loginListenerAdded = true;
         }
     }
