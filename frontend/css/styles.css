@@ -2179,7 +2179,7 @@ button:disabled {
 
 @keyframes pulseCardListo {
     0%, 100% { box-shadow: var(--shadow); }
-    50% { box-shadow: 0 0 0 4px rgba(39, 174, 96, 0.25), var(--shadow); }
+    50% { box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.22); }
 }
 
 @media (max-width: 600px) {
