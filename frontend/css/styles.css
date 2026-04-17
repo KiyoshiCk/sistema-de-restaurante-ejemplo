@@ -3427,6 +3427,13 @@ button:disabled {
     max-height: 260px;
     overflow-y: auto;
     overflow-x: hidden;
+    transition: max-height 0.25s ease;
+}
+
+/* Cuando se expande "Ver todos" */
+.reporte-lista.expanded {
+    max-height: none;
+    overflow-y: visible;
 }
 
 .reporte-item {

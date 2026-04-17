@@ -3167,7 +3167,206 @@ ${filtrosAplicados.length ? `<div class="print-meta"><strong>Filtros aplicados:<
     }
 
     // ===== REPORTES (Solo Admin) =====
-    
+
+    _imprimirReporte() {
+        const btnActivo = document.querySelector('#reportes .periodo-btn.active');
+        const periodo   = btnActivo?.dataset.periodo || 'mes';
+        const { inicio, fin, textoInfo } = this.obtenerRangoFechas(periodo);
+
+        const facturasDelPeriodo = this.facturas.filter(f => {
+            const fecha = parsefecha(f.fecha);
+            return fecha >= inicio && fecha <= fin;
+        });
+
+        const totalVentas     = facturasDelPeriodo.reduce((s, f) => s + (f.total || 0), 0);
+        const pedidos         = facturasDelPeriodo.length;
+        const ticketPromedio  = pedidos > 0 ? totalVentas / pedidos : 0;
+
+        // ── Platillos ──
+        const conteoPlat = {};
+        facturasDelPeriodo.forEach(f => {
+            (f.items || []).forEach(item => {
+                const n = item.nombre || 'Sin nombre';
+                if (!conteoPlat[n]) conteoPlat[n] = { cantidad: 0, total: 0 };
+                conteoPlat[n].cantidad += item.cantidad || 1;
+                conteoPlat[n].total   += (item.precio || 0) * (item.cantidad || 1);
+            });
+        });
+        const platOrdenado = Object.entries(conteoPlat).sort((a, b) => b[1].cantidad - a[1].cantidad);
+        const maxPlat      = platOrdenado[0]?.[1].cantidad || 1;
+
+        // ── Mesas ──
+        const conteoMesa = {};
+        facturasDelPeriodo.forEach(f => {
+            const m = f.mesaNumero || 'N/A';
+            if (!conteoMesa[m]) conteoMesa[m] = { pedidos: 0, total: 0 };
+            conteoMesa[m].pedidos++;
+            conteoMesa[m].total += f.total || 0;
+        });
+        const mesasOrdenado = Object.entries(conteoMesa)
+            .sort((a, b) => b[1].total - a[1].total).slice(0, 5);
+
+        // ── Ventas por día ──
+        const conteoDia = {};
+        facturasDelPeriodo.forEach(f => {
+            const fecha = parsefecha(f.fecha);
+            const clave = fecha.toISOString().slice(0, 10);
+            const dia   = fecha.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+            if (!conteoDia[clave]) conteoDia[clave] = { label: dia, total: 0 };
+            conteoDia[clave].total += f.total || 0;
+        });
+        let diasOrdenado = Object.entries(conteoDia).sort((a, b) => a[0].localeCompare(b[0]));
+        if (diasOrdenado.length > 31) {
+            const porMes = {};
+            for (const [clave, data] of diasOrdenado) {
+                const mes   = clave.slice(0, 7);
+                const label = new Date(clave + 'T12:00:00').toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
+                if (!porMes[mes]) porMes[mes] = { label, total: 0 };
+                porMes[mes].total += data.total;
+            }
+            diasOrdenado = Object.entries(porMes).sort((a, b) => a[0].localeCompare(b[0]));
+        }
+        const maxDia = Math.max(...diasOrdenado.map(([, v]) => v.total)) || 1;
+
+        // ── Horas pico ──
+        const conteoHora = {};
+        facturasDelPeriodo.forEach(f => {
+            const hora  = parsefecha(f.fecha).getHours();
+            const rango = `${hora}:00 - ${hora + 1}:00`;
+            if (!conteoHora[rango]) conteoHora[rango] = { pedidos: 0, total: 0 };
+            conteoHora[rango].pedidos++;
+            conteoHora[rango].total += f.total || 0;
+        });
+        const horasOrdenado = Object.entries(conteoHora)
+            .sort((a, b) => b[1].pedidos - a[1].pedidos).slice(0, 5);
+
+        // ── Categorías ──
+        const conteoCat = {};
+        facturasDelPeriodo.forEach(f => {
+            (f.items || []).forEach(item => {
+                const platillo = this.menu.find(p => p.nombre === item.nombre);
+                const cat      = item.categoria || platillo?.categoria || 'Otros';
+                if (!conteoCat[cat]) conteoCat[cat] = 0;
+                conteoCat[cat] += (item.precio || 0) * (item.cantidad || 1);
+            });
+        });
+        const catOrdenado = Object.entries(conteoCat).sort((a, b) => b[1] - a[1]);
+        const totalCat    = catOrdenado.reduce((s, [, v]) => s + v, 0) || 1;
+
+        // ── Helpers de renderizado ──
+        const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        const rankRow = (rank, label, valStr, sub = '') => {
+            const cls = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+            return `<div class="pi">
+                <span class="pi-rank ${cls}">${rank}</span>
+                <span class="pi-name">${esc(label)}</span>
+                <div class="pi-val">${esc(valStr)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>
+            </div>`;
+        };
+
+        const barRow = (label, val, max, valStr, sub = '') => `
+            <div class="pi">
+                <span class="pi-name">${esc(label)}</span>
+                <div class="pi-bar-wrap"><div class="pi-bar" style="width:${(val / max * 100).toFixed(1)}%"></div></div>
+                <div class="pi-val">${esc(valStr)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>
+            </div>`;
+
+        const seccion = (titulo, contenido) => `
+            <div class="ps">
+                <div class="ps-title">${titulo}</div>
+                ${contenido || '<p class="empty">Sin datos</p>'}
+            </div>`;
+
+        const sin = '<p class="empty">Sin datos</p>';
+
+        const platHtml  = platOrdenado.length
+            ? platOrdenado.map(([n, d], i) => rankRow(i + 1, n, `${d.cantidad} uds`, `S/${d.total.toFixed(2)}`)).join('')
+            : sin;
+        const mesaHtml  = mesasOrdenado.length
+            ? mesasOrdenado.map(([m, d], i) => rankRow(i + 1, `Mesa ${m}`, `S/${d.total.toFixed(2)}`, `${d.pedidos} pedidos`)).join('')
+            : sin;
+        const diaHtml   = diasOrdenado.length
+            ? diasOrdenado.map(([, d]) => barRow(d.label, d.total, maxDia, `S/${d.total.toFixed(2)}`)).join('')
+            : sin;
+        const horaHtml  = horasOrdenado.length
+            ? horasOrdenado.map(([h, d], i) => rankRow(i + 1, h, `${d.pedidos} pedidos`, `S/${d.total.toFixed(2)}`)).join('')
+            : sin;
+        const catHtml   = catOrdenado.length
+            ? catOrdenado.map(([c, v]) => barRow(c, v, totalCat, `S/${v.toFixed(2)}`, `${(v / totalCat * 100).toFixed(1)}%`)).join('')
+            : sin;
+
+        const nombreRest = document.getElementById('cfg-nombre')?.value || 'Restaurante';
+        const ahora = new Date().toLocaleString('es-PE', {
+            day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte — ${esc(nombreRest)}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;padding:20px}
+  .ph{border-bottom:3px solid #ff6b35;padding-bottom:12px;margin-bottom:16px}
+  .ph h1{font-size:20px;color:#ff6b35}
+  .ph p{color:#555;font-size:12px;margin-top:4px}
+  .meta{font-size:12px;color:#444;background:#f5f7fa;border:1px solid #e0e6ef;border-radius:6px;padding:8px 14px;margin-bottom:18px}
+  .sum{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+  .sc{background:#fff4f0;border:1px solid #ffc4aa;border-radius:8px;padding:14px;text-align:center}
+  .sc .sl{font-size:11px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+  .sc .sv{font-size:20px;font-weight:700;color:#ff6b35}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .ps{background:#fff;border:1px solid #e0e6ef;border-radius:10px;padding:14px;page-break-inside:avoid}
+  .ps-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#666;border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:10px}
+  .pi{display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid #f5f5f5}
+  .pi:last-child{border-bottom:none}
+  .pi-rank{width:22px;height:22px;border-radius:50%;background:#bbb;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+  .pi-rank.gold{background:#f1c40f}.pi-rank.silver{background:#95a5a6}.pi-rank.bronze{background:#cd6133}
+  .pi-name{flex:1;font-size:12px;color:#333}
+  .pi-bar-wrap{flex:1;height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden;min-width:40px}
+  .pi-bar{height:100%;background:linear-gradient(90deg,#ff6b35,#ffaa80);border-radius:3px}
+  .pi-val{text-align:right;font-size:12px;font-weight:700;color:#ff6b35;min-width:72px}
+  .pi-val small{display:block;font-weight:400;color:#888;font-size:10px}
+  .empty{color:#aaa;text-align:center;padding:10px 0;font-size:12px}
+  .footer{margin-top:20px;font-size:11px;color:#aaa;text-align:right;border-top:1px solid #eee;padding-top:8px}
+  @media print{body{padding:8mm} button{display:none} .grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="ph">
+  <h1>📊 Reporte de Estadísticas — ${esc(nombreRest)}</h1>
+  <p>Generado: ${ahora}</p>
+</div>
+<div class="meta"><strong>Período analizado:</strong> ${esc(textoInfo)} &nbsp;|&nbsp; <strong>Facturas en período:</strong> ${pedidos}</div>
+<div class="sum">
+  <div class="sc"><div class="sl">Total Ventas</div><div class="sv">S/${totalVentas.toFixed(2)}</div></div>
+  <div class="sc"><div class="sl">Pedidos Completados</div><div class="sv">${pedidos}</div></div>
+  <div class="sc"><div class="sl">Ticket Promedio</div><div class="sv">S/${ticketPromedio.toFixed(2)}</div></div>
+</div>
+<div class="grid">
+  ${seccion('🍽 Platillos Más Vendidos', platHtml)}
+  ${seccion('🪑 Mesas Más Activas', mesaHtml)}
+  ${seccion('📅 Ventas por Día', diaHtml)}
+  ${seccion('🕐 Horas Pico', horaHtml)}
+  ${seccion('📂 Ventas por Categoría', catHtml)}
+</div>
+<div class="footer">Sistema de Restaurante — ${esc(nombreRest)}</div>
+</body>
+</html>`;
+
+        const ventana = window.open('', '_blank', 'width=960,height=720');
+        if (!ventana) {
+            alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio e intenta de nuevo.');
+            return;
+        }
+        ventana.document.write(html);
+        ventana.document.close();
+        ventana.focus();
+        setTimeout(() => ventana.print(), 500);
+    }
+
     cargarReportes() {
         if (this.usuario.rol !== 'administrador') return;
         
@@ -3200,6 +3399,16 @@ ${filtrosAplicados.length ? `<div class="print-meta"><strong>Filtros aplicados:<
             // Botón generar reporte personalizado
             document.getElementById('btn-generar-reporte')?.addEventListener('click', () => {
                 this.generarReportePersonalizado();
+            });
+
+            // Botón imprimir reporte
+            document.getElementById('btn-imprimir-reporte')?.addEventListener('click', () => {
+                this._imprimirReporte();
+            });
+
+            // Botón ver todos/menos en platillos
+            document.getElementById('btn-platillos-ver-todos')?.addEventListener('click', () => {
+                this._toggleVerTodosPlatillos();
             });
             
             // Validación en tiempo real: fecha inicio no puede ser mayor a fecha fin
@@ -3392,11 +3601,16 @@ ${filtrosAplicados.length ? `<div class="print-meta"><strong>Filtros aplicados:<
             });
         });
         
-        const ordenado = Object.entries(conteo)
-            .sort((a, b) => b[1].cantidad - a[1].cantidad)
-            .slice(0, 5);
-        
-        const maxCantidad = ordenado[0]?.[1].cantidad || 1;
+        this._platillosTodos = Object.entries(conteo)
+            .sort((a, b) => b[1].cantidad - a[1].cantidad);
+        this._platillosMostrandoTodos = false;
+        this._renderPlatillosTop(false);
+    }
+
+    _renderPlatillosTop(mostrarTodos) {
+        const todos = this._platillosTodos || [];
+        const ordenado = mostrarTodos ? todos : todos.slice(0, 5);
+        const maxCantidad = todos[0]?.[1].cantidad || 1;
         
         document.getElementById('reporte-platillos-top').innerHTML = ordenado.length > 0 
             ? ordenado.map(([nombre, data], i) => `
@@ -3415,6 +3629,27 @@ ${filtrosAplicados.length ? `<div class="print-meta"><strong>Filtros aplicados:<
                 </div>
             `).join('')
             : '<p style="text-align: center; color: #7f8c8d;">Sin datos</p>';
+        
+        const toggleWrap = document.getElementById('reporte-platillos-toggle-wrap');
+        const toggleBtn  = document.getElementById('btn-platillos-ver-todos');
+        const lista      = document.getElementById('reporte-platillos-top');
+        if (toggleWrap && toggleBtn && lista) {
+            if (todos.length > 5) {
+                toggleWrap.style.display = 'block';
+                lista.classList.toggle('expanded', mostrarTodos);
+                toggleBtn.innerHTML = mostrarTodos
+                    ? '<i class="fa-solid fa-chevron-up"></i> Ver menos'
+                    : `<i class="fa-solid fa-list"></i> Ver todos (${todos.length})`;
+            } else {
+                toggleWrap.style.display = 'none';
+                lista.classList.remove('expanded');
+            }
+        }
+    }
+
+    _toggleVerTodosPlatillos() {
+        this._platillosMostrandoTodos = !this._platillosMostrandoTodos;
+        this._renderPlatillosTop(this._platillosMostrandoTodos);
     }
     
     mostrarMesasTop(facturas) {
