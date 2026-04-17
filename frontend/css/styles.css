@@ -599,7 +599,7 @@
 
     /* ── Estructura ────────────────────────── */
     --dark-color:  #1e293b;   /* slate-800  — más profesional que #2c3e50 */
-    --light-color: #ffffff;   /* blanco puro — pills/filas flotan sobre bg-app   */
+    --light-color: #f1f5f9;   /* slate-100  — filas, pills, separadores    */
 
     /* ── Semántico ─────────────────────────── */
     --success-color: #16a34a;
