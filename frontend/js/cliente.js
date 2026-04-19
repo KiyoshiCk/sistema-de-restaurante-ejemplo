@@ -402,7 +402,7 @@ class ClienteApp {
         };
 
         container.innerHTML = menuFiltrado.map((platillo, index) => `
-            <div class="menu-cliente-item card-hidden" data-index="${index}">
+            <div class="menu-cliente-item card-hidden" data-index="${index}" data-id="${platillo._id || index}" role="button" tabindex="0" aria-label="Ver detalle de ${this.escapeHTML(platillo.nombre)}">
                 <div class="menu-cliente-item-header" style="${!platillo.imagen ? 'background:' + (gradientes[platillo.categoria] || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)') : ''}">
                     ${platillo.imagen 
                         ? `<div class="menu-cliente-item-foto"><img src="${platillo.imagen}" alt="${this.escapeHTML(platillo.nombre)}" loading="lazy"></div>` 
@@ -428,6 +428,18 @@ class ClienteApp {
                 </div>
             </div>
         `).join('');
+
+        // Evento de expansión al hacer click en cualquier tarjeta
+        container.addEventListener('click', (e) => {
+            const card = e.target.closest('.menu-cliente-item');
+            if (card) this._expandirTarjeta(card, menuFiltrado);
+        });
+        container.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                const card = e.target.closest('.menu-cliente-item');
+                if (card) { e.preventDefault(); this._expandirTarjeta(card, menuFiltrado); }
+            }
+        });
 
         // Revelar tarjetas con animación progresiva
         this.revealCards();
@@ -483,6 +495,133 @@ class ClienteApp {
                 card.classList.add('card-visible');
             });
         }
+    }
+
+    _expandirTarjeta(cardEl, menuFiltrado) {
+        // Evitar doble apertura
+        if (document.querySelector('.card-expandida-overlay')) return;
+
+        // Datos del platillo a partir del índice de la tarjeta
+        const index = parseInt(cardEl.dataset.index);
+        const platillo = menuFiltrado[index];
+        if (!platillo) return;
+
+        const iconos = {
+            'Entradas':      '<i class="fa-solid fa-leaf"></i>',
+            'Platos Fuertes':'<i class="fa-solid fa-utensils"></i>',
+            'Postres':       '<i class="fa-solid fa-cake-candles"></i>',
+            'Bebidas':       '<i class="fa-solid fa-glass-water"></i>'
+        };
+        const gradientes = {
+            'Entradas':      'linear-gradient(135deg, #00b894 0%, #00cec9 100%)',
+            'Platos Fuertes':'linear-gradient(135deg, #e17055 0%, #d63031 100%)',
+            'Postres':       'linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%)',
+            'Bebidas':       'linear-gradient(135deg, #0984e3 0%, #74b9ff 100%)'
+        };
+
+        // ── 1. Capturar posición de origen ──────────────────────────────
+        const origen = cardEl.getBoundingClientRect();
+
+        // ── 2. Overlay oscuro ────────────────────────────────────────────
+        const overlay = document.createElement('div');
+        overlay.className = 'card-expandida-overlay';
+        document.body.appendChild(overlay);
+        // Forzar reflow para que la transición arranque
+        overlay.getBoundingClientRect();
+        overlay.classList.add('card-expandida-overlay--visible');
+
+        // ── 3. Clonar la tarjeta con descripción completa ────────────────
+        const clone = document.createElement('div');
+        clone.className = 'menu-cliente-item card-expandida-clone';
+        clone.setAttribute('role', 'dialog');
+        clone.setAttribute('aria-modal', 'true');
+        clone.setAttribute('aria-label', platillo.nombre);
+        clone.innerHTML = `
+            <button class="card-expandida-cerrar" aria-label="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="menu-cliente-item-header" style="${!platillo.imagen ? 'background:' + (gradientes[platillo.categoria] || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)') : ''}">
+                ${platillo.imagen
+                    ? `<div class="menu-cliente-item-foto"><img src="${platillo.imagen}" alt="${this.escapeHTML(platillo.nombre)}"></div>`
+                    : `<div class="menu-cliente-item-icono">${iconos[platillo.categoria] || '<i class="fa-solid fa-utensils"></i>'}</div>`
+                }
+                <span class="menu-cliente-item-categoria">
+                    ${iconos[platillo.categoria] || '<i class="fa-solid fa-utensils"></i>'}
+                    ${this.escapeHTML(platillo.categoria)}
+                </span>
+            </div>
+            <div class="menu-cliente-item-body">
+                <div class="menu-cliente-item-nombre">${this.escapeHTML(platillo.nombre)}</div>
+                <p class="menu-cliente-item-descripcion card-expandida-desc">
+                    ${this.escapeHTML(platillo.descripcion || 'Delicioso platillo preparado con los mejores ingredientes.')}
+                </p>
+                <div class="menu-cliente-item-footer">
+                    <div class="menu-cliente-item-precio">
+                        <span class="menu-cliente-item-precio-label">Precio</span>
+                        ${this.config.moneda || 'S/'}${platillo.precio.toFixed(2)}
+                    </div>
+                    <span class="menu-disponible"><i class="fa-solid fa-circle-check"></i> Disponible</span>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(clone);
+
+        // ── 4. Posición destino: centrado en viewport ────────────────────
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const targetW = Math.min(420, vw * 0.92);
+        const targetH = clone.offsetHeight; // altura natural con desc completa
+        const targetX = (vw - targetW) / 2;
+        const targetY = Math.max(20, (vh - targetH) / 2);
+
+        // ── 5. Posición inicial = encima de la tarjeta original ──────────
+        clone.style.cssText = `
+            position: fixed;
+            width: ${origen.width}px;
+            left: ${origen.left}px;
+            top: ${origen.top}px;
+            transform-origin: center center;
+            z-index: 10001;
+            transition: none;
+            will-change: left, top, width;
+        `;
+
+        // Forzar reflow antes de aplicar la transición
+        clone.getBoundingClientRect();
+
+        // ── 6. Animar hacia el centro ────────────────────────────────────
+        clone.style.transition = 'left 0.38s cubic-bezier(0.4,0,0.2,1), top 0.38s cubic-bezier(0.4,0,0.2,1), width 0.38s cubic-bezier(0.4,0,0.2,1), box-shadow 0.38s ease';
+        clone.style.left      = `${targetX}px`;
+        clone.style.top       = `${targetY}px`;
+        clone.style.width     = `${targetW}px`;
+        clone.style.boxShadow = '0 32px 80px rgba(0,0,0,0.35)';
+
+        // ── 7. Cerrar ────────────────────────────────────────────────────
+        const cerrar = () => {
+            // Animar de vuelta al origen
+            clone.style.transition = 'left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), width 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease, box-shadow 0.3s ease';
+            clone.style.left      = `${origen.left}px`;
+            clone.style.top       = `${origen.top}px`;
+            clone.style.width     = `${origen.width}px`;
+            clone.style.opacity   = '0';
+            clone.style.boxShadow = 'none';
+
+            overlay.classList.remove('card-expandida-overlay--visible');
+
+            clone.addEventListener('transitionend', () => {
+                clone.remove();
+                overlay.remove();
+            }, { once: true });
+        };
+
+        clone.querySelector('.card-expandida-cerrar').addEventListener('click', (e) => {
+            e.stopPropagation();
+            cerrar();
+        });
+        overlay.addEventListener('click', cerrar);
+        document.addEventListener('keydown', function esc(e) {
+            if (e.key === 'Escape') { cerrar(); document.removeEventListener('keydown', esc); }
+        });
     }
 }
 

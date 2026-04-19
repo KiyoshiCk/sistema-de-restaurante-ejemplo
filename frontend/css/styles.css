@@ -5329,6 +5329,71 @@ button:disabled {
     transition-duration: 0.3s;
 }
 
+/* ── Expansión de tarjeta al click ─────────────────────────────────── */
+
+.card-expandida-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0);
+    z-index: 10000;
+    transition: background 0.35s ease;
+}
+.card-expandida-overlay--visible {
+    background: rgba(0, 0, 0, 0.55);
+}
+
+/* El clon hereda TODO el diseño de .menu-cliente-item —
+   solo añadimos lo necesario para que flote sobre el resto */
+.card-expandida-clone {
+    /* posición y tamaño se aplican inline desde JS */
+    cursor: default;
+    /* Quitar el hover lift para que no interfiera con la animación */
+    pointer-events: auto;
+}
+.card-expandida-clone:hover {
+    transform: none !important;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.35) !important;
+}
+
+/* La descripción expandida no tiene clamp */
+.card-expandida-desc {
+    -webkit-line-clamp: unset !important;
+    -webkit-box-orient: unset !important;
+    display: block !important;
+    overflow: visible !important;
+    min-height: unset !important;
+}
+
+/* Header de imagen más alto en la versión expandida */
+.card-expandida-clone .menu-cliente-item-header {
+    height: 200px;
+}
+
+/* Botón cerrar ── posicionado en la esquina superior derecha de la tarjeta */
+.card-expandida-cerrar {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.45);
+    border: none;
+    color: #fff;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: background 0.18s, transform 0.18s;
+    backdrop-filter: blur(4px);
+}
+.card-expandida-cerrar:hover {
+    background: rgba(0,0,0,0.7);
+    transform: scale(1.1);
+}
+
 /* Footer del cliente */
 .cliente-footer {
     background: #2d3436;
