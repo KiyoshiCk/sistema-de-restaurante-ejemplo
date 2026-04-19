@@ -401,6 +401,9 @@ class ClienteApp {
             'Bebidas': 'linear-gradient(135deg, #0984e3 0%, #74b9ff 100%)'
         };
 
+        // Guardar el menú filtrado actual en la instancia para el expansor
+        this._menuActual = menuFiltrado;
+
         container.innerHTML = menuFiltrado.map((platillo, index) => `
             <div class="menu-cliente-item card-hidden" data-index="${index}" data-id="${platillo._id || index}" role="button" tabindex="0" aria-label="Ver detalle de ${this.escapeHTML(platillo.nombre)}">
                 <div class="menu-cliente-item-header" style="${!platillo.imagen ? 'background:' + (gradientes[platillo.categoria] || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)') : ''}">
@@ -429,17 +432,21 @@ class ClienteApp {
             </div>
         `).join('');
 
-        // Evento de expansión al hacer click en cualquier tarjeta
-        container.addEventListener('click', (e) => {
-            const card = e.target.closest('.menu-cliente-item');
-            if (card) this._expandirTarjeta(card, menuFiltrado);
-        });
-        container.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+        // Registrar listener de expansión solo la primera vez (delegación en container fijo)
+        if (!this._expandListenerInit) {
+            const grid = document.getElementById('menu-cliente-grid');
+            grid.addEventListener('click', (e) => {
                 const card = e.target.closest('.menu-cliente-item');
-                if (card) { e.preventDefault(); this._expandirTarjeta(card, menuFiltrado); }
-            }
-        });
+                if (card) this._expandirTarjeta(card);
+            });
+            grid.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    const card = e.target.closest('.menu-cliente-item');
+                    if (card) { e.preventDefault(); this._expandirTarjeta(card); }
+                }
+            });
+            this._expandListenerInit = true;
+        }
 
         // Revelar tarjetas con animación progresiva
         this.revealCards();
@@ -497,12 +504,13 @@ class ClienteApp {
         }
     }
 
-    _expandirTarjeta(cardEl, menuFiltrado) {
+    _expandirTarjeta(cardEl) {
         // Evitar doble apertura
         if (document.querySelector('.card-expandida-overlay')) return;
 
-        // Datos del platillo a partir del índice de la tarjeta
+        // Datos del platillo desde el menú actual filtrado
         const index = parseInt(cardEl.dataset.index);
+        const menuFiltrado = this._menuActual || [];
         const platillo = menuFiltrado[index];
         if (!platillo) return;
 
