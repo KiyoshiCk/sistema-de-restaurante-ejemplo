@@ -1,8 +1,8 @@
-# 🍽️ Sistema de Gestión de Restaurante
+# Sistema de Gestión de Restaurante
 
 Sistema completo para gestionar restaurantes con menú, mesas, pedidos y facturación. Funciona 100% local con **SQLite** (sin necesidad de servicios externos).
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 ├── frontend/           # Interfaz de usuario
@@ -17,10 +17,10 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 │   ├── package.json
 │   └── restaurante.db # Base de datos SQLite (se crea automáticamente)
 ├── docs/              # Documentación
-├── INSTALAR.bat       # 📦 Doble clic para instalar requisitos (primera vez)
-├── INICIAR.bat        # ▶️ Doble clic para iniciar (recomendado)
-├── DETENER.bat        # ⏹️ Doble clic para detener
-├── AUTOARRANQUE.bat   # 🔁 Activar/desactivar inicio automático con Windows
+├── INSTALAR.bat       # Doble clic para instalar requisitos (primera vez)
+├── INICIAR.bat        # Doble clic para iniciar (recomendado)
+├── DETENER.bat        # Doble clic para detener
+├── AUTOARRANQUE.bat   # Activar/desactivar inicio automático con Windows
 ├── instalar.ps1       # Script PowerShell del instalador
 ├── iniciar.ps1        # Script PowerShell para iniciar
 ├── detener.ps1        # Script PowerShell para detener
@@ -28,7 +28,7 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 └── README.md
 ```
 
-## 🚀 Características
+## Características
 
 - **Dashboard**: Estadísticas en tiempo real con actividad por usuario y rol
 - **Gestión de Menú**: CRUD de platillos con fotos, categorías, iconos y disponibilidad
@@ -47,9 +47,9 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 - **WebSocket**: Actualizaciones en tiempo real entre admin, cocina y meseros
 - **Acceso en Red Local**: Usa desde celular, tablet u otra PC en tu WiFi
 
-## 👥 Roles de Usuario
+## Roles de Usuario
 
-> ⚠️ **Cambia estas contraseñas desde el panel Admin antes de usar el sistema en producción.**
+> **Cambia estas contraseñas desde el panel Admin antes de usar el sistema en producción.**
 
 | Usuario | Contraseña | Rol |
 |---------|------------|-----|
@@ -57,16 +57,16 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 | mesero | mesero123 | Mesero |
 | cocinero | cocinero123 | Cocinero |
 
-## 🛠️ Requisitos previos
+## Requisitos previos
 
 | Programa | Versión mínima |
 |----------|----------------|
 | **Node.js** | 18+ |
 | **Python** | 3.8+ |
 
-> 💡 Si no tienes Node.js o Python instalados, usa **`INSTALAR.bat`** — los instala automáticamente.
+> Si no tienes Node.js o Python instalados, usa **`INSTALAR.bat`** — los instala automáticamente.
 
-## 🚀 Inicio Rápido
+## Inicio Rápido
 
 ### Primera vez en una PC nueva
 
@@ -75,10 +75,10 @@ Sistema completo para gestionar restaurantes con menú, mesas, pedidos y factura
 3. **Doble clic en `INICIAR.bat`** — y listo
 
 ```
-📁 sistema de restaurante\
- ├── 📦 INSTALAR.bat  ← primera vez: instala todo
- ├── 📄 INICIAR.bat   ← doble clic para iniciar
- └── 📄 DETENER.bat   ← doble clic para detener
+sistema de restaurante\
+ ├── INSTALAR.bat  ← primera vez: instala todo
+ ├── INICIAR.bat   ← doble clic para iniciar
+ └── DETENER.bat   ← doble clic para detener
 ```
 
 ### Uso normal (ya instalado)
@@ -102,33 +102,33 @@ cd frontend
 python -m http.server 5500 --bind 0.0.0.0
 ```
 
-## 📱 Acceso
+## Acceso
 
 Una vez iniciado, accede desde cualquier dispositivo en tu red:
 
 | Página | URL Local | Red Local |
 |--------|-----------|----------|
-| 🏠 Inicio | `http://localhost:5500/` | `http://TU_IP:5500/` |
-| ⚙️ Admin | `http://localhost:5500/admin.html` | `http://TU_IP:5500/admin.html` |
-| 🍽️ Cliente | `http://localhost:5500/cliente.html` | `http://TU_IP:5500/cliente.html` |
-| 👨‍🍳 Cocina | `http://localhost:5500/cocina.html` | `http://TU_IP:5500/cocina.html` |
+| Inicio | `http://localhost:5500/` | `http://TU_IP:5500/` |
+| Admin | `http://localhost:5500/admin.html` | `http://TU_IP:5500/admin.html` |
+| Cliente | `http://localhost:5500/cliente.html` | `http://TU_IP:5500/cliente.html` |
+| Cocina | `http://localhost:5500/cocina.html` | `http://TU_IP:5500/cocina.html` |
 
-> 💡 Para saber tu IP: abre CMD y escribe `ipconfig`, busca **Dirección IPv4**
+> Para saber tu IP: abre CMD y escribe `ipconfig`, busca **Dirección IPv4**
 
-## 🛑 Detener el sistema
+## Detener el sistema
 
 **Doble clic en `DETENER.bat`** o:
 ```powershell
 powershell -ExecutionPolicy Bypass -File detener.ps1
 ```
 
-## 🛠️ Tecnologías
+## Tecnologías
 
 - **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
 - **Backend**: Node.js, Express, Socket.IO
 - **Base de datos**: SQLite (better-sqlite3) - local, gratis, sin servidor
 - **Autenticación**: JWT + bcrypt
 
-## 📱 Responsive
+## Responsive
 
 El sistema es completamente responsive y funciona en dispositivos móviles, tablets y desktop.
